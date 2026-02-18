@@ -25,11 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = document.getElementById('email').value;
         const pass = document.getElementById('password').value;
 
-        if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-            alert("⚠️ خطأ تقني: يجب عليك وضع كود الـ Firebase الخاص بك في ملف firebase-config.js أولاً!");
-            return;
-        }
-
         loginBtn.innerText = "جاري الدخول...";
         auth.signInWithEmailAndPassword(email, pass)
             .catch(err => {
