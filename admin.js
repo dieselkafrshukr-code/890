@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Removed specific size systems based on user request for manual input.
 
     // --- AUTH ---
+    // Force logout on every reload to require fresh login
+    auth.signOut();
+
     auth.onAuthStateChanged(user => {
         if (user) {
             loginScreen.classList.add('hidden');
