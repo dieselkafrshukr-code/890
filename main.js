@@ -156,11 +156,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Line 1: EL TOUFAN
         const mainTitle = document.querySelector('.intro-main');
         mainTitle.textContent = "";
-        await typeText(mainTitle, "EL TOUFAN", 120);
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await typeText(mainTitle, "EL TOUFAN", 60); // Faster speed (was 120)
+        await new Promise(resolve => setTimeout(resolve, 600)); // Shorter wait (was 1500)
 
         // Fade out preloader
-        introScreen.style.transition = 'opacity 1s ease';
+        introScreen.style.transition = 'opacity 0.6s ease'; // Faster fade (was 1s)
         introScreen.classList.add('hidden');
 
         setTimeout(() => {
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mainApp.classList.remove('hidden');
             renderStage();
             lucide.createIcons();
-        }, 1000);
+        }, 600); // Shorter completion wait
     };
 
     // --- 5. RENDER LOGIC ---
