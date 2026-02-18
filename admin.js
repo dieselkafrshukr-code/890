@@ -276,6 +276,39 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     };
 
+    // Helper to convert file to Base64 with compression
+    const fileToBase64 = (file) => new Promise((resolve, reject) => {
+        if (!file) return resolve(null);
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800; // Good balance for store images
+                let width = img.width;
+                let height = img.height;
+
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Compress to 0.7 quality to save space in DB
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                resolve(dataUrl);
+            };
+        };
+        reader.onerror = error => reject(error);
+    });
+
     document.getElementById('save-product').onclick = async () => {
         const nameInput = document.getElementById('prod-name');
         const priceInput = document.getElementById('prod-price');
@@ -293,37 +326,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const colorRows = document.querySelectorAll('.color-variant-row');
 
         if (!name || !price || !catId || !mainImgFile) {
-            return alert("❌ من فضلك املأ البيانات الأساسية واختار الصورة الأساسية للمنتج!");
+            return alert("❌ من فضلك اكمل البيانات الأساسية!");
         }
 
         const btn = document.getElementById('save-product');
         const originalText = btn.innerText;
         btn.disabled = true;
-        btn.innerText = "⏳ جاري بدء الرفع...";
+        btn.innerText = "⏳ تحويل وحفظ...";
 
         try {
-            // Check storage
-            if (!storage) throw new Error("Firebase Storage service is missing!");
+            // 1. Convert Main Image to Base64
+            const mainBase64 = await fileToBase64(mainImgFile);
 
-            const getExt = file => file.name.split('.').pop() || 'jpg';
-
-            // 1. Upload Main Image
-            const mainPath = `products/${Date.now()}_main.${getExt(mainImgFile)}`;
-            const mainRef = storage.ref().child(mainPath);
-            const mainTask = mainRef.put(mainImgFile);
-
-            const mainUrl = await new Promise((resolve, reject) => {
-                mainTask.on('state_changed',
-                    (snapshot) => {
-                        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                        btn.innerText = `⏳ رفع الصورة الأساسية (${progress}%)...`;
-                    },
-                    reject,
-                    async () => resolve(await mainTask.snapshot.ref.getDownloadURL())
-                );
-            });
-
-            // 2. Upload Variants with Sizes
+            // 2. Convert Color Variants
             const colorsData = [];
             for (let [index, row] of Array.from(colorRows).entries()) {
                 const nameV = row.querySelector('.v-name').value.trim();
@@ -331,36 +346,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 const sizesV = Array.from(row.querySelectorAll('.v-sizes input:checked')).map(cb => cb.value);
 
                 if (nameV && fileV) {
-                    btn.innerText = `⏳ رفع اللون ${index + 1}/${colorRows.length}...`;
-                    const colorPath = `products/${Date.now()}_v${index}.${getExt(fileV)}`;
-                    const colorRef = storage.ref().child(colorPath);
-                    const colorTask = colorRef.put(fileV);
-
-                    const urlV = await new Promise((resolve, reject) => {
-                        colorTask.on('state_changed', null, reject, async () => resolve(await colorTask.snapshot.ref.getDownloadURL()));
-                    });
-                    colorsData.push({ name: nameV, image: urlV, sizes: sizesV });
+                    btn.innerText = `⏳ معالجة اللون ${index + 1}/${colorRows.length}...`;
+                    const colorBase64 = await fileToBase64(fileV);
+                    colorsData.push({ name: nameV, image: colorBase64, sizes: sizesV });
                 }
             }
 
-            // 3. Save
-            btn.innerText = "⏳ جاري حفظ البيانات...";
+            // 3. Save to Firestore DIRECTLY
+            btn.innerText = "⏳ جاري الحفظ في الداتابيز...";
             await db.collection('products').add({
                 name,
                 price: parseFloat(price),
                 categoryId: catId,
                 categoryName: catName,
-                mainImage: mainUrl,
+                mainImage: mainBase64,
                 colors: colorsData,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             window.closeModal('modal-product');
-            alert("✅ تم حفظ ونشر المنتج بنجاح!");
+            alert("✅ تم الحفظ بنجاح في الداتابيز!");
             renderProductManager();
         } catch (e) {
             console.error(e);
-            alert("❌ فشل الحفظ: " + e.message);
+            alert("❌ خطأ: " + e.message);
         } finally {
             btn.innerText = originalText;
             btn.disabled = false;
