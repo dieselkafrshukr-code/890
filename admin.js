@@ -30,10 +30,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = document.getElementById('email').value;
         const pass = document.getElementById('password').value;
         loginBtn.innerText = "⏳ جاري التحقق...";
-        auth.signInWithEmailAndPassword(email, pass).catch(err => {
-            alert("❌ خطأ: " + err.message);
-            loginBtn.innerText = "تسجيل الدخول الآمن";
-        });
+
+        // Force session persistence: User must login again on reload/close
+        auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+            .then(() => {
+                return auth.signInWithEmailAndPassword(email, pass);
+            })
+            .catch(err => {
+                alert("❌ خطأ: " + err.message);
+                loginBtn.innerText = "تسجيل الدخول الآمن";
+            });
     };
 
     logoutBtn.onclick = () => auth.signOut();
