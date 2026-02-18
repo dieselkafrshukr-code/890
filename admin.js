@@ -164,18 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 4. PRODUCT MANAGER ---
-    const sizeSystems = {
-        clothes: ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'],
-        pants: ['28', '30', '32', '34', '36', '38', '40', '42'],
-        shoes: ['37', '38', '39', '40', '41', '42', '43', '44', '45']
-    };
-
-    window.updateSizeSystem = () => {
-        // When system changes, we might want to refresh current rows, 
-        // but for now, it affects NEW rows added.
-        console.log("Size system updated to:", document.getElementById('size-type-selector').value);
-    };
-
     async function renderProductManager() {
         tabContent.innerHTML = `
             <div class="actions-header">
@@ -228,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('prod-name').value = '';
         document.getElementById('prod-price').value = '';
         document.getElementById('prod-main-img').value = '';
-        document.querySelectorAll('#size-options input').forEach(cb => cb.checked = false);
+        document.getElementById('prod-main-sizes').value = '';
         document.getElementById('color-variants-container').innerHTML = '';
 
         const categories = [];
@@ -252,24 +240,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addColorVariant = () => {
         const container = document.getElementById('color-variants-container');
-        const system = document.getElementById('size-type-selector').value;
-        const availableSizes = sizeSystems[system] || sizeSystems.clothes;
-
         const rowId = 'color_' + Date.now();
         const row = document.createElement('div');
         row.className = 'color-variant-row';
         row.id = rowId;
 
         row.innerHTML = `
-            <div class="variant-header">
-                <input type="text" placeholder="اسم اللون" class="v-name">
-                <input type="file" accept="image/*" class="v-img">
-                <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:#ff4d4d; cursor:pointer;"><i data-lucide="trash-2"></i></button>
-            </div>
-            <div class="v-sizes">
-                ${availableSizes.map(s => `
-                    <label class="size-chip"><input type="checkbox" value="${s}"> ${s}</label>
-                `).join('')}
+            <div class="variant-header" style="flex-wrap:wrap;">
+                <input type="text" placeholder="اسم اللون (أبيض، أسود...)" class="v-name" style="width:100%;">
+                <input type="file" accept="image/*" class="v-img" style="width:100%;">
+                <input type="text" placeholder="المقاسات المتاحة للون ده (M, L, XL...)" class="v-sizes-text" style="width:100%; margin-top:10px;">
+                <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:#ff4d4d; cursor:pointer; margin-top:10px; width:100%; display:flex; justify-content:center; gap:5px;"><i data-lucide="trash-2"></i> حذف هذا اللون</button>
             </div>
         `;
         container.appendChild(row);
@@ -313,6 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nameInput = document.getElementById('prod-name');
         const priceInput = document.getElementById('prod-price');
         const catSelect = document.getElementById('prod-category');
+        const mainSizesInput = document.getElementById('prod-main-sizes');
         const mainImgInput = document.getElementById('prod-main-img');
         const mainImgFile = mainImgInput.files[0];
 
@@ -321,12 +303,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const catId = catSelect.value;
         const selectedOpt = catSelect.options[catSelect.selectedIndex];
         const catName = selectedOpt ? selectedOpt.dataset.name : "";
+        const mainSizes = mainSizesInput.value.split(',').map(s => s.trim()).filter(s => s);
 
         // Collect Colors & Sizes
         const colorRows = document.querySelectorAll('.color-variant-row');
 
-        if (!name || !price || !catId || !mainImgFile) {
-            return alert("❌ من فضلك اكمل البيانات الأساسية!");
+        if (!name || !price || !catId || !mainImgFile || !mainSizes.length) {
+            return alert("❌ من فضلك اكمل البيانات الأساسية (الاسم، السعر، القسم، الصورة الرئيسية، المقاسات الرئيسية)!");
         }
 
         const btn = document.getElementById('save-product');
@@ -343,7 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let [index, row] of Array.from(colorRows).entries()) {
                 const nameV = row.querySelector('.v-name').value.trim();
                 const fileV = row.querySelector('.v-img').files[0];
-                const sizesV = Array.from(row.querySelectorAll('.v-sizes input:checked')).map(cb => cb.value);
+                const sizesRaw = row.querySelector('.v-sizes-text').value;
+                const sizesV = sizesRaw.split(',').map(s => s.trim()).filter(s => s);
 
                 if (nameV && fileV) {
                     btn.innerText = `⏳ معالجة اللون ${index + 1}/${colorRows.length}...`;
@@ -360,12 +344,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 categoryId: catId,
                 categoryName: catName,
                 mainImage: mainBase64,
+                mainSizes: mainSizes,
                 colors: colorsData,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             window.closeModal('modal-product');
-            alert("✅ تم الحفظ بنجاح في الداتابيز!");
+            alert("✅ تم الحفظ بنجاح!");
             renderProductManager();
         } catch (e) {
             console.error(e);

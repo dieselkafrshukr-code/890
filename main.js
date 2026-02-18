@@ -170,14 +170,26 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('detail-price').innerText = detailedProd.price;
         document.getElementById('detail-main-img').src = detailedProd.mainImage;
 
+        // Render Main Sizes by default
+        const sizeGroup = document.getElementById('detail-sizes');
+        const initialSizes = detailedProd.mainSizes || [];
+        if (initialSizes.length > 0) {
+            sizeGroup.innerHTML = initialSizes.map(s =>
+                `<button class="detail-chip" onclick="window.selectSize(this, '${s}')">${s}</button>`
+            ).join('');
+        } else {
+            sizeGroup.innerHTML = '<p style="font-size:0.8rem; color:var(--text-dim);">لا توجد مقاسات محددة</p>';
+        }
+
         // Colors
         const colorGroup = document.getElementById('detail-colors');
-        colorGroup.innerHTML = (detailedProd.colors || []).map(c =>
-            `<button class="detail-chip" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${c.name}</button>`
-        ).join('');
-
-        // Initially clear sizes until color is picked, or show if only 1 color
-        document.getElementById('detail-sizes').innerHTML = '<p style="font-size:0.8rem; color:var(--text-dim);">اختر اللون لرؤية المقاسات المتاحة</p>';
+        if (detailedProd.colors && detailedProd.colors.length > 0) {
+            colorGroup.innerHTML = detailedProd.colors.map(c =>
+                `<button class="detail-chip" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${c.name}</button>`
+            ).join('');
+        } else {
+            colorGroup.innerHTML = '<p style="font-size:0.8rem; color:var(--text-dim);">لا توجد ألوان إضافية</p>';
+        }
 
         document.getElementById('product-detail-modal').classList.remove('hidden');
         lucide.createIcons();
@@ -195,12 +207,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('#detail-colors .detail-chip').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
         selColor = cName;
-        selSize = ""; // Reset size when color changes
+        selSize = ""; // Reset size selection
         if (img) document.getElementById('detail-main-img').src = img;
 
-        // Find the sizes for THIS color
+        // Find sizes for this color, or fallback to mainSizes
         const variant = (detailedProd.colors || []).find(vc => vc.name === cName);
-        const sizes = variant ? (variant.sizes || []) : [];
+        const sizes = (variant && variant.sizes && variant.sizes.length > 0) ? variant.sizes : (detailedProd.mainSizes || []);
 
         const sizeGroup = document.getElementById('detail-sizes');
         if (sizes.length > 0) {
@@ -208,27 +220,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 `<button class="detail-chip" onclick="window.selectSize(this, '${s}')">${s}</button>`
             ).join('');
         } else {
-            sizeGroup.innerHTML = '<p style="color:red; font-size:0.8rem;">غير متوفر مقاسات لهذا اللون</p>';
+            sizeGroup.innerHTML = '<p style="color:red; font-size:0.8rem;">غير متوفر مقاسات</p>';
         }
     };
 
     document.getElementById('add-to-cart-detailed').onclick = () => {
         if (!detailedProd) return;
 
-        let requiresSizeSelection = false;
-        if (detailedProd.colors && detailedProd.colors.length > 0) {
-            // If colors exist, check the selected color's sizes
-            const selectedVariant = detailedProd.colors.find(c => c.name === selColor);
-            if (!selColor) return alert("اختر اللون!");
-            if (selectedVariant && selectedVariant.sizes && selectedVariant.sizes.length > 0) {
-                requiresSizeSelection = true;
-            }
-        } else if (detailedProd.sizes && detailedProd.sizes.length > 0) {
-            // Fallback to top-level sizes if no colors
-            requiresSizeSelection = true;
+        // Determine if size selection is required
+        let availableSizes = [];
+        if (selColor) {
+            const variant = detailedProd.colors.find(c => c.name === selColor);
+            availableSizes = (variant && variant.sizes && variant.sizes.length > 0) ? variant.sizes : (detailedProd.mainSizes || []);
+        } else {
+            availableSizes = detailedProd.mainSizes || [];
         }
 
-        if (requiresSizeSelection && !selSize) return alert("اختر المقاس!");
+        if (availableSizes.length > 0 && !selSize) {
+            return alert("يرجى اختيار المقاس أولاً!");
+        }
 
         const fullTitle = `${detailedProd.name} ${selColor ? `(لون: ${selColor})` : ''} ${selSize ? `(مقاس: ${selSize})` : ''}`;
         window.addToCart(fullTitle, detailedProd.price);

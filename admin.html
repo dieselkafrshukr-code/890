@@ -109,22 +109,18 @@
                         <option value="">اختر القسم...</option>
                     </select>
                 </div>
+                <!-- New Main Sizes Input -->
+                <div class="input-group" style="margin-top:15px;">
+                    <label>المقاسات المتاحة لهذا المنتج (اكتبها مفصولة بفاصلة):</label>
+                    <input type="text" id="prod-main-sizes" placeholder="مثال: S, M, L, XL أو 37, 38, 39">
+                </div>
             </div>
 
             <div class="form-section" style="margin-bottom:2rem;">
                 <h4
                     style="color:var(--accent); border-right:4px solid var(--accent); padding-right:10px; margin-bottom:1.5rem;">
-                    2. نوع المقاسات والصور</h4>
+                    2. الصور</h4>
                 <div class="input-group">
-                    <label>نظام المقاسات للمنتج:</label>
-                    <select id="size-type-selector" onchange="window.updateSizeSystem()"
-                        style="background:#111; border-color:var(--accent);">
-                        <option value="clothes">ملابس (S, M, L...)</option>
-                        <option value="pants">بنطلونات (28, 30, 32...)</option>
-                        <option value="shoes">أحذية (37, 38, 39...)</option>
-                    </select>
-                </div>
-                <div class="input-group" style="margin-top:15px;">
                     <label>الصورة الأساسية (تظهر في الواجهة):</label>
                     <input type="file" id="prod-main-img" accept="image/*"
                         style="border:1px dashed #444; padding:20px;">
