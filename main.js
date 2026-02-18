@@ -52,23 +52,31 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function initFirebaseData() {
+        // Set a timeout of 2 seconds for Firebase, so the site doesn't "hang"
+        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 2000));
+
         try {
-            const snap = await db.collection('settings').doc('storeTree').get();
-            if (snap.exists) {
+            const fetchPromise = db.collection('settings').doc('storeTree').get();
+            const snap = await Promise.race([fetchPromise, timeoutPromise]);
+
+            if (snap && snap.exists) {
                 storeTree = snap.data();
                 currentLevel = storeTree;
                 navigationStack = [storeTree];
+                console.log("Firebase Data Loaded");
             } else {
-                storeTree.options = defaultData;
-                currentLevel = storeTree;
-                navigationStack = [storeTree];
+                useDefaultData();
             }
         } catch (e) {
-            console.error("Firebase fetch error:", e);
-            storeTree.options = defaultData;
-            currentLevel = storeTree;
-            navigationStack = [storeTree];
+            console.error("Firebase Error or Timeout, using local data.");
+            useDefaultData();
         }
+    }
+
+    function useDefaultData() {
+        storeTree.options = defaultData;
+        currentLevel = storeTree;
+        navigationStack = [storeTree];
     }
 
     // --- 4. RENDER LOGIC ---

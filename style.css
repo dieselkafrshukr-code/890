@@ -261,8 +261,31 @@ body {
 
 .stage-footer {
     display: flex;
-    justify-content: center;
-    gap: 20px;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    margin-top: 3rem;
+}
+
+.footer-nav-btns {
+    display: flex;
+    gap: 15px;
+}
+
+.admin-link-btn {
+    color: #333;
+    text-decoration: none;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: 0.3s;
+    opacity: 0.5;
+}
+
+.admin-link-btn:hover {
+    color: var(--accent);
+    opacity: 1;
 }
 
 .back-btn,
@@ -279,28 +302,6 @@ body {
 .reset-btn:hover {
     border-color: var(--primary);
     color: var(--primary);
-}
-
-.admin-access-footer {
-    margin-top: 5rem;
-    display: flex;
-    justify-content: center;
-    border-top: 1px solid #111;
-    padding-top: 2rem;
-}
-
-.admin-link-btn {
-    color: #444;
-    text-decoration: none;
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: 0.3s;
-}
-
-.admin-link-btn:hover {
-    color: var(--gold);
 }
 
 .footer {
