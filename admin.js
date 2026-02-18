@@ -259,19 +259,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const row = document.createElement('div');
         row.className = 'color-variant-row';
         row.id = rowId;
-        row.style.cssText = "background: #0a0a0a; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #222;";
 
         row.innerHTML = `
-            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:10px; margin-bottom:10px;">
+            <div class="variant-header">
                 <input type="text" placeholder="اسم اللون" class="v-name">
                 <input type="file" accept="image/*" class="v-img">
-                <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i data-lucide="x"></i></button>
+                <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:#ff4d4d; cursor:pointer;"><i data-lucide="trash-2"></i></button>
             </div>
-            <div class="v-sizes" style="display:flex; gap:5px; flex-wrap:wrap;">
+            <div class="v-sizes">
                 ${availableSizes.map(s => `
-                    <label class="size-chip" style="font-size:0.75rem; padding:4px 8px;">
-                        <input type="checkbox" value="${s}"> ${s}
-                    </label>
+                    <label class="size-chip"><input type="checkbox" value="${s}"> ${s}</label>
                 `).join('')}
             </div>
         `;
