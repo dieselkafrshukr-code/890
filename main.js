@@ -10,6 +10,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let navigationStack = [];
     let currentLevel = storeTree;
     let cart = [];
+    let shippingPrices = {};
+
+    // WhatsApp Number
+    const WA_NUMBER = "201020451206";
+
+    // Egypt Governorates
+    const EGYPT_GOVERNORATES = [
+        "القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر",
+        "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية",
+        "المنيا", "القليوبية", "الوادي الجديد", "السويس", "أسوان",
+        "أسيوط", "بني سويف", "بورسعيد", "دمياط", "الشرقية",
+        "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا",
+        "شمال سيناء", "سوهاج"
+    ];
 
     // --- 3. DOM ELEMENTS ---
     const cartDrawer = document.getElementById('cart-drawer');
@@ -47,21 +61,65 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 4. INITIALIZATION ---
     async function startIntro() {
         if (!introScreen) return initApp();
-        const tl = gsap.timeline();
-        tl.to(".intro-main", { duration: 1.5, opacity: 1, y: 0, ease: "power4.out" });
-        tl.to(".intro-sub-line", { duration: 1, opacity: 1, delay: 0.5 });
-        tl.to(introScreen, {
-            duration: 1, opacity: 0, delay: 1, onComplete: () => {
-                introScreen.classList.add('hidden');
-                initApp();
-            }
+
+        // Fast, dynamic intro animation
+        const introMain = document.querySelector('.intro-main');
+        const introSub = document.querySelector('.intro-sub-line');
+
+        if (introMain) {
+            introMain.style.opacity = '0';
+            introMain.style.transform = 'translateY(40px) scale(0.8)';
+            introMain.style.transition = 'none';
+        }
+        if (introSub) {
+            introSub.style.opacity = '0';
+        }
+
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                if (introMain) {
+                    introMain.style.transition = 'opacity 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1)';
+                    introMain.style.opacity = '1';
+                    introMain.style.transform = 'translateY(0) scale(1)';
+                }
+                setTimeout(() => {
+                    if (introSub) {
+                        introSub.style.transition = 'opacity 0.4s ease';
+                        introSub.style.opacity = '1';
+                    }
+                    setTimeout(() => {
+                        introScreen.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                        introScreen.style.opacity = '0';
+                        introScreen.style.transform = 'scale(1.05)';
+                        setTimeout(() => {
+                            introScreen.classList.add('hidden');
+                            initApp();
+                        }, 400);
+                    }, 700);
+                }, 500);
+            }, 50);
         });
     }
 
     async function initApp() {
         mainApp.classList.remove('hidden');
-        await syncData();
+        mainApp.style.opacity = '0';
+        mainApp.style.transform = 'translateY(20px)';
+        mainApp.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        setTimeout(() => {
+            mainApp.style.opacity = '1';
+            mainApp.style.transform = 'translateY(0)';
+        }, 50);
+
+        await Promise.all([syncData(), loadShippingPrices()]);
         await renderStage();
+    }
+
+    async function loadShippingPrices() {
+        try {
+            const snap = await db.collection('settings').doc('governoratesPricing').get();
+            if (snap.exists) shippingPrices = snap.data().prices || {};
+        } catch (e) { }
     }
 
     async function syncData() {
@@ -111,12 +169,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         const p = doc.data();
                         const card = document.createElement('div');
                         card.className = 'product-card';
+                        const colorBadge = p.mainColor
+                            ? `<div class="product-color-badge">🎨 ${p.mainColor}</div>`
+                            : '';
                         card.innerHTML = `
                             <div class="product-card-img">
                                 <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${p.name}">
                             </div>
                             <div class="product-card-info">
                                 <div class="product-card-name">${p.name}</div>
+                                ${colorBadge}
                                 <div class="product-card-price">${p.price} ج.م</div>
                             </div>
                         `;
@@ -181,12 +243,27 @@ document.addEventListener('DOMContentLoaded', () => {
             sizeGroup.innerHTML = '<p style="font-size:0.8rem; color:var(--text-dim);">لا توجد مقاسات محددة</p>';
         }
 
-        // Colors
+        // Colors: show main color first + additional variants
         const colorGroup = document.getElementById('detail-colors');
+        let allColors = [];
+
+        // Add main color as first chip
+        if (detailedProd.mainColor) {
+            allColors.push({ name: detailedProd.mainColor, image: detailedProd.mainImage, sizes: detailedProd.mainSizes || [], isMain: true });
+        }
+        // Add additional color variants
         if (detailedProd.colors && detailedProd.colors.length > 0) {
-            colorGroup.innerHTML = detailedProd.colors.map(c =>
-                `<button class="detail-chip" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${c.name}</button>`
+            detailedProd.colors.forEach(c => allColors.push({ ...c, isMain: false }));
+        }
+
+        if (allColors.length > 0) {
+            colorGroup.innerHTML = allColors.map((c, i) =>
+                `<button class="detail-chip ${i === 0 ? 'active' : ''}" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${c.name}${c.isMain ? ' ✦' : ''}</button>`
             ).join('');
+            // Pre-select first color
+            if (allColors[0]) {
+                selColor = allColors[0].name;
+            }
         } else {
             colorGroup.innerHTML = '<p style="font-size:0.8rem; color:var(--text-dim);">لا توجد ألوان إضافية</p>';
         }
@@ -207,10 +284,20 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('#detail-colors .detail-chip').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
         selColor = cName;
-        selSize = ""; // Reset size selection
+        selSize = "";
         if (img) document.getElementById('detail-main-img').src = img;
 
-        // Find sizes for this color, or fallback to mainSizes
+        // Check if this is the main color
+        if (detailedProd.mainColor === cName) {
+            const sizes = detailedProd.mainSizes || [];
+            const sizeGroup = document.getElementById('detail-sizes');
+            sizeGroup.innerHTML = sizes.length > 0
+                ? sizes.map(s => `<button class="detail-chip" onclick="window.selectSize(this, '${s}')">${s}</button>`).join('')
+                : '<p style="font-size:0.8rem; color:var(--text-dim);">لا توجد مقاسات محددة</p>';
+            return;
+        }
+
+        // Find sizes for variant color
         const variant = (detailedProd.colors || []).find(vc => vc.name === cName);
         const sizes = (variant && variant.sizes && variant.sizes.length > 0) ? variant.sizes : (detailedProd.mainSizes || []);
 
@@ -227,11 +314,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-to-cart-detailed').onclick = () => {
         if (!detailedProd) return;
 
-        // Determine if size selection is required
         let availableSizes = [];
         if (selColor) {
-            const variant = detailedProd.colors.find(c => c.name === selColor);
-            availableSizes = (variant && variant.sizes && variant.sizes.length > 0) ? variant.sizes : (detailedProd.mainSizes || []);
+            if (detailedProd.mainColor === selColor) {
+                availableSizes = detailedProd.mainSizes || [];
+            } else {
+                const variant = (detailedProd.colors || []).find(c => c.name === selColor);
+                availableSizes = (variant && variant.sizes && variant.sizes.length > 0) ? variant.sizes : (detailedProd.mainSizes || []);
+            }
         } else {
             availableSizes = detailedProd.mainSizes || [];
         }
@@ -240,7 +330,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return alert("يرجى اختيار المقاس أولاً!");
         }
 
-        const fullTitle = `${detailedProd.name} ${selColor ? `(لون: ${selColor})` : ''} ${selSize ? `(مقاس: ${selSize})` : ''}`;
+        const colorLabel = selColor ? `(لون: ${selColor})` : '';
+        const sizeLabel = selSize ? `(مقاس: ${selSize})` : '';
+        const fullTitle = `${detailedProd.name} ${colorLabel} ${sizeLabel}`.trim();
         window.addToCart(fullTitle, detailedProd.price);
         window.closeProductModal();
     };
@@ -257,9 +349,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateCartUI() {
         cartItemsContainer.innerHTML = '';
-        let total = 0;
+        let subtotal = 0;
         cart.forEach((item, index) => {
-            total += item.price;
+            subtotal += item.price;
             const div = document.createElement('div');
             div.className = 'cart-item';
             div.innerHTML = `
@@ -272,31 +364,181 @@ document.addEventListener('DOMContentLoaded', () => {
             cartItemsContainer.appendChild(div);
         });
         badge.innerText = cart.length;
-        cartTotalDisplay.innerText = `${total} ج.م`;
+
+        // Update total display (will be updated with shipping when gov is selected)
+        cartTotalDisplay.innerText = `${subtotal} ج.م`;
         lucide.createIcons();
     }
 
     window.removeFromCart = (idx) => { cart.splice(idx, 1); updateCartUI(); };
 
-    window.confirmOrder = async () => {
+    // --- 8. ORDER FORM (Customer Info + Governorate) ---
+    window.confirmOrder = () => {
         if (cart.length === 0) return alert("السلة فارغة!");
-        const total = cart.reduce((sum, item) => sum + item.price, 0);
-        const itemsList = cart.map(i => `- ${i.name} (${i.price} ج.م)`).join('%0A');
+
+        // Show customer info modal
+        showOrderForm();
+    };
+
+    function showOrderForm() {
+        // Remove existing modal if any
+        const existing = document.getElementById('order-form-modal');
+        if (existing) existing.remove();
+
+        const govOptions = EGYPT_GOVERNORATES.map(g =>
+            `<option value="${g}">${g}</option>`
+        ).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'order-form-modal';
+        modal.style.cssText = `
+            position:fixed; inset:0; background:rgba(0,0,0,0.95);
+            backdrop-filter:blur(15px); z-index:99999;
+            display:flex; align-items:center; justify-content:center;
+            padding:1rem; animation: modalPop 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+        `;
+
+        const subtotal = cart.reduce((s, i) => s + i.price, 0);
+
+        modal.innerHTML = `
+            <div style="
+                background:#0f0f0f; border:1px solid #333; border-radius:24px;
+                padding:2.5rem; width:100%; max-width:500px; max-height:90vh; overflow-y:auto;
+                font-family:'Cairo', sans-serif; color:#fff; direction:rtl;
+            ">
+                <h2 style="font-size:1.8rem; font-weight:900; margin-bottom:0.5rem; color:#d4af37;">📦 إتمام الطلب</h2>
+                <p style="color:#666; margin-bottom:2rem; font-size:0.9rem;">يرجى ملء البيانات لإتمام طلبك</p>
+
+                <div style="margin-bottom:1.2rem;">
+                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">الاسم الكامل *</label>
+                    <input id="of-name" type="text" placeholder="اسمك الكامل"
+                        style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px 16px; border-radius:12px; font-size:1rem; font-family:'Cairo',sans-serif;">
+                </div>
+
+                <div style="margin-bottom:1.2rem;">
+                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">رقم الهاتف *</label>
+                    <input id="of-phone" type="tel" placeholder="01XXXXXXXXX" dir="ltr"
+                        style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px 16px; border-radius:12px; font-size:1rem; text-align:right; font-family:'Cairo',sans-serif;">
+                </div>
+
+                <div style="margin-bottom:1.2rem;">
+                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">العنوان التفصيلي *</label>
+                    <input id="of-address" type="text" placeholder="الشارع، الحي، رقم المبنى..."
+                        style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px 16px; border-radius:12px; font-size:1rem; font-family:'Cairo',sans-serif;">
+                </div>
+
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">المحافظة *</label>
+                    <select id="of-gov"
+                        style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px 16px; border-radius:12px; font-size:1rem; font-family:'Cairo',sans-serif; cursor:pointer;"
+                        onchange="window.updateOrderTotal()">
+                        <option value="">-- اختر المحافظة --</option>
+                        ${govOptions}
+                    </select>
+                </div>
+
+                <!-- Price Breakdown -->
+                <div id="of-price-box" style="background:#111; border:1px solid #222; border-radius:16px; padding:1.2rem; margin-bottom:1.5rem;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <span style="color:#aaa;">المنتجات:</span>
+                        <span style="font-weight:700;">${subtotal} ج.م</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <span style="color:#aaa;">الشحن:</span>
+                        <span id="of-shipping-cost" style="font-weight:700; color:#4caf50;">0 ج.م</span>
+                    </div>
+                    <div style="height:1px; background:#333; margin:10px 0;"></div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span style="font-weight:900; font-size:1.1rem;">الإجمالي:</span>
+                        <span id="of-total" style="font-weight:900; font-size:1.3rem; color:#d4af37;">${subtotal} ج.م</span>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:12px;">
+                    <button onclick="window.submitOrder()" style="
+                        flex:1; background:#25d366; border:none; color:#fff; padding:16px;
+                        border-radius:14px; font-size:1.1rem; font-weight:900; cursor:pointer;
+                        font-family:'Cairo',sans-serif; display:flex; align-items:center; justify-content:center; gap:8px;
+                    ">📲 أرسل عبر واتساب</button>
+                    <button onclick="document.getElementById('order-form-modal').remove()" style="
+                        background:#1a1a1a; border:1px solid #333; color:#aaa; padding:16px 20px;
+                        border-radius:14px; font-size:1rem; cursor:pointer; font-family:'Cairo',sans-serif;
+                    ">إلغاء</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    // Store shipping prices for use in form
+    window.updateOrderTotal = () => {
+        const gov = document.getElementById('of-gov').value;
+        const subtotal = cart.reduce((s, i) => s + i.price, 0);
+        const shipping = gov ? (shippingPrices[gov] || 0) : 0;
+        const total = subtotal + shipping;
+
+        const shippingEl = document.getElementById('of-shipping-cost');
+        const totalEl = document.getElementById('of-total');
+
+        if (shippingEl) shippingEl.innerText = `${shipping} ج.م`;
+        if (totalEl) totalEl.innerText = `${total} ج.م`;
+    };
+
+    window.submitOrder = async () => {
+        const name = document.getElementById('of-name').value.trim();
+        const phone = document.getElementById('of-phone').value.trim();
+        const address = document.getElementById('of-address').value.trim();
+        const gov = document.getElementById('of-gov').value;
+
+        if (!name) return alert("❌ يرجى إدخال الاسم!");
+        if (!phone) return alert("❌ يرجى إدخال رقم الهاتف!");
+        if (!address) return alert("❌ يرجى إدخال العنوان!");
+        if (!gov) return alert("❌ يرجى اختيار المحافظة!");
+
+        const subtotal = cart.reduce((s, i) => s + i.price, 0);
+        const shipping = shippingPrices[gov] || 0;
+        const total = subtotal + shipping;
+
+        const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
+
+        const waText = encodeURIComponent(
+            `🛍️ طلب جديد - EL TOUFAN\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `👤 الاسم: ${name}\n` +
+            `📱 التليفون: ${phone}\n` +
+            `📍 العنوان: ${address}\n` +
+            `🗺️ المحافظة: ${gov}\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `🛒 المنتجات:\n${itemsList}\n` +
+            `━━━━━━━━━━━━━━━\n` +
+            `💰 المنتجات: ${subtotal} ج.م\n` +
+            `🚚 الشحن (${gov}): ${shipping} ج.م\n` +
+            `✅ الإجمالي: ${total} ج.م`
+        );
 
         try {
             await db.collection('orders').add({
-                customer: "عميل اونلاين",
+                customer: name,
+                phone: phone,
+                address: address,
+                governorate: gov,
                 item: cart.map(i => i.name).join(' | '),
                 total: total,
+                shipping: shipping,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 status: 'new'
             });
-            const phone = "201020304050";
-            const text = `طلب جديد من الطوفان:%0A${itemsList}%0A%0Aالإجمالي: ${total} ج.م`;
-            window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
-            cart = []; updateCartUI(); window.toggleCart();
-            alert("تم إرسال طلبك!");
-        } catch (e) { alert("خطأ: " + e.message); }
+        } catch (e) { console.warn("Could not save to Firestore:", e.message); }
+
+        window.open(`https://wa.me/${WA_NUMBER}?text=${waText}`, '_blank');
+
+        cart = [];
+        updateCartUI();
+        const modal = document.getElementById('order-form-modal');
+        if (modal) modal.remove();
+        cartDrawer.classList.add('hidden');
+        alert("✅ تم إرسال طلبك! شكراً لك 🎉");
     };
 
     startIntro();

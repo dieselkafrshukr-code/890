@@ -56,6 +56,10 @@
                     <i data-lucide="box"></i>
                     <span>إحصائيات ومنتجات</span>
                 </button>
+                <button class="nav-item" data-tab="governorates">
+                    <i data-lucide="map-pin"></i>
+                    <span>المحافظات والشحن</span>
+                </button>
                 <button id="logout-btn" class="nav-item logout">
                     <i data-lucide="log-out"></i>
                     <span>خروج</span>
@@ -126,16 +130,23 @@
                 <div class="form-section-title">2. الهوية البصرية والمقاسات</div>
                 <!-- Size system selector removed as per request for manual input -->
 
-                <div class="input-group">
-                    <label>الصورة الرئيسية للمنتج (التي تظهر أولاً):</label>
-                    <input type="file" id="prod-main-img" accept="image/*">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                    <div class="input-group">
+                        <label>الصورة الرئيسية للمنتج (التي تظهر أولاً):</label>
+                        <input type="file" id="prod-main-img" accept="image/*">
+                    </div>
+                    <div class="input-group">
+                        <label>🎨 اللون الرئيسي (اسم لون الصورة الرئيسية):</label>
+                        <input type="text" id="prod-main-color" placeholder="مثلاً: أسود، أبيض، أحمر...">
+                    </div>
                 </div>
                 <div class="input-group">
                     <label>المقاسات الأساسية (للصورة الرئيسية):</label>
                     <input type="text" id="prod-main-sizes" placeholder="مثلاً: S, M, L, XL - افصل بفاصلة"
                         style="direction:ltr; text-align:right;">
                 </div>
-                <p style="color:var(--text-dim); font-size:0.75rem; margin-top:-10px;">* يرجى اختيار صورة واضحة ومميزة.
+                <p style="color:var(--text-dim); font-size:0.75rem; margin-top:-10px;">* اللون الرئيسي هو اللون الذي
+                    يظهر في كارت المنتج خارجياً.
                 </p>
             </div>
 
