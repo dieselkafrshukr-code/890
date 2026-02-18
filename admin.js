@@ -164,6 +164,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 4. PRODUCT MANAGER ---
+    const sizeSystems = {
+        clothes: ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'],
+        pants: ['28', '30', '32', '34', '36', '38', '40', '42'],
+        shoes: ['37', '38', '39', '40', '41', '42', '43', '44', '45']
+    };
+
+    window.updateSizeSystem = () => {
+        // When system changes, we might want to refresh current rows, 
+        // but for now, it affects NEW rows added.
+        console.log("Size system updated to:", document.getElementById('size-type-selector').value);
+    };
+
     async function renderProductManager() {
         tabContent.innerHTML = `
             <div class="actions-header">
@@ -240,14 +252,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addColorVariant = () => {
         const container = document.getElementById('color-variants-container');
+        const system = document.getElementById('size-type-selector').value;
+        const availableSizes = sizeSystems[system] || sizeSystems.clothes;
+
         const rowId = 'color_' + Date.now();
         const row = document.createElement('div');
         row.className = 'color-variant-row';
         row.id = rowId;
+        row.style.cssText = "background: #0a0a0a; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #222;";
+
         row.innerHTML = `
-            <input type="text" placeholder="اسم اللون" class="v-name">
-            <input type="file" accept="image/*" class="v-img">
-            <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i data-lucide="x"></i></button>
+            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:10px; margin-bottom:10px;">
+                <input type="text" placeholder="اسم اللون" class="v-name">
+                <input type="file" accept="image/*" class="v-img">
+                <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i data-lucide="x"></i></button>
+            </div>
+            <div class="v-sizes" style="display:flex; gap:5px; flex-wrap:wrap;">
+                ${availableSizes.map(s => `
+                    <label class="size-chip" style="font-size:0.75rem; padding:4px 8px;">
+                        <input type="checkbox" value="${s}"> ${s}
+                    </label>
+                `).join('')}
+            </div>
         `;
         container.appendChild(row);
         lucide.createIcons();
@@ -257,7 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const nameInput = document.getElementById('prod-name');
         const priceInput = document.getElementById('prod-price');
         const catSelect = document.getElementById('prod-category');
-        const mainImgFile = document.getElementById('prod-main-img').files[0];
+        const mainImgInput = document.getElementById('prod-main-img');
+        const mainImgFile = mainImgInput.files[0];
 
         const name = nameInput.value.trim();
         const price = priceInput.value.trim();
@@ -265,44 +292,82 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedOpt = catSelect.options[catSelect.selectedIndex];
         const catName = selectedOpt ? selectedOpt.dataset.name : "";
 
-        const selectedSizes = Array.from(document.querySelectorAll('#size-options input:checked')).map(cb => cb.value);
+        // Collect Colors & Sizes
         const colorRows = document.querySelectorAll('.color-variant-row');
 
-        if (!name || !price || !catId || !mainImgFile) return alert("❌ املأ البيانات الأساسية!");
+        if (!name || !price || !catId || !mainImgFile) {
+            return alert("❌ من فضلك املأ البيانات الأساسية واختار الصورة الأساسية للمنتج!");
+        }
 
         const btn = document.getElementById('save-product');
-        btn.innerText = "جاري الحفظ...";
+        const originalText = btn.innerText;
         btn.disabled = true;
+        btn.innerText = "⏳ جاري بدء الرفع...";
 
         try {
-            const mainRef = storage.ref().child(`products/${Date.now()}_main`);
-            await mainRef.put(mainImgFile);
-            const mainUrl = await mainRef.getDownloadURL();
+            // Check storage
+            if (!storage) throw new Error("Firebase Storage service is missing!");
 
+            const getExt = file => file.name.split('.').pop() || 'jpg';
+
+            // 1. Upload Main Image
+            const mainPath = `products/${Date.now()}_main.${getExt(mainImgFile)}`;
+            const mainRef = storage.ref().child(mainPath);
+            const mainTask = mainRef.put(mainImgFile);
+
+            const mainUrl = await new Promise((resolve, reject) => {
+                mainTask.on('state_changed',
+                    (snapshot) => {
+                        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                        btn.innerText = `⏳ رفع الصورة الأساسية (${progress}%)...`;
+                    },
+                    reject,
+                    async () => resolve(await mainTask.snapshot.ref.getDownloadURL())
+                );
+            });
+
+            // 2. Upload Variants with Sizes
             const colorsData = [];
-            for (let row of colorRows) {
+            for (let [index, row] of Array.from(colorRows).entries()) {
                 const nameV = row.querySelector('.v-name').value.trim();
                 const fileV = row.querySelector('.v-img').files[0];
+                const sizesV = Array.from(row.querySelectorAll('.v-sizes input:checked')).map(cb => cb.value);
+
                 if (nameV && fileV) {
-                    const rowRef = storage.ref().child(`products/${Date.now()}_${nameV}`);
-                    await rowRef.put(fileV);
-                    const urlV = await rowRef.getDownloadURL();
-                    colorsData.push({ name: nameV, image: urlV });
+                    btn.innerText = `⏳ رفع اللون ${index + 1}/${colorRows.length}...`;
+                    const colorPath = `products/${Date.now()}_v${index}.${getExt(fileV)}`;
+                    const colorRef = storage.ref().child(colorPath);
+                    const colorTask = colorRef.put(fileV);
+
+                    const urlV = await new Promise((resolve, reject) => {
+                        colorTask.on('state_changed', null, reject, async () => resolve(await colorTask.snapshot.ref.getDownloadURL()));
+                    });
+                    colorsData.push({ name: nameV, image: urlV, sizes: sizesV });
                 }
             }
 
+            // 3. Save
+            btn.innerText = "⏳ جاري حفظ البيانات...";
             await db.collection('products').add({
-                name, price, categoryId: catId, categoryName: catName,
-                mainImage: mainUrl, sizes: selectedSizes, colors: colorsData,
+                name,
+                price: parseFloat(price),
+                categoryId: catId,
+                categoryName: catName,
+                mainImage: mainUrl,
+                colors: colorsData,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             window.closeModal('modal-product');
-            alert("✅ تم بنجاح!");
+            alert("✅ تم حفظ ونشر المنتج بنجاح!");
             renderProductManager();
-        } catch (e) { alert("❌ خطأ: " + e.message); }
-        btn.innerText = "حفظ ونشر المنتج";
-        btn.disabled = false;
+        } catch (e) {
+            console.error(e);
+            alert("❌ فشل الحفظ: " + e.message);
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
     };
 
     window.deleteProduct = async (id) => {

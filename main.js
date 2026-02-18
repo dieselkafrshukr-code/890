@@ -170,15 +170,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('detail-price').innerText = detailedProd.price;
         document.getElementById('detail-main-img').src = detailedProd.mainImage;
 
-        const sizeGroup = document.getElementById('detail-sizes');
-        sizeGroup.innerHTML = (detailedProd.sizes || []).map(s =>
-            `<button class="detail-chip" onclick="window.selectSize(this, '${s}')">${s}</button>`
-        ).join('');
-
+        // Colors
         const colorGroup = document.getElementById('detail-colors');
         colorGroup.innerHTML = (detailedProd.colors || []).map(c =>
             `<button class="detail-chip" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${c.name}</button>`
         ).join('');
+
+        // Initially clear sizes until color is picked, or show if only 1 color
+        document.getElementById('detail-sizes').innerHTML = '<p style="font-size:0.8rem; color:var(--text-dim);">اختر اللون لرؤية المقاسات المتاحة</p>';
 
         document.getElementById('product-detail-modal').classList.remove('hidden');
         lucide.createIcons();
@@ -192,17 +191,44 @@ document.addEventListener('DOMContentLoaded', () => {
         selSize = s;
     };
 
-    window.selectColor = (btn, c, img) => {
+    window.selectColor = (btn, cName, img) => {
         document.querySelectorAll('#detail-colors .detail-chip').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
-        selColor = c;
+        selColor = cName;
+        selSize = ""; // Reset size when color changes
         if (img) document.getElementById('detail-main-img').src = img;
+
+        // Find the sizes for THIS color
+        const variant = (detailedProd.colors || []).find(vc => vc.name === cName);
+        const sizes = variant ? (variant.sizes || []) : [];
+
+        const sizeGroup = document.getElementById('detail-sizes');
+        if (sizes.length > 0) {
+            sizeGroup.innerHTML = sizes.map(s =>
+                `<button class="detail-chip" onclick="window.selectSize(this, '${s}')">${s}</button>`
+            ).join('');
+        } else {
+            sizeGroup.innerHTML = '<p style="color:red; font-size:0.8rem;">غير متوفر مقاسات لهذا اللون</p>';
+        }
     };
 
     document.getElementById('add-to-cart-detailed').onclick = () => {
         if (!detailedProd) return;
-        if (detailedProd.sizes?.length > 0 && !selSize) return alert("اختر المقاس!");
-        if (detailedProd.colors?.length > 0 && !selColor) return alert("اختر اللون!");
+
+        let requiresSizeSelection = false;
+        if (detailedProd.colors && detailedProd.colors.length > 0) {
+            // If colors exist, check the selected color's sizes
+            const selectedVariant = detailedProd.colors.find(c => c.name === selColor);
+            if (!selColor) return alert("اختر اللون!");
+            if (selectedVariant && selectedVariant.sizes && selectedVariant.sizes.length > 0) {
+                requiresSizeSelection = true;
+            }
+        } else if (detailedProd.sizes && detailedProd.sizes.length > 0) {
+            // Fallback to top-level sizes if no colors
+            requiresSizeSelection = true;
+        }
+
+        if (requiresSizeSelection && !selSize) return alert("اختر المقاس!");
 
         const fullTitle = `${detailedProd.name} ${selColor ? `(لون: ${selColor})` : ''} ${selSize ? `(مقاس: ${selSize})` : ''}`;
         window.addToCart(fullTitle, detailedProd.price);
