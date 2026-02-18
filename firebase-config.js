@@ -1,15 +1,19 @@
-// Firebase Configuration - Replace with your own from Firebase Console
+// Firebase Configuration provided by the user
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDOh5zxiYQOIAE-2W7KElUeIybE8w_MtKY",
+    authDomain: "el-toufan.firebaseapp.com",
+    projectId: "el-toufan",
+    storageBucket: "el-toufan.firebasestorage.app",
+    messagingSenderId: "504489496991",
+    appId: "1:504489496991:web:f11970186177ee12ca2daa",
+    measurementId: "G-959HCQRK44"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+// Initialize Firebase (Using v8 syntax to match existing logic)
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
