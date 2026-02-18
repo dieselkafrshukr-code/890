@@ -31,6 +31,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const backBtn = document.getElementById('back-btn');
     const resetBtn = document.getElementById('reset-btn');
     const steps = document.querySelectorAll('.step');
+    const themeToggle = document.getElementById('theme-toggle');
+
+    // --- Theme Logic ---
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        if (themeToggle) themeToggle.innerHTML = '<i data-lucide="moon"></i>';
+    }
+
+    if (themeToggle) {
+        themeToggle.onclick = () => {
+            const isLight = document.body.classList.toggle('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            themeToggle.innerHTML = isLight ? '<i data-lucide="moon"></i>' : '<i data-lucide="sun"></i>';
+            lucide.createIcons();
+        };
+    }
 
     // Cart Logic
     if (cartTrigger) cartTrigger.onclick = () => window.toggleCart();

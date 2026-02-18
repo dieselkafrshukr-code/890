@@ -9,7 +9,21 @@
     --text: #ffffff;
     --text-dim: #888888;
     --gold: #d4af37;
+    --accent: var(--gold);
+    --border: #222222;
     --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.light-mode {
+    --bg: #f8f8f8;
+    --surface: #ffffff;
+    --btn-bg: #eeeeee;
+    --btn-border: #dddddd;
+    --text: #111111;
+    --text-dim: #666666;
+    --primary: #d31a1a;
+    /* Slightly darker red for better contrast on white */
+    --border: #eeeeee;
 }
 
 * {
@@ -25,6 +39,25 @@ body {
     font-family: 'Cairo', sans-serif;
     overflow-x: hidden;
     height: 100vh;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.theme-toggle-btn {
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    color: var(--text);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.theme-toggle-btn:hover {
+    border-color: var(--primary);
 }
 
 /* Intro Overlay */
@@ -319,7 +352,7 @@ body {
     left: 0;
     width: 350px;
     height: 100vh;
-    background: rgba(10, 10, 10, 0.95);
+    background: var(--surface);
     backdrop-filter: blur(20px);
     z-index: 2000;
     border-right: 1px solid var(--border);
@@ -350,7 +383,7 @@ body {
 .close-cart {
     background: none;
     border: none;
-    color: white;
+    color: var(--text);
     cursor: pointer;
 }
 
@@ -361,20 +394,20 @@ body {
 }
 
 .cart-item {
-    background: #111;
+    background: var(--btn-bg);
     padding: 12px;
     border-radius: 12px;
     margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 1px solid #222;
+    border: 1px solid var(--border);
 }
 
 .cart-footer {
     padding: 1.5rem;
     border-top: 1px solid var(--border);
-    background: #050505;
+    background: var(--bg);
 }
 
 .total-row {
