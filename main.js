@@ -162,10 +162,10 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("تم تسجيل طلبك وإرساله عبر واتساب!");
     }
 
-    function selectOption(opt) {
+    async function selectOption(opt) {
         navigationStack.push(currentLevel);
         currentLevel = opt;
-        renderStage();
+        await renderStage();
     }
 
     window.goBack = async () => {

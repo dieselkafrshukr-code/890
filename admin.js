@@ -245,13 +245,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.getElementById('save-product').onclick = async () => {
-        const name = document.getElementById('prod-name').value.trim();
-        const price = document.getElementById('prod-price').value.trim();
+        const nameInput = document.getElementById('prod-name');
+        const priceInput = document.getElementById('prod-price');
         const catSelect = document.getElementById('prod-category');
-        const catId = catSelect.value;
-        const catName = catSelect.options[catSelect.selectedIndex].dataset.name;
 
-        if (!name || !price || !catId) return alert("يرجى ملء جميع البيانات");
+        const name = nameInput.value.trim();
+        const price = priceInput.value.trim();
+        const catId = catSelect.value;
+        const selectedOption = catSelect.options[catSelect.selectedIndex];
+        const catName = selectedOption ? selectedOption.dataset.name : "";
+
+        if (!name || !price || !catId || catId === "") {
+            alert("❌ يرجى ملء جميع البيانات واختيار القسم!");
+            return;
+        }
 
         const btn = document.getElementById('save-product');
         btn.innerText = "جاري الحفظ...";
@@ -318,18 +325,5 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     }
 
-    function renderProductManager() {
-        tabContent.innerHTML = `
-            <div class="actions-header">
-                <h3>إدارة المنتجات</h3>
-                <p style="color:var(--text-dim)">قريباً: رفع صور المنتجات وتحديد الأسعار بالتفصيل.</p>
-            </div>
-            <div style="background:var(--card); padding:3rem; border-radius:20px; text-align:center; border:1px solid var(--border);">
-                <i data-lucide="construction" style="width:60px; height:60px; color:var(--accent); margin-bottom:1rem;"></i>
-                <p>هذا القسم قيد التطوير حالياً لربطه بالمخزن.</p>
-            </div>
-        `;
-        lucide.createIcons();
-    }
 
 });
