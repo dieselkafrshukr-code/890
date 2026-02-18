@@ -80,16 +80,48 @@
 
     <!-- Product Modal -->
     <div id="modal-product" class="admin-modal hidden">
-        <div class="modal-card">
+        <div class="modal-card" style="width: 600px; max-height: 90vh; overflow-y: auto;">
             <i data-lucide="package" style="width: 40px; height: 40px; color: var(--accent); margin-bottom: 1rem;"></i>
-            <h3>إضافة منتج جديد</h3>
-            <input type="text" id="prod-name" placeholder="اسم المنتج">
-            <input type="number" id="prod-price" placeholder="السعر (ج.م)">
-            <select id="prod-category">
-                <option value="">اختر القسم...</option>
-            </select>
+            <h3>إضافة منتج احترافي</h3>
+
+            <div class="input-group" style="text-align: right; margin-bottom: 1.5rem;">
+                <label>بيانات المنتج الأساسية:</label>
+                <input type="text" id="prod-name" placeholder="اسم المنتج (مثلاً: هودي شتوي)">
+                <input type="number" id="prod-price" placeholder="السعر (ج.م)">
+                <select id="prod-category">
+                    <option value="">اختر القسم...</option>
+                </select>
+            </div>
+
+            <div class="input-group" style="text-align: right; margin-bottom: 1.5rem;">
+                <label>الصورة الأساسية للمنتج:</label>
+                <input type="file" id="prod-main-img" accept="image/*" style="padding: 10px;">
+            </div>
+
+            <div class="input-group" style="text-align: right; margin-bottom: 1.5rem;">
+                <label>المقاسات المتوفرة:</label>
+                <div id="size-options" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                    <label class="size-chip"><input type="checkbox" value="S"> S</label>
+                    <label class="size-chip"><input type="checkbox" value="M"> M</label>
+                    <label class="size-chip"><input type="checkbox" value="L"> L</label>
+                    <label class="size-chip"><input type="checkbox" value="XL"> XL</label>
+                    <label class="size-chip"><input type="checkbox" value="2XL"> 2XL</label>
+                    <label class="size-chip"><input type="checkbox" value="3XL"> 3XL</label>
+                </div>
+            </div>
+
+            <div class="input-group" style="text-align: right; margin-bottom: 1.5rem;">
+                <label>الألوان المتاحة (صور لكل لون):</label>
+                <div id="color-variants-container" style="margin-top: 10px;">
+                    <!-- Color items will be added here -->
+                </div>
+                <button type="button" onclick="window.addColorVariant()" class="add-btn"
+                    style="background:#222; width: 100%; justify-content: center; margin-top: 10px;">+ إضافة لون
+                    جديد</button>
+            </div>
+
             <div class="modal-btns">
-                <button id="save-product" class="save-btn">حفظ المنتج</button>
+                <button id="save-product" class="save-btn">حفظ ونشر المنتج</button>
                 <button onclick="closeModal('modal-product')" class="cancel-btn">إلغاء</button>
             </div>
         </div>

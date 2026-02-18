@@ -109,6 +109,37 @@
         </div>
     </div>
 
+    <!-- Product Detail Modal -->
+    <div id="product-detail-modal" class="admin-modal hidden">
+        <div class="product-view-card">
+            <button onclick="window.closeProductModal()" class="close-detail"><i data-lucide="x"></i></button>
+            <div class="product-view-split">
+                <div class="product-image-side">
+                    <img id="detail-main-img" src="" alt="">
+                </div>
+                <div class="product-info-side">
+                    <h2 id="detail-name"></h2>
+                    <div class="price-box">
+                        <span id="detail-price"></span> <span>جنية</span>
+                    </div>
+
+                    <div class="detail-section">
+                        <label>اللون المتوفر:</label>
+                        <div id="detail-colors" class="chip-group"></div>
+                    </div>
+
+                    <div class="detail-section">
+                        <label>المقاس المناسب:</label>
+                        <div id="detail-sizes" class="chip-group"></div>
+                    </div>
+
+                    <button id="add-to-cart-detailed" class="opt-btn active"
+                        style="width: 100%; margin-top: 2rem;">إضافة إلى السلة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="main.js"></script>
 </body>
 

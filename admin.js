@@ -204,18 +204,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const p = doc.data();
                 const card = document.createElement('div');
                 card.className = 'tree-item'; // Reusing style
-                card.style.flexDirection = 'column';
-                card.style.alignItems = 'flex-start';
+                card.style.flexDirection = 'row';
+                card.style.alignItems = 'center';
+                card.style.gap = '15px';
                 card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; width:100%; margin-bottom:10px;">
-                        <span class="name">${p.name}</span>
-                        <span style="color:var(--accent); font-weight:900;">${p.price} ج.م</span>
-                    </div>
-                    <div style="color:var(--text-dim); font-size:0.8rem; margin-bottom:10px;">
-                        <i data-lucide="tag" style="width:12px;"></i> ${p.categoryName || 'بدون قسم'}
-                    </div>
-                    <button onclick="window.deleteProduct('${doc.id}')" class="action-link del"><i data-lucide="trash-2"></i> حذف المنتج</button>
-                `;
+                        <img src="${p.mainImage || 'https://via.placeholder.com/50'}" style="width:50px; height:50px; border-radius:8px; object-fit:cover;">
+                        <div style="flex-grow:1;">
+                            <div style="display:flex; justify-content:space-between; width:100%; margin-bottom:5px;">
+                                <span class="name">${p.name}</span>
+                                <span style="color:var(--accent); font-weight:900;">${p.price} ج.م</span>
+                            </div>
+                            <div style="color:var(--text-dim); font-size:0.8rem;">
+                                <i data-lucide="tag" style="width:12px;"></i> ${p.categoryName || 'بدون قسم'}
+                            </div>
+                        </div>
+                        <button onclick="window.deleteProduct('${doc.id}')" class="action-link del" style="margin-right:auto;"><i data-lucide="trash-2"></i></button>
+                    `;
                 productsContainer.appendChild(card);
             });
         }
@@ -226,7 +230,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const catSelect = document.getElementById('prod-category');
         catSelect.innerHTML = '<option value="">اختر القسم...</option>';
 
-        // Flatten the tree for the select dropdown
+        // Reset Modal
+        document.getElementById('prod-name').value = '';
+        document.getElementById('prod-price').value = '';
+        document.getElementById('prod-main-img').value = '';
+        document.querySelectorAll('#size-options input').forEach(cb => cb.checked = false);
+        document.getElementById('color-variants-container').innerHTML = '';
+
         const categories = [];
         const flatten = (nodes, path = "") => {
             nodes.forEach(n => {
@@ -244,10 +254,26 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-product').classList.remove('hidden');
     };
 
+    window.addColorVariant = () => {
+        const container = document.getElementById('color-variants-container');
+        const rowId = 'color_' + Date.now();
+        const row = document.createElement('div');
+        row.className = 'color-variant-row';
+        row.id = rowId;
+        row.innerHTML = `
+            <input type="text" placeholder="اسم اللون" class="v-name">
+            <input type="file" accept="image/*" class="v-img">
+            <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i data-lucide="trash"></i></button>
+        `;
+        container.appendChild(row);
+        lucide.createIcons();
+    };
+
     document.getElementById('save-product').onclick = async () => {
         const nameInput = document.getElementById('prod-name');
         const priceInput = document.getElementById('prod-price');
         const catSelect = document.getElementById('prod-category');
+        const mainImgFile = document.getElementById('prod-main-img').files[0];
 
         const name = nameInput.value.trim();
         const price = priceInput.value.trim();
@@ -255,29 +281,60 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedOption = catSelect.options[catSelect.selectedIndex];
         const catName = selectedOption ? selectedOption.dataset.name : "";
 
-        if (!name || !price || !catId || catId === "") {
-            alert("❌ يرجى ملء جميع البيانات واختيار القسم!");
+        // Collect Sizes
+        const selectedSizes = Array.from(document.querySelectorAll('#size-options input:checked')).map(cb => cb.value);
+
+        // Collect Colors
+        const colorRows = document.querySelectorAll('.color-variant-row');
+
+        if (!name || !price || !catId || !mainImgFile) {
+            alert("❌ يرجى التأكد من الاسم والسعر والقسم والصورة الأساسية!");
             return;
         }
 
         const btn = document.getElementById('save-product');
-        btn.innerText = "جاري الحفظ...";
+        btn.innerText = "جاري الرفع...";
         btn.disabled = true;
 
         try {
+            // 1. Upload Main Image
+            const mainRef = storage.ref().child(`products/${Date.now()}_main_${mainImgFile.name}`);
+            await mainRef.put(mainImgFile);
+            const mainUrl = await mainRef.getDownloadURL();
+
+            // 2. Upload Color Images
+            const colorsData = [];
+            for (let row of colorRows) {
+                const nameV = row.querySelector('.v-name').value.trim();
+                const fileV = row.querySelector('.v-img').files[0];
+                if (nameV && fileV) {
+                    const rowRef = storage.ref().child(`products/${Date.now()}_${nameV}_${fileV.name}`);
+                    await rowRef.put(fileV);
+                    const urlV = await rowRef.getDownloadURL();
+                    colorsData.push({ name: nameV, image: urlV });
+                }
+            }
+
+            // 3. Save to Firestore
             await db.collection('products').add({
                 name,
                 price,
                 categoryId: catId,
                 categoryName: catName,
+                mainImage: mainUrl,
+                sizes: selectedSizes,
+                colors: colorsData,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
+
             window.closeModal('modal-product');
+            alert("✅ تم إضافة المنتج بنجاح!");
             renderProductManager();
         } catch (e) {
-            alert("خطأ في الحفظ: " + e.message);
+            console.error(e);
+            alert("❌ خطأ أثناء الحفظ: " + e.message);
         }
-        btn.innerText = "حفظ المنتج";
+        btn.innerText = "حفظ ونشر المنتج";
         btn.disabled = false;
     };
 

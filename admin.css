@@ -293,6 +293,48 @@ body {
     cursor: not-allowed;
 }
 
+.size-chip {
+    background: #111;
+    border: 1px solid var(--border);
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+}
+
+.size-chip input {
+    cursor: pointer;
+}
+
+.size-chip:has(input:checked) {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(212, 175, 55, 0.05);
+}
+
+.color-variant-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 40px;
+    gap: 10px;
+    margin-bottom: 10px;
+    background: #000;
+    padding: 10px;
+    border-radius: 12px;
+    align-items: center;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
 /* Table Styling */
 .orders-table {
     width: 100%;

@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedTheme === 'light') {
         document.body.classList.add('light-mode');
         if (themeToggle) themeToggle.innerHTML = '<i data-lucide="moon"></i>';
+        lucide.createIcons();
     }
 
     if (themeToggle) {
@@ -202,12 +203,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     prodSnap.forEach(doc => {
                         const p = doc.data();
-                        const btn = document.createElement('button');
-                        btn.className = 'opt-btn active';
-                        btn.style.margin = '5px';
-                        btn.innerHTML = `+ ${p.name} - <span style="color:#fff">${p.price} ج.م</span>`;
-                        btn.onclick = () => window.addToCart(p.name, p.price);
-                        optionsGrid.appendChild(btn);
+                        const card = document.createElement('div');
+                        card.className = 'opt-btn';
+                        card.style.display = 'flex';
+                        card.style.flexDirection = 'column';
+                        card.style.alignItems = 'center';
+                        card.style.padding = '0';
+                        card.style.overflow = 'hidden';
+                        card.style.width = '240px';
+                        card.style.height = 'auto';
+
+                        card.innerHTML = `
+                            <div style="width:100%; height:200px;">
+                                <img src="${p.mainImage || 'https://via.placeholder.com/300'}" style="width:100%; height:100%; object-fit:cover;">
+                            </div>
+                            <div style="padding:15px; width:100%;">
+                                <div style="font-weight:900; margin-bottom:5px;">${p.name}</div>
+                                <div style="color:var(--gold); font-size:1.2rem; font-weight:900;">${p.price} ج.م</div>
+                            </div>
+                        `;
+                        card.onclick = () => window.openProductDetail(doc.id);
+                        optionsGrid.appendChild(card);
                     });
                 }
             } catch (e) {
@@ -227,6 +243,71 @@ document.addEventListener('DOMContentLoaded', () => {
         resetBtn.classList.toggle('hidden', navigationStack.length <= 1);
         lucide.createIcons();
     }
+
+    // --- 5. PRODUCT DETAIL LOGIC ---
+    let currentDetailedProduct = null;
+    let selectedSize = "";
+    let selectedColor = "";
+
+    window.openProductDetail = async (id) => {
+        const doc = await db.collection('products').doc(id).get();
+        if (!doc.exists) return;
+        const p = doc.data();
+        currentDetailedProduct = p;
+        selectedSize = "";
+        selectedColor = "";
+
+        document.getElementById('detail-name').innerText = p.name;
+        document.getElementById('detail-price').innerText = p.price;
+        document.getElementById('detail-main-img').src = p.mainImage;
+
+        // Render Sizes
+        const sizeContainer = document.getElementById('detail-sizes');
+        sizeContainer.innerHTML = (p.sizes || []).map(s =>
+            `<button class="detail-chip" onclick="window.selectDetailSize(this, '${s}')">${s}</button>`
+        ).join('');
+
+        // Render Colors
+        const colorContainer = document.getElementById('detail-colors');
+        colorContainer.innerHTML = (p.colors || []).map(c =>
+            `<button class="detail-chip" onclick="window.selectDetailColor(this, '${c.name}', '${c.image}')">${c.name}</button>`
+        ).join('');
+
+        document.getElementById('product-detail-modal').classList.remove('hidden');
+        lucide.createIcons();
+    };
+
+    window.closeProductModal = () => {
+        document.getElementById('product-detail-modal').classList.add('hidden');
+    };
+
+    window.selectDetailSize = (btn, size) => {
+        document.querySelectorAll('#detail-sizes .detail-chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        selectedSize = size;
+    };
+
+    window.selectDetailColor = (btn, colorName, colorImg) => {
+        document.querySelectorAll('#detail-colors .detail-chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        selectedColor = colorName;
+        if (colorImg) document.getElementById('detail-main-img').src = colorImg;
+    };
+
+    document.getElementById('add-to-cart-detailed').onclick = () => {
+        if (!currentDetailedProduct) return;
+
+        if (currentDetailedProduct.sizes && currentDetailedProduct.sizes.length > 0 && !selectedSize) {
+            return alert("يرجى اختيار المقاس!");
+        }
+        if (currentDetailedProduct.colors && currentDetailedProduct.colors.length > 0 && !selectedColor) {
+            return alert("يرجى اختيار اللون!");
+        }
+
+        const fullName = `${currentDetailedProduct.name} ${selectedColor ? `(لون: ${selectedColor})` : ""} ${selectedSize ? `(مقاس: ${selectedSize})` : ""}`;
+        window.addToCart(fullName, currentDetailedProduct.price);
+        window.closeProductModal();
+    };
 
     async function selectOption(opt) {
         navigationStack.push(currentLevel);
