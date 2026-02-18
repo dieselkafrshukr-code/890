@@ -1,11 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- 1. CONFIG & DATA ---
-    let storeTree = {
-        name: "EL TOUFAN",
-        options: []
-    };
-
-    // Default Fallback Data
+    let storeTree = { name: "EL TOUFAN", options: [] };
     const defaultData = [
         { id: "wholesale", name: "جملة", options: [] },
         { id: "retail", name: "قطاعي", options: [] }
@@ -14,13 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 2. STATE MANAGEMENT ---
     let navigationStack = [];
     let currentLevel = storeTree;
-    let cart = []; // Real shopping cart array
+    let cart = [];
 
     // --- 3. DOM ELEMENTS ---
     const cartDrawer = document.getElementById('cart-drawer');
     const cartItemsContainer = document.getElementById('cart-items');
     const cartTrigger = document.querySelector('.cart-trigger');
-    const badge = document.querySelector('.badge');
+    const badge = document.getElementById('cart-count');
     const cartTotalDisplay = document.getElementById('cart-total');
 
     const introScreen = document.getElementById('intro-screen');
@@ -38,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedTheme === 'light') {
         document.body.classList.add('light-mode');
         if (themeToggle) themeToggle.innerHTML = '<i data-lucide="moon"></i>';
-        lucide.createIcons();
     }
 
     if (themeToggle) {
@@ -50,115 +44,37 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Cart Logic
-    if (cartTrigger) cartTrigger.onclick = () => window.toggleCart();
-
-    window.toggleCart = () => {
-        cartDrawer.classList.toggle('hidden');
-    };
-
-    window.addToCart = (name, price) => {
-        cart.push({ name, price: parseFloat(price) });
-        updateCartUI();
-        alert(`تم إضافة ${name} إلى السلة`);
-    };
-
-    function updateCartUI() {
-        if (badge) badge.innerText = cart.length;
-        if (cart.length === 0) {
-            cartItemsContainer.innerHTML = '<p style="text-align:center; color:var(--text-dim); padding:2rem;">السلة فارغة حالياً</p>';
-            cartTotalDisplay.innerText = "0 ج.م";
-            return;
-        }
-        let total = 0;
-        cartItemsContainer.innerHTML = cart.map((item, idx) => {
-            total += item.price;
-            return `
-                <div class="cart-item">
-                    <div>
-                        <div style="font-weight:700;">${item.name}</div>
-                        <div style="color:var(--accent); font-size:0.9rem;">${item.price} ج.م</div>
-                    </div>
-                    <button onclick="window.removeFromCart(${idx})" style="background:none; border:none; color:#ff3e3e; cursor:pointer;"><i data-lucide="trash-2"></i></button>
-                </div>
-            `;
-        }).join('');
-        cartTotalDisplay.innerText = `${total} ج.م`;
-        lucide.createIcons();
+    // --- 4. INITIALIZATION ---
+    async function startIntro() {
+        if (!introScreen) return initApp();
+        const tl = gsap.timeline();
+        tl.to(".intro-main", { duration: 1.5, opacity: 1, y: 0, ease: "power4.out" });
+        tl.to(".intro-sub-line", { duration: 1, opacity: 1, delay: 0.5 });
+        tl.to(introScreen, {
+            duration: 1, opacity: 0, delay: 1, onComplete: () => {
+                introScreen.classList.add('hidden');
+                initApp();
+            }
+        });
     }
 
-    window.removeFromCart = (index) => {
-        cart.splice(index, 1);
-        updateCartUI();
-    };
+    async function initApp() {
+        mainApp.classList.remove('hidden');
+        await syncData();
+        await renderStage();
+    }
 
-    window.confirmOrder = async () => {
-        if (cart.length === 0) return alert("السلة فارغة!");
-        const orderText = cart.map(item => `- ${item.name} (${item.price} ج.م)`).join('\n');
-        const total = cart.reduce((sum, item) => sum + item.price, 0);
+    async function syncData() {
         try {
-            await db.collection('orders').add({
-                item: orderText,
-                total: total,
-                customer: "عميل ويب",
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                status: 'new'
-            });
-        } catch (e) { console.error("Firebase Order Error:", e); }
-        const phone = "201020304050";
-        const finalMsg = encodeURIComponent(`طلب جديد من EL TOUFAN:\n${orderText}\n\nالإجمالي: ${total} ج.م`);
-        window.open(`https://wa.me/${phone}?text=${finalMsg}`, '_blank');
-        alert("تم إرسال طلبك وتسجيله بنجاح!");
-        cart = [];
-        updateCartUI();
-        window.toggleCart();
-    };
-
-    const typeText = async (element, text, speed = 100) => {
-        for (let i = 0; i < text.length; i++) {
-            element.textContent += text[i];
-            await new Promise(resolve => setTimeout(resolve, speed));
-        }
-    };
-
-    const startIntro = async () => {
-        const mainTitle = document.querySelector('.intro-main');
-        mainTitle.textContent = "";
-        await typeText(mainTitle, "EL TOUFAN", 60);
-        await new Promise(resolve => setTimeout(resolve, 600));
-
-        introScreen.style.transition = 'opacity 0.6s ease';
-        introScreen.classList.add('hidden');
-
-        setTimeout(async () => {
-            introScreen.style.display = 'none';
-            mainApp.classList.remove('hidden');
-            await initFirebaseData();
-            renderStage();
-            lucide.createIcons();
-        }, 600);
-    };
-
-    async function initFirebaseData() {
-        // Set a timeout of 2 seconds for Firebase, so the site doesn't "hang"
-        const timeoutPromise = new Promise(resolve => setTimeout(resolve, 2000));
-
-        try {
-            const fetchPromise = db.collection('settings').doc('storeTree').get();
-            const snap = await Promise.race([fetchPromise, timeoutPromise]);
-
-            if (snap && snap.exists) {
+            const snap = await db.collection('settings').doc('storeTree').get();
+            if (snap.exists) {
                 storeTree = snap.data();
                 currentLevel = storeTree;
                 navigationStack = [storeTree];
-                console.log("Firebase Data Loaded");
             } else {
                 useDefaultData();
             }
-        } catch (e) {
-            console.error("Firebase Error or Timeout, using local data.");
-            useDefaultData();
-        }
+        } catch (e) { useDefaultData(); }
     }
 
     function useDefaultData() {
@@ -167,19 +83,15 @@ document.addEventListener('DOMContentLoaded', () => {
         navigationStack = [storeTree];
     }
 
-    // --- 4. RENDER LOGIC ---
+    // --- 5. RENDER LOGIC ---
     async function renderStage() {
         stageTitle.innerText = currentLevel.name || "EL TOUFAN";
-        stageDesc.innerText = currentLevel.desc || "اختر من الخيارات المتاحة";
 
         const levelIdx = navigationStack.length;
-        steps.forEach((s, i) => {
-            s.classList.toggle('active', i + 1 <= levelIdx);
-        });
-
+        steps.forEach((s, i) => s.classList.toggle('active', i + 1 <= levelIdx));
         optionsGrid.innerHTML = '';
 
-        // 1. Render Sub-Categories if any
+        // Sub-Categories
         if (currentLevel.options && currentLevel.options.length > 0) {
             currentLevel.options.forEach(opt => {
                 const btn = document.createElement('button');
@@ -190,124 +102,35 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // 2. Render Products for this leaf category (or any level)
+        // Products
         if (currentLevel.id) {
             try {
                 const prodSnap = await db.collection('products').where('categoryId', '==', currentLevel.id).get();
                 if (!prodSnap.empty) {
-                    const header = document.createElement('div');
-                    header.style.width = '100%';
-                    header.style.marginTop = '2rem';
-                    header.innerHTML = `<p style="color:var(--accent); font-weight:900;">المنتجات المتاحة في ${currentLevel.name}:</p>`;
-                    optionsGrid.appendChild(header);
-
                     prodSnap.forEach(doc => {
                         const p = doc.data();
                         const card = document.createElement('div');
-                        card.className = 'opt-btn';
-                        card.style.display = 'flex';
-                        card.style.flexDirection = 'column';
-                        card.style.alignItems = 'center';
-                        card.style.padding = '0';
-                        card.style.overflow = 'hidden';
-                        card.style.width = '240px';
-                        card.style.height = 'auto';
-
+                        card.className = 'product-card';
                         card.innerHTML = `
-                            <div style="width:100%; height:200px;">
-                                <img src="${p.mainImage || 'https://via.placeholder.com/300'}" style="width:100%; height:100%; object-fit:cover;">
+                            <div class="product-card-img">
+                                <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${p.name}">
                             </div>
-                            <div style="padding:15px; width:100%;">
-                                <div style="font-weight:900; margin-bottom:5px;">${p.name}</div>
-                                <div style="color:var(--gold); font-size:1.2rem; font-weight:900;">${p.price} ج.م</div>
+                            <div class="product-card-info">
+                                <div class="product-card-name">${p.name}</div>
+                                <div class="product-card-price">${p.price} ج.م</div>
                             </div>
                         `;
                         card.onclick = () => window.openProductDetail(doc.id);
                         optionsGrid.appendChild(card);
                     });
                 }
-            } catch (e) {
-                console.error("Error fetching products:", e);
-            }
-        }
-
-        // 3. Fallback message if totally empty
-        if ((!currentLevel.options || currentLevel.options.length === 0) && currentLevel.name !== "EL TOUFAN") {
-            const prodSnapCheck = await db.collection('products').where('categoryId', '==', currentLevel.id).get();
-            if (prodSnapCheck.empty) {
-                optionsGrid.innerHTML += `<p style="color:var(--text-dim); width:100%; margin-top:20px;">لا توجد منتجات حالياً في هذا القسم.</p>`;
-            }
+            } catch (e) { console.error(e); }
         }
 
         backBtn.classList.toggle('hidden', navigationStack.length <= 1);
         resetBtn.classList.toggle('hidden', navigationStack.length <= 1);
         lucide.createIcons();
     }
-
-    // --- 5. PRODUCT DETAIL LOGIC ---
-    let currentDetailedProduct = null;
-    let selectedSize = "";
-    let selectedColor = "";
-
-    window.openProductDetail = async (id) => {
-        const doc = await db.collection('products').doc(id).get();
-        if (!doc.exists) return;
-        const p = doc.data();
-        currentDetailedProduct = p;
-        selectedSize = "";
-        selectedColor = "";
-
-        document.getElementById('detail-name').innerText = p.name;
-        document.getElementById('detail-price').innerText = p.price;
-        document.getElementById('detail-main-img').src = p.mainImage;
-
-        // Render Sizes
-        const sizeContainer = document.getElementById('detail-sizes');
-        sizeContainer.innerHTML = (p.sizes || []).map(s =>
-            `<button class="detail-chip" onclick="window.selectDetailSize(this, '${s}')">${s}</button>`
-        ).join('');
-
-        // Render Colors
-        const colorContainer = document.getElementById('detail-colors');
-        colorContainer.innerHTML = (p.colors || []).map(c =>
-            `<button class="detail-chip" onclick="window.selectDetailColor(this, '${c.name}', '${c.image}')">${c.name}</button>`
-        ).join('');
-
-        document.getElementById('product-detail-modal').classList.remove('hidden');
-        lucide.createIcons();
-    };
-
-    window.closeProductModal = () => {
-        document.getElementById('product-detail-modal').classList.add('hidden');
-    };
-
-    window.selectDetailSize = (btn, size) => {
-        document.querySelectorAll('#detail-sizes .detail-chip').forEach(c => c.classList.remove('active'));
-        btn.classList.add('active');
-        selectedSize = size;
-    };
-
-    window.selectDetailColor = (btn, colorName, colorImg) => {
-        document.querySelectorAll('#detail-colors .detail-chip').forEach(c => c.classList.remove('active'));
-        btn.classList.add('active');
-        selectedColor = colorName;
-        if (colorImg) document.getElementById('detail-main-img').src = colorImg;
-    };
-
-    document.getElementById('add-to-cart-detailed').onclick = () => {
-        if (!currentDetailedProduct) return;
-
-        if (currentDetailedProduct.sizes && currentDetailedProduct.sizes.length > 0 && !selectedSize) {
-            return alert("يرجى اختيار المقاس!");
-        }
-        if (currentDetailedProduct.colors && currentDetailedProduct.colors.length > 0 && !selectedColor) {
-            return alert("يرجى اختيار اللون!");
-        }
-
-        const fullName = `${currentDetailedProduct.name} ${selectedColor ? `(لون: ${selectedColor})` : ""} ${selectedSize ? `(مقاس: ${selectedSize})` : ""}`;
-        window.addToCart(fullName, currentDetailedProduct.price);
-        window.closeProductModal();
-    };
 
     async function selectOption(opt) {
         navigationStack.push(currentLevel);
@@ -331,6 +154,114 @@ document.addEventListener('DOMContentLoaded', () => {
 
     backBtn.onclick = window.goBack;
     resetBtn.onclick = window.resetApp;
+
+    // --- 6. PRODUCT DETAIL ---
+    let detailedProd = null;
+    let selSize = "";
+    let selColor = "";
+
+    window.openProductDetail = async (id) => {
+        const doc = await db.collection('products').doc(id).get();
+        if (!doc.exists) return;
+        detailedProd = doc.data();
+        selSize = ""; selColor = "";
+
+        document.getElementById('detail-name').innerText = detailedProd.name;
+        document.getElementById('detail-price').innerText = detailedProd.price;
+        document.getElementById('detail-main-img').src = detailedProd.mainImage;
+
+        const sizeGroup = document.getElementById('detail-sizes');
+        sizeGroup.innerHTML = (detailedProd.sizes || []).map(s =>
+            `<button class="detail-chip" onclick="window.selectSize(this, '${s}')">${s}</button>`
+        ).join('');
+
+        const colorGroup = document.getElementById('detail-colors');
+        colorGroup.innerHTML = (detailedProd.colors || []).map(c =>
+            `<button class="detail-chip" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${c.name}</button>`
+        ).join('');
+
+        document.getElementById('product-detail-modal').classList.remove('hidden');
+        lucide.createIcons();
+    };
+
+    window.closeProductModal = () => document.getElementById('product-detail-modal').classList.add('hidden');
+
+    window.selectSize = (btn, s) => {
+        document.querySelectorAll('#detail-sizes .detail-chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        selSize = s;
+    };
+
+    window.selectColor = (btn, c, img) => {
+        document.querySelectorAll('#detail-colors .detail-chip').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        selColor = c;
+        if (img) document.getElementById('detail-main-img').src = img;
+    };
+
+    document.getElementById('add-to-cart-detailed').onclick = () => {
+        if (!detailedProd) return;
+        if (detailedProd.sizes?.length > 0 && !selSize) return alert("اختر المقاس!");
+        if (detailedProd.colors?.length > 0 && !selColor) return alert("اختر اللون!");
+
+        const fullTitle = `${detailedProd.name} ${selColor ? `(لون: ${selColor})` : ''} ${selSize ? `(مقاس: ${selSize})` : ''}`;
+        window.addToCart(fullTitle, detailedProd.price);
+        window.closeProductModal();
+    };
+
+    // --- 7. CART LOGIC ---
+    if (cartTrigger) cartTrigger.onclick = () => window.toggleCart();
+    window.toggleCart = () => cartDrawer.classList.toggle('hidden');
+
+    window.addToCart = (name, price) => {
+        cart.push({ name, price: parseFloat(price) });
+        updateCartUI();
+        if (cartDrawer.classList.contains('hidden')) window.toggleCart();
+    };
+
+    function updateCartUI() {
+        cartItemsContainer.innerHTML = '';
+        let total = 0;
+        cart.forEach((item, index) => {
+            total += item.price;
+            const div = document.createElement('div');
+            div.className = 'cart-item';
+            div.innerHTML = `
+                <div>
+                    <div style="font-weight:700;">${item.name}</div>
+                    <div style="color:var(--accent); font-size:0.8rem;">${item.price} ج.م</div>
+                </div>
+                <button onclick="window.removeFromCart(${index})" style="background:none; border:none; color:#ff3a3a; cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
+            `;
+            cartItemsContainer.appendChild(div);
+        });
+        badge.innerText = cart.length;
+        cartTotalDisplay.innerText = `${total} ج.م`;
+        lucide.createIcons();
+    }
+
+    window.removeFromCart = (idx) => { cart.splice(idx, 1); updateCartUI(); };
+
+    window.confirmOrder = async () => {
+        if (cart.length === 0) return alert("السلة فارغة!");
+        const total = cart.reduce((sum, item) => sum + item.price, 0);
+        const itemsList = cart.map(i => `- ${i.name} (${i.price} ج.م)`).join('%0A');
+
+        try {
+            await db.collection('orders').add({
+                customer: "عميل اونلاين",
+                item: cart.map(i => i.name).join(' | '),
+                total: total,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                status: 'new'
+            });
+            const phone = "201020304050";
+            const text = `طلب جديد من الطوفان:%0A${itemsList}%0A%0Aالإجمالي: ${total} ج.م`;
+            window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+            cart = []; updateCartUI(); window.toggleCart();
+            alert("تم إرسال طلبك!");
+        } catch (e) { alert("خطأ: " + e.message); }
+    };
 
     startIntro();
 });

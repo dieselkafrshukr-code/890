@@ -80,48 +80,76 @@
 
     <!-- Product Modal -->
     <div id="modal-product" class="admin-modal hidden">
-        <div class="modal-card" style="width: 600px; max-height: 90vh; overflow-y: auto;">
-            <i data-lucide="package" style="width: 40px; height: 40px; color: var(--accent); margin-bottom: 1rem;"></i>
-            <h3>إضافة منتج احترافي</h3>
+        <div class="modal-card"
+            style="width: 700px; max-height: 90vh; overflow-y: auto; text-align: right; border: 2px solid var(--accent);">
+            <header
+                style="display:flex; align-items:center; gap:15px; margin-bottom:2rem; border-bottom:1px solid #222; padding-bottom:1rem;">
+                <div style="background:var(--accent); color:black; padding:10px; border-radius:12px;"><i
+                        data-lucide="package"></i></div>
+                <h3 style="margin:0;">إضافة منتج احترافي جديد</h3>
+            </header>
 
-            <div class="input-group" style="text-align: right; margin-bottom: 1.5rem;">
-                <label>بيانات المنتج الأساسية:</label>
-                <input type="text" id="prod-name" placeholder="اسم المنتج (مثلاً: هودي شتوي)">
-                <input type="number" id="prod-price" placeholder="السعر (ج.م)">
-                <select id="prod-category">
-                    <option value="">اختر القسم...</option>
-                </select>
-            </div>
-
-            <div class="input-group" style="text-align: right; margin-bottom: 1.5rem;">
-                <label>الصورة الأساسية للمنتج:</label>
-                <input type="file" id="prod-main-img" accept="image/*" style="padding: 10px;">
-            </div>
-
-            <div class="input-group" style="text-align: right; margin-bottom: 1.5rem;">
-                <label>المقاسات المتوفرة:</label>
-                <div id="size-options" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                    <label class="size-chip"><input type="checkbox" value="S"> S</label>
-                    <label class="size-chip"><input type="checkbox" value="M"> M</label>
-                    <label class="size-chip"><input type="checkbox" value="L"> L</label>
-                    <label class="size-chip"><input type="checkbox" value="XL"> XL</label>
-                    <label class="size-chip"><input type="checkbox" value="2XL"> 2XL</label>
-                    <label class="size-chip"><input type="checkbox" value="3XL"> 3XL</label>
+            <div class="form-section" style="margin-bottom:2rem;">
+                <h4
+                    style="color:var(--accent); border-right:4px solid var(--accent); padding-right:10px; margin-bottom:1.5rem;">
+                    1. المعلومات الأساسية</h4>
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px;">
+                    <div class="input-group">
+                        <label>إسم المنتج:</label>
+                        <input type="text" id="prod-name" placeholder="مثلاً: هودي شتوي تركي">
+                    </div>
+                    <div class="input-group">
+                        <label>السعر (ج.م):</label>
+                        <input type="number" id="prod-price" placeholder="100">
+                    </div>
+                </div>
+                <div class="input-group" style="margin-top:15px;">
+                    <label>القسم (Category):</label>
+                    <select id="prod-category" style="background:#111; border-color:#333;">
+                        <option value="">اختر القسم...</option>
+                    </select>
                 </div>
             </div>
 
-            <div class="input-group" style="text-align: right; margin-bottom: 1.5rem;">
-                <label>الألوان المتاحة (صور لكل لون):</label>
-                <div id="color-variants-container" style="margin-top: 10px;">
-                    <!-- Color items will be added here -->
+            <div class="form-section" style="margin-bottom:2rem;">
+                <h4
+                    style="color:var(--accent); border-right:4px solid var(--accent); padding-right:10px; margin-bottom:1.5rem;">
+                    2. الصور والمقاسات</h4>
+                <div class="input-group">
+                    <label>الصورة الأساسية (تظهر في الواجهة):</label>
+                    <input type="file" id="prod-main-img" accept="image/*"
+                        style="border:1px dashed #444; padding:20px;">
                 </div>
+                <div class="input-group" style="margin-top:20px;">
+                    <label>المقاسات المتاحة لهذا المنتج:</label>
+                    <div id="size-options" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <label class="size-chip"><input type="checkbox" value="S"> S</label>
+                        <label class="size-chip"><input type="checkbox" value="M"> M</label>
+                        <label class="size-chip"><input type="checkbox" value="L"> L</label>
+                        <label class="size-chip"><input type="checkbox" value="XL"> XL</label>
+                        <label class="size-chip"><input type="checkbox" value="2XL"> 2XL</label>
+                        <label class="size-chip"><input type="checkbox" value="3XL"> 3XL</label>
+                        <label class="size-chip"><input type="checkbox" value="4XL"> 4XL</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section" style="margin-bottom:2rem;">
+                <h4
+                    style="color:var(--accent); border-right:4px solid var(--accent); padding-right:10px; margin-bottom:1.5rem;">
+                    3. الألوان والبدائل (Variants)</h4>
+                <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem;">أضف كل لون متاح مع صورة مخصصة
+                    له:</p>
+                <div id="color-variants-container"></div>
                 <button type="button" onclick="window.addColorVariant()" class="add-btn"
-                    style="background:#222; width: 100%; justify-content: center; margin-top: 10px;">+ إضافة لون
-                    جديد</button>
+                    style="background:#111; border:1px solid #333; width:100%; justify-content:center; margin-top:1rem;">
+                    <i data-lucide="plus"></i> إضافة لون/بديل جديد
+                </button>
             </div>
 
-            <div class="modal-btns">
-                <button id="save-product" class="save-btn">حفظ ونشر المنتج</button>
+            <div class="modal-btns" style="margin-top:3rem; border-top:1px solid #222; padding-top:2rem;">
+                <button id="save-product" class="save-btn" style="height:55px; font-size:1.1rem;">نشر المنتج
+                    الآن</button>
                 <button onclick="closeModal('modal-product')" class="cancel-btn">إلغاء</button>
             </div>
         </div>

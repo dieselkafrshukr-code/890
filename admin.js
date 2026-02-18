@@ -11,14 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Global State for the Store Tree
     let storeTreeData = [];
-    let currentModalTarget = null; // 'root' or a parent node id
+    let currentModalTarget = null;
 
     // --- 1. AUTH LOGIC ---
     auth.onAuthStateChanged(user => {
         if (user) {
             loginScreen.classList.add('hidden');
             adminPanel.classList.remove('hidden');
-            loadTab('categories');
+            loadTab('orders');
         } else {
             loginScreen.classList.remove('hidden');
             adminPanel.classList.add('hidden');
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.innerText = "جاري الدخول...";
         auth.signInWithEmailAndPassword(email, pass).catch(err => {
             alert("❌ فشل الدخول: " + err.message);
-            loginBtn.innerText = "Login";
+            loginBtn.innerText = "تسجيل الدخول";
         });
     };
 
@@ -50,24 +50,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function loadTab(tab) {
-        tabContent.innerHTML = '<div style="text-align:center; padding:50px;">جاري التحميل...</div>';
+        tabContent.innerHTML = '<div style="text-align:center; padding:50px;">جاري تحميل البيانات...</div>';
         if (tab === 'categories') renderCategoryEditor();
         if (tab === 'products') renderProductManager();
         if (tab === 'orders') renderOrderViewer();
     }
 
-    // --- 3. CATEGORY EDITOR (THE MAP) ---
+    // --- 3. CATEGORY EDITOR ---
     async function renderCategoryEditor() {
         const snap = await db.collection('settings').doc('storeTree').get();
         storeTreeData = snap.exists ? (snap.data().options || []) : [];
-
         updateTreeView();
     }
 
     function updateTreeView() {
         tabContent.innerHTML = `
             <div class="actions-header">
-                <h3>خريطة الأقسام الحالية</h3>
+                <h3>خريطة الأقسام</h3>
                 <button onclick="window.openCategoryModal('root')" class="add-btn"><i data-lucide="plus-circle"></i> إضافة قسم رئيسي</button>
             </div>
             <div id="tree-container" class="tree-view"></div>
@@ -78,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const container = document.getElementById('tree-container');
         if (storeTreeData.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:var(--text-dim); padding:2rem;">لا توجد أقسام بعد. ابدأ بإضافة قسم رئيسي.</p>';
+            container.innerHTML = '<p style="text-align:center; color:var(--text-dim); padding:2rem;">لا توجد أقسام بعد.</p>';
         } else {
             renderTreeView(storeTreeData, container);
         }
@@ -92,10 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     name: "EL TOUFAN",
                     options: storeTreeData
                 });
-                alert("✅ تم حفظ الخريطة ونشرها على الموقع بنجاح!");
-            } catch (e) {
-                alert("❌ خطأ في الحفظ: " + e.message);
-            }
+                alert("✅ تم حفظ ونشر التغييرات بنجاح!");
+            } catch (e) { alert("❌ خطأ: " + e.message); }
             btn.innerHTML = '<i data-lucide="save"></i> حفظ ونشر التغييرات على الموقع';
             btn.disabled = false;
             lucide.createIcons();
@@ -108,15 +105,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = 'tree-item';
             item.style.marginRight = `${level * 40}px`;
-
-            // Check if it's a leaf node or has children
-            const hasChildren = node.options && node.options.length > 0;
-
             item.innerHTML = `
                 <span class="name">${node.name}</span>
                 <div class="item-actions">
                     <button onclick="window.openCategoryModal('${node.id}')" class="action-link add"><i data-lucide="plus"></i> فرعي</button>
-                    <button onclick="window.deleteNode('${node.id}')" class="action-link del"><i data-lucide="trash-2"></i> حذف</button>
+                    <button onclick="window.deleteNode('${node.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
                 </div>
             `;
             container.appendChild(item);
@@ -124,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- MODAL LOGIC ---
     window.openCategoryModal = (parentId) => {
         currentModalTarget = parentId;
         document.getElementById('cat-name').value = '';
@@ -138,19 +130,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-cat').onclick = () => {
         const name = document.getElementById('cat-name').value.trim();
         if (!name) return alert("يرجى إدخال اسم القسم");
-
-        const newNode = {
-            id: 'id_' + Date.now(),
-            name: name,
-            options: []
-        };
-
-        if (currentModalTarget === 'root') {
-            storeTreeData.push(newNode);
-        } else {
-            addNodeToParent(storeTreeData, currentModalTarget, newNode);
-        }
-
+        const newNode = { id: 'id_' + Date.now(), name: name, options: [] };
+        if (currentModalTarget === 'root') storeTreeData.push(newNode);
+        else addNodeToParent(storeTreeData, currentModalTarget, newNode);
         window.closeModal('modal-category');
         updateTreeView();
     };
@@ -168,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.deleteNode = (id) => {
-        if (!confirm("هل أنت متأكد من حذف هذا القسم وكل تفرعاته؟")) return;
+        if (!confirm("هل متأكد من حذف هذا القسم؟")) return;
         storeTreeData = removeNodeById(storeTreeData, id);
         updateTreeView();
     };
@@ -185,52 +167,52 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderProductManager() {
         tabContent.innerHTML = `
             <div class="actions-header">
-                <h3>إدارة المنتجات</h3>
+                <div>
+                    <h3>إدارة المنتجات</h3>
+                    <p style="color:var(--text-dim); font-size:0.85rem;">تحكم في صور وألوان ومقاسات منتجاتك</p>
+                </div>
                 <button onclick="window.openProductModal()" class="add-btn"><i data-lucide="plus-circle"></i> إضافة منتج جديد</button>
             </div>
-            <div id="products-list" class="orders-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
-                <p style="text-align:center; grid-column: 1/-1;">جاري تحميل المنتجات...</p>
+            <div id="products-list-grid" class="orders-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+                <p style="text-align:center; grid-column: 1/-1; padding: 4rem; color:var(--text-dim);">جاري التحميل...</p>
             </div>
         `;
 
-        const productsContainer = document.getElementById('products-list');
-        const snap = await db.collection('products').orderBy('timestamp', 'desc').get();
-
-        if (snap.empty) {
-            productsContainer.innerHTML = '<p style="text-align:center; grid-column: 1/-1; color:var(--text-dim);">لا توجد منتجات حالياً.</p>';
-        } else {
-            productsContainer.innerHTML = '';
-            snap.forEach(doc => {
-                const p = doc.data();
-                const card = document.createElement('div');
-                card.className = 'tree-item'; // Reusing style
-                card.style.flexDirection = 'row';
-                card.style.alignItems = 'center';
-                card.style.gap = '15px';
-                card.innerHTML = `
-                        <img src="${p.mainImage || 'https://via.placeholder.com/50'}" style="width:50px; height:50px; border-radius:8px; object-fit:cover;">
+        try {
+            const container = document.getElementById('products-list-grid');
+            const snap = await db.collection('products').orderBy('timestamp', 'desc').get();
+            if (snap.empty) {
+                container.innerHTML = '<div style="text-align:center; grid-column:1/-1; padding:5rem;"><p style="color:var(--text-dim);">لا توجد منتجات.</p></div>';
+            } else {
+                container.innerHTML = '';
+                snap.forEach(doc => {
+                    const p = doc.data();
+                    const card = document.createElement('div');
+                    card.className = 'tree-item';
+                    card.style.flexDirection = 'row';
+                    card.style.alignItems = 'center';
+                    card.style.gap = '15px';
+                    card.innerHTML = `
+                        <img src="${p.mainImage || 'https://via.placeholder.com/60'}" style="width:60px; height:60px; border-radius:12px; object-fit:cover;">
                         <div style="flex-grow:1;">
-                            <div style="display:flex; justify-content:space-between; width:100%; margin-bottom:5px;">
-                                <span class="name">${p.name}</span>
+                            <div style="display:flex; justify-content:space-between; width:100%; margin-bottom:4px;">
+                                <span class="name" style="font-size:1.1rem; font-weight:800;">${p.name}</span>
                                 <span style="color:var(--accent); font-weight:900;">${p.price} ج.م</span>
                             </div>
-                            <div style="color:var(--text-dim); font-size:0.8rem;">
-                                <i data-lucide="tag" style="width:12px;"></i> ${p.categoryName || 'بدون قسم'}
-                            </div>
+                            <div style="color:var(--text-dim); font-size:0.75rem;">${p.categoryName || 'قسم عام'}</div>
                         </div>
-                        <button onclick="window.deleteProduct('${doc.id}')" class="action-link del" style="margin-right:auto;"><i data-lucide="trash-2"></i></button>
+                        <button onclick="window.deleteProduct('${doc.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
                     `;
-                productsContainer.appendChild(card);
-            });
-        }
+                    container.appendChild(card);
+                });
+            }
+        } catch (e) { console.error(e); }
         lucide.createIcons();
     }
 
     window.openProductModal = async () => {
         const catSelect = document.getElementById('prod-category');
-        catSelect.innerHTML = '<option value="">اختر القسم...</option>';
-
-        // Reset Modal
+        catSelect.innerHTML = '<option value="">-- اختر القسم --</option>';
         document.getElementById('prod-name').value = '';
         document.getElementById('prod-price').value = '';
         document.getElementById('prod-main-img').value = '';
@@ -246,11 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         };
         flatten(storeTreeData);
-
         categories.forEach(c => {
-            catSelect.innerHTML += `<option value="${c.id}" data-name="${c.name}">${c.name}</option>`;
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.dataset.name = c.name;
+            opt.innerText = c.name;
+            catSelect.appendChild(opt);
         });
-
         document.getElementById('modal-product').classList.remove('hidden');
     };
 
@@ -263,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.innerHTML = `
             <input type="text" placeholder="اسم اللون" class="v-name">
             <input type="file" accept="image/*" class="v-img">
-            <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i data-lucide="trash"></i></button>
+            <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i data-lucide="x"></i></button>
         `;
         container.appendChild(row);
         lucide.createIcons();
@@ -278,68 +262,51 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = nameInput.value.trim();
         const price = priceInput.value.trim();
         const catId = catSelect.value;
-        const selectedOption = catSelect.options[catSelect.selectedIndex];
-        const catName = selectedOption ? selectedOption.dataset.name : "";
+        const selectedOpt = catSelect.options[catSelect.selectedIndex];
+        const catName = selectedOpt ? selectedOpt.dataset.name : "";
 
-        // Collect Sizes
         const selectedSizes = Array.from(document.querySelectorAll('#size-options input:checked')).map(cb => cb.value);
-
-        // Collect Colors
         const colorRows = document.querySelectorAll('.color-variant-row');
 
-        if (!name || !price || !catId || !mainImgFile) {
-            alert("❌ يرجى التأكد من الاسم والسعر والقسم والصورة الأساسية!");
-            return;
-        }
+        if (!name || !price || !catId || !mainImgFile) return alert("❌ املأ البيانات الأساسية!");
 
         const btn = document.getElementById('save-product');
-        btn.innerText = "جاري الرفع...";
+        btn.innerText = "جاري الحفظ...";
         btn.disabled = true;
 
         try {
-            // 1. Upload Main Image
-            const mainRef = storage.ref().child(`products/${Date.now()}_main_${mainImgFile.name}`);
+            const mainRef = storage.ref().child(`products/${Date.now()}_main`);
             await mainRef.put(mainImgFile);
             const mainUrl = await mainRef.getDownloadURL();
 
-            // 2. Upload Color Images
             const colorsData = [];
             for (let row of colorRows) {
                 const nameV = row.querySelector('.v-name').value.trim();
                 const fileV = row.querySelector('.v-img').files[0];
                 if (nameV && fileV) {
-                    const rowRef = storage.ref().child(`products/${Date.now()}_${nameV}_${fileV.name}`);
+                    const rowRef = storage.ref().child(`products/${Date.now()}_${nameV}`);
                     await rowRef.put(fileV);
                     const urlV = await rowRef.getDownloadURL();
                     colorsData.push({ name: nameV, image: urlV });
                 }
             }
 
-            // 3. Save to Firestore
             await db.collection('products').add({
-                name,
-                price,
-                categoryId: catId,
-                categoryName: catName,
-                mainImage: mainUrl,
-                sizes: selectedSizes,
-                colors: colorsData,
+                name, price, categoryId: catId, categoryName: catName,
+                mainImage: mainUrl, sizes: selectedSizes, colors: colorsData,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             window.closeModal('modal-product');
-            alert("✅ تم إضافة المنتج بنجاح!");
+            alert("✅ تم بنجاح!");
             renderProductManager();
-        } catch (e) {
-            console.error(e);
-            alert("❌ خطأ أثناء الحفظ: " + e.message);
-        }
+        } catch (e) { alert("❌ خطأ: " + e.message); }
         btn.innerText = "حفظ ونشر المنتج";
         btn.disabled = false;
     };
 
     window.deleteProduct = async (id) => {
-        if (!confirm("هل أنت متأكد من حذف هذا المنتج؟")) return;
+        if (!confirm("حذف المنتج؟")) return;
         await db.collection('products').doc(id).delete();
         renderProductManager();
     };
@@ -348,39 +315,17 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderOrderViewer() {
         const snap = await db.collection('orders').orderBy('timestamp', 'desc').limit(50).get();
         if (snap.empty) {
-            tabContent.innerHTML = '<p style="text-align:center; padding:3rem; color:var(--text-dim);">لا توجد طلبات حالياً.</p>';
+            tabContent.innerHTML = '<p style="text-align:center; padding:3rem;">لا توجد طلبات.</p>';
             return;
         }
-
-        let html = `
-            <table class="orders-table">
-                <thead>
-                    <tr>
-                        <th>العميل</th>
-                        <th>المنتج</th>
-                        <th>الوقت</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
+        let html = '<table class="orders-table"><thead><tr><th>العميل</th><th>الطلب</th><th>الوقت</th><th>الحالة</th></tr></thead><tbody>';
         snap.forEach(doc => {
-            const order = doc.data();
-            const date = order.timestamp ? new Date(order.timestamp.toDate()).toLocaleString('ar-EG') : 'غير مسجل';
-            html += `
-                <tr>
-                    <td>${order.customer || 'زائر'}</td>
-                    <td><span style="font-weight:700; color:var(--accent);">${order.item}</span></td>
-                    <td>${date}</td>
-                    <td><span class="status-badge">${order.status === 'new' ? 'طلب جديد' : order.status}</span></td>
-                </tr>
-            `;
+            const o = doc.data();
+            const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : '';
+            html += `<tr><td>${o.customer}</td><td>${o.item}</td><td>${date}</td><td><span class="status-badge">${o.status}</span></td></tr>`;
         });
         html += '</tbody></table>';
         tabContent.innerHTML = html;
         lucide.createIcons();
     }
-
-
 });
