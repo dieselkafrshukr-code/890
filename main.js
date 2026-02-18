@@ -1,118 +1,231 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Intro Animation
-    const introTitle = document.getElementById('intro-title');
-    const introSub = document.getElementById('intro-sub');
-    const preloader = document.getElementById('preloader');
-    const appContent = document.getElementById('app-content');
+    // --- 1. CONFIG & DATA ---
+    const storeTree = {
+        name: "البداية",
+        options: [
+            {
+                id: "wholesale",
+                name: "جملة",
+                desc: "أسعار خاصة للتجار والكميات",
+                options: [] // Wholesale can be added later or follow the same tree
+            },
+            {
+                id: "retail",
+                name: "قطاعي",
+                desc: "أرقى الموديلات للأفراد",
+                options: [
+                    {
+                        id: "men",
+                        name: "رجالي",
+                        options: [
+                            {
+                                id: "m-clothes",
+                                name: "ملابس",
+                                options: [
+                                    { name: "بنطلون" }, { name: "تيشيرت" }, { name: "قميص" }, { name: "جاكيت" },
+                                    { name: "سويسرت" }, { name: "بلوفر" }, { name: "بدلة" }, { name: "شورت" }
+                                ]
+                            },
+                            {
+                                id: "m-shoes",
+                                name: "أحذية",
+                                options: [
+                                    { name: "كوتشي" }, { name: "جزمة كلاسيك" }, { name: "بوت" }, { name: "صندل" }
+                                ]
+                            },
+                            {
+                                id: "m-acc",
+                                name: "إكسسوارات",
+                                options: [{ name: "ساعة" }, { name: "نظارة" }, { name: "حزام" }, { name: "محفظة" }]
+                            },
+                            { name: "برفانات" },
+                            { name: "داخلي" }
+                        ]
+                    },
+                    {
+                        id: "women",
+                        name: "حريمي",
+                        options: [
+                            {
+                                id: "w-clothes",
+                                name: "ملابس",
+                                options: [
+                                    { name: "فستان" }, { name: "بلوزة" }, { name: "جيبة" }, { name: "بنطلون" },
+                                    { name: "جاكيت" }, { name: "عباية" }, { name: "ترينج" }
+                                ]
+                            },
+                            {
+                                id: "w-shoes",
+                                name: "أحذية",
+                                options: [
+                                    { name: "هيلز" }, { name: "فلات" }, { name: "سنيكرز" }, { name: "بوت" }, { name: "صندل" }
+                                ]
+                            },
+                            { name: "شنط" },
+                            { name: "ميك أب" },
+                            { name: "إكسسوارات" },
+                            { name: "برفانات" },
+                            { name: "داخلي" }
+                        ]
+                    },
+                    {
+                        id: "unisex",
+                        name: "محير (يونيسكس)",
+                        options: [
+                            {
+                                id: "u-clothes",
+                                name: "ملابس",
+                                options: [{ name: "تيشيرت" }, { name: "هودي" }, { name: "سويسرت" }, { name: "ترينج" }]
+                            },
+                            {
+                                id: "u-shoes",
+                                name: "أحذية",
+                                options: [{ name: "سنيكرز" }, { name: "كاجوال" }]
+                            }
+                        ]
+                    },
+                    {
+                        id: "kids",
+                        name: "أطفال",
+                        options: [
+                            {
+                                id: "k-clothes",
+                                name: "ملابس",
+                                options: [
+                                    {
+                                        name: "أولادي",
+                                        options: [{ name: "تيشيرت" }, { name: "بنطلون" }, { name: "جاكيت" }, { name: "ترينج" }]
+                                    },
+                                    {
+                                        name: "بناتي",
+                                        options: [{ name: "فستان" }, { name: "بلوزة" }, { name: "جيبة" }, { name: "ترينج" }]
+                                    }
+                                ]
+                            },
+                            {
+                                id: "k-shoes",
+                                name: "أحذية",
+                                options: [
+                                    {
+                                        name: "أولادي",
+                                        options: [{ name: "سنيكرز" }, { name: "صندل" }, { name: "بوت" }]
+                                    },
+                                    {
+                                        name: "بناتي",
+                                        options: [{ name: "هيلز أطفال" }, { name: "فلات" }, { name: "صندل" }, { name: "سنيكرز" }]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    };
 
-    const typeText = async (element, text, speed = 100) => {
-        for (let i = 0; i < text.length; i++) {
-            element.textContent += text[i];
-            await new Promise(resolve => setTimeout(resolve, speed));
+    // Fill Wholesale with a clone of Retail for demo purposes if needed
+    storeTree.options[0].options = JSON.parse(JSON.stringify(storeTree.options[1].options));
+
+    // --- 2. STATE MANAGEMENT ---
+    let navigationStack = [storeTree]; // To handle back button
+    let currentLevel = storeTree;
+    let cartCount = 0;
+
+    // --- 3. DOM ELEMENTS ---
+    const introScreen = document.getElementById('intro-screen');
+    const mainApp = document.getElementById('main-app');
+    const optionsGrid = document.getElementById('options-grid');
+    const stageTitle = document.getElementById('stage-title');
+    const stageDesc = document.getElementById('stage-desc');
+    const backBtn = document.getElementById('back-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const steps = document.querySelectorAll('.step');
+
+    // --- 4. INTRO ANIMATION ---
+    const startIntro = async () => {
+        // Just a delay to show the CSS animation/structure
+        setTimeout(() => {
+            introScreen.classList.add('hidden');
+            setTimeout(() => {
+                introScreen.style.display = 'none';
+                mainApp.classList.remove('hidden');
+                renderStage();
+                lucide.createIcons();
+            }, 600);
+        }, 2500);
+    };
+
+    // --- 5. RENDER LOGIC ---
+    function renderStage() {
+        // Update Title & Desc
+        stageTitle.innerText = currentLevel.name;
+        stageDesc.innerText = currentLevel.desc || "اختر من الخيارات المتاحة";
+
+        // Update Steps
+        const levelIdx = navigationStack.length;
+        steps.forEach((s, i) => {
+            s.classList.toggle('active', i + 1 <= levelIdx);
+        });
+
+        // Clear and Render Grid
+        optionsGrid.innerHTML = '';
+
+        if (currentLevel.options && currentLevel.options.length > 0) {
+            currentLevel.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'opt-btn';
+                btn.innerText = opt.name;
+                btn.onclick = () => selectOption(opt);
+                optionsGrid.appendChild(btn);
+            });
+        } else {
+            // Leaf node: Final Item
+            const msg = document.createElement('div');
+            msg.className = 'stage-desc';
+            msg.style.width = '100%';
+            msg.innerHTML = `<p style="color: var(--gold); font-size: 1.5rem; font-weight: 700;">تم اختيار: ${currentLevel.name}</p>`;
+            optionsGrid.appendChild(msg);
+
+            const addBtn = document.createElement('button');
+            addBtn.className = 'opt-btn active';
+            addBtn.innerHTML = `<i data-lucide="shopping-cart"></i> أضف للطلب`;
+            addBtn.onclick = () => {
+                cartCount++;
+                document.getElementById('cart-count').innerText = cartCount;
+                addBtn.innerText = "تمت الإضافة ✓";
+                addBtn.disabled = true;
+            };
+            optionsGrid.appendChild(addBtn);
+            lucide.createIcons();
+        }
+
+        // Show/Hide Back & Reset
+        backBtn.classList.toggle('hidden', navigationStack.length <= 1);
+        resetBtn.classList.toggle('hidden', navigationStack.length <= 1);
+    }
+
+    function selectOption(opt) {
+        navigationStack.push(currentLevel);
+        currentLevel = opt;
+        renderStage();
+    }
+
+    window.goBack = () => {
+        if (navigationStack.length > 0) {
+            currentLevel = navigationStack.pop();
+            renderStage();
         }
     };
 
-    const startIntro = async () => {
-        await typeText(introTitle, "EL TOUFAN", 120);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        await typeText(introSub, "KAFR SHUKR", 100);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        preloader.style.transition = 'opacity 1s ease';
-        preloader.style.opacity = '0';
-        setTimeout(() => {
-            preloader.style.display = 'none';
-            appContent.style.opacity = '1';
-            initApp();
-        }, 1000);
+    window.resetApp = () => {
+        navigationStack = [];
+        currentLevel = storeTree;
+        renderStage();
     };
+
+    // Event Bindings
+    backBtn.onclick = window.goBack;
+    resetBtn.onclick = window.resetApp;
 
     startIntro();
-
-    function initApp() {
-        lucide.createIcons();
-        renderMainTabs();
-    }
-
-    // 2. Data Structure
-    const storeData = [
-        {
-            id: 'men',
-            name: 'رجالي',
-            sub: [
-                { id: 'm-clothes', name: 'ملابس', items: ["بنطلون", "تيشيرت", "قميص", "جاكيت", "سويسرت", "بلوفر", "بدلة", "شورت"] },
-                { id: 'm-shoes', name: 'أحذية', items: ["كوتشي", "جزمة كلاسيك", "بوت", "صندل"] },
-                { id: 'm-acc', name: 'إكسسوارات', items: ["ساعة", "نظارة", "حزام", "محفظة"] }
-            ]
-        },
-        {
-            id: 'women',
-            name: 'حريمي',
-            sub: [
-                { id: 'w-clothes', name: 'ملابس', items: ["فستان", "بلوزة", "جيبة", "بنطلون", "جاكيت", "عباية", "ترينج"] },
-                { id: 'w-shoes', name: 'أحذية', items: ["هيلز", "فلات", "سنيكرز", "بوت", "صندل"] },
-                { id: 'w-acc', name: 'حقائب وجمال', items: ["شنطة", "ميك أب", "إكسسوارات", "برفان"] }
-            ]
-        },
-        {
-            id: 'kids',
-            name: 'أطفال',
-            sub: [
-                { id: 'k-boys', name: 'أولادي', items: ["تيشيرت", "بنطلون", "جاكيت", "ترينج", "سنيكرز", "صندل"] },
-                { id: 'k-girls', name: 'بناتي', items: ["فستان", "بلوزة", "جيبة", "ترينج", "فلات", "صندل"] }
-            ]
-        },
-        {
-            id: 'unisex',
-            name: 'محير',
-            sub: [
-                { id: 'u-clothes', name: 'ملابس', items: ["تيشيرت", "هودي", "سويسرت", "ترينج"] },
-                { id: 'u-shoes', name: 'أحذية', items: ["سنيكرز", "كاجوال"] }
-            ]
-        }
-    ];
-
-    let activeCategory = storeData[0];
-    let activeSub = activeCategory.sub[0];
-
-    // 3. UI Rendering Logic
-    function renderMainTabs() {
-        const container = document.getElementById('main-tabs');
-        container.innerHTML = storeData.map(cat => `
-            <button class="tab-btn ${cat.id === activeCategory.id ? 'active' : ''}" 
-                    onclick="selectCategory('${cat.id}')">
-                ${cat.name}
-            </button>
-        `).join('');
-        renderSubFilters();
-    }
-
-    function renderSubFilters() {
-        const container = document.getElementById('sub-filters');
-        container.innerHTML = activeCategory.sub.map((sub, idx) => `
-            <button class="filter-btn ${sub.id === activeSub.id ? 'active' : ''}" 
-                    onclick="selectSub('${sub.id}')">
-                ${sub.name}
-            </button>
-        `).join('');
-        renderItems();
-    }
-
-    function renderItems() {
-        const container = document.getElementById('final-items-grid');
-        container.innerHTML = activeSub.items.map(item => `
-            <div class="item-chip">${item}</div>
-        `).join('');
-    }
-
-    // 4. Global Event Handlers
-    window.selectCategory = (id) => {
-        activeCategory = storeData.find(c => c.id === id);
-        activeSub = activeCategory.sub[0];
-        renderMainTabs();
-    };
-
-    window.selectSub = (id) => {
-        activeSub = activeCategory.sub.find(s => s.id === id);
-        renderSubFilters();
-    };
 });

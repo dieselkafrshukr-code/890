@@ -8,109 +8,70 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@400;700;900&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <!-- Intro Animation -->
-    <div id="preloader" class="preloader">
-        <div class="intro-content">
-            <h1 id="intro-title"></h1>
-            <div class="sub-intro">
-                <span id="intro-sub"></span><span class="cursor">_</span>
+    <!-- Intro (DIESEL Style) -->
+    <div id="intro-screen" class="intro-overlay">
+        <div class="intro-box">
+            <h1 class="intro-main">EL TOUFAN</h1>
+            <div class="intro-sub-line">
+                <span class="intro-sub-text">KAFR SHUKR</span>
+                <span class="intro-cursor">_</span>
             </div>
         </div>
     </div>
 
-    <div id="app-content">
-        <div class="glow-bg"></div>
-
-        <nav class="navbar">
-            <div class="nav-container">
-                <div class="logo-area">
-                    <img src="logo/WhatsApp Image 2026-02-18 at 19.18.38.jpeg" alt="EL TOUFAN" class="main-logo">
-                    <div class="logo-text-group">
-                        <span class="brand-name">EL TOUFAN</span>
-                        <span class="brand-tag">PREMIUM WEAR</span>
-                    </div>
-                </div>
-                <div class="nav-links">
-                    <a href="#home">الرئيسية</a>
-                    <a href="#store-section">المتجر</a>
-                    <a href="#about">تواصل معنا</a>
-                </div>
-                <div class="nav-actions">
-                    <button class="icon-btn cart-trigger">
-                        <i data-lucide="shopping-cart"></i>
-                        <span class="badge">0</span>
-                    </button>
+    <!-- Main App Container -->
+    <div id="main-app" class="app-container hidden">
+        <header class="header">
+            <div class="logo-box">
+                <img src="logo/WhatsApp Image 2026-02-18 at 19.18.38.jpeg" alt="Logo" class="site-logo">
+                <div class="logo-texts">
+                    <span class="logo-name">EL TOUFAN</span>
+                    <span class="logo-tag">PREMIUM VERSION</span>
                 </div>
             </div>
-        </nav>
+            <div class="header-actions">
+                <button class="cart-btn"><i data-lucide="shopping-bag"></i><span id="cart-count">0</span></button>
+            </div>
+        </header>
 
-        <section id="home" class="hero-section">
-            <div class="hero-content">
-                <h1 class="glitch-text" data-text="EL TOUFAN">EL TOUFAN</h1>
-                <h2 class="sub-hero">أقوى تشكيلة ملابس في مصر</h2>
-                <div class="hero-actions">
-                    <button class="btn-glow" onclick="document.getElementById('store-section').scrollIntoView()">تصفح
-                        الأقسام</button>
+        <main class="explorer-main">
+            <div class="step-indicator">
+                <div class="step active" data-step="1">1</div>
+                <div class="step-line"></div>
+                <div class="step" data-step="2">2</div>
+                <div class="step-line"></div>
+                <div class="step" data-step="3">3</div>
+                <div class="step-line"></div>
+                <div class="step" data-step="4">4</div>
+            </div>
+
+            <div id="selection-stage" class="stage-container">
+                <div class="stage-header">
+                    <h2 id="stage-title">مرحباً بك في الطوفان</h2>
+                    <p id="stage-desc">اختر طريقة الشراء أولاً</p>
+                </div>
+
+                <div id="options-grid" class="options-grid">
+                    <!-- Buttons will appear here -->
+                </div>
+
+                <div class="stage-footer">
+                    <button id="back-btn" class="back-btn hidden"><i data-lucide="chevron-right"></i> رجوع</button>
+                    <button id="reset-btn" class="reset-btn hidden">البداية <i data-lucide="rotate-ccw"></i></button>
                 </div>
             </div>
-        </section>
+        </main>
 
-        <!-- Dynamic Store Section -->
-        <section id="store-section" class="store-explorer">
-            <div class="container">
-                <div class="section-header">
-                    <span class="accent-line"></span>
-                    <h2>تصفح حسب الفئة</h2>
-                    <p>اختر القسم لرؤية الخيارات المتاحة</p>
-                </div>
-
-                <!-- Main Tabs (Men, Women, etc.) -->
-                <div class="tabs-container" id="main-tabs">
-                    <!-- Dynamic -->
-                </div>
-
-                <!-- Sub-Category Filters (Clothes, Shoes, etc.) -->
-                <div class="filters-container" id="sub-filters">
-                    <!-- Dynamic -->
-                </div>
-
-                <!-- Final Items (Pants, T-shirts, etc.) -->
-                <div class="items-grid" id="final-items-grid">
-                    <!-- Dynamic chips like the user photo -->
-                </div>
-            </div>
-        </section>
-
-        <footer class="modern-footer" id="about">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <img src="logo/WhatsApp Image 2026-02-18 at 19.18.38.jpeg" alt="EL TOUFAN">
-                    <h3>EL TOUFAN</h3>
-                    <p>المكان الذي تجتمع فيه الجودة مع الأناقة. الطوفان للملابس الجاهزة.</p>
-                </div>
-                <div class="footer-contact">
-                    <h4>تواصل معنا</h4>
-                    <div class="contact-item"><i data-lucide="phone"></i> <span>0123456789</span></div>
-                    <div class="contact-item"><i data-lucide="map-pin"></i> <span>كفر شكر، القليوبية</span></div>
-                    <div class="social-links">
-                        <a href="#"><i data-lucide="facebook"></i></a>
-                        <a href="#"><i data-lucide="instagram"></i></a>
-                        <a href="#"><i data-lucide="message-circle"></i></a>
-                    </div>
-                </div>
-            </div>
-            <div class="copyright">
-                <p>&copy; 2026 EL TOUFAN. All Rights Reserved.</p>
-            </div>
-        </footer>
+        <footer class="footer">
+            <p>&copy; 2026 EL TOUFAN. Powered by Diesel.</p>
+    </div>
     </div>
 
     <script src="main.js"></script>
