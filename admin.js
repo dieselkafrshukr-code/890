@@ -9,11 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabContent = document.getElementById('tab-content');
     const tabTitle = document.getElementById('tab-title');
 
-    // Global State for the Store Tree
+    // State
     let storeTreeData = [];
     let currentModalTarget = null;
+    const sizeSystems = {
+        clothes: ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'],
+        pants: ['28', '30', '32', '34', '36', '38', '40', '42'],
+        shoes: ['37', '38', '39', '40', '41', '42', '43', '44', '45']
+    };
 
-    // --- 1. AUTH LOGIC ---
+    // --- AUTH ---
     auth.onAuthStateChanged(user => {
         if (user) {
             loginScreen.classList.add('hidden');
@@ -28,206 +33,210 @@ document.addEventListener('DOMContentLoaded', () => {
     loginBtn.onclick = () => {
         const email = document.getElementById('email').value;
         const pass = document.getElementById('password').value;
-        loginBtn.innerText = "جاري الدخول...";
+        loginBtn.innerText = "⏳ جاري التحقق...";
         auth.signInWithEmailAndPassword(email, pass).catch(err => {
-            alert("❌ فشل الدخول: " + err.message);
-            loginBtn.innerText = "تسجيل الدخول";
+            alert("❌ خطأ: " + err.message);
+            loginBtn.innerText = "تسجيل الدخول الآمن";
         });
     };
 
     logoutBtn.onclick = () => auth.signOut();
 
-    // --- 2. TAB NAVIGATION ---
+    // --- NAVIGATION ---
     tabItems.forEach(item => {
         item.onclick = () => {
             if (item.classList.contains('logout')) return;
             tabItems.forEach(i => i.classList.remove('active'));
             item.classList.add('active');
             const tab = item.dataset.tab;
-            tabTitle.innerText = item.innerText;
+            tabTitle.innerText = item.querySelector('span').innerText;
             loadTab(tab);
         };
     });
 
     function loadTab(tab) {
-        tabContent.innerHTML = '<div style="text-align:center; padding:50px;">جاري تحميل البيانات...</div>';
-        if (tab === 'categories') renderCategoryEditor();
-        if (tab === 'products') renderProductManager();
-        if (tab === 'orders') renderOrderViewer();
+        tabContent.innerHTML = '<div style="text-align:center; padding:100px; color:var(--accent);">⭐ جاري تحميل البيانات...</div>';
+        if (tab === 'orders') renderOrders();
+        if (tab === 'categories') renderCategories();
+        if (tab === 'products') renderProducts();
     }
 
-    // --- 3. CATEGORY EDITOR ---
-    async function renderCategoryEditor() {
+    // --- 1. ORDERS ---
+    async function renderOrders() {
+        const snap = await db.collection('orders').orderBy('timestamp', 'desc').get();
+        if (snap.empty) {
+            tabContent.innerHTML = '<div style="text-align:center; padding:5rem; color:var(--text-dim);">🕳️ لا توجد طلبات في الوقت الحالي.</div>';
+            return;
+        }
+
+        let html = `
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>العميل</th>
+                        <th>المنتجات</th>
+                        <th>الوقت</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        snap.forEach(doc => {
+            const o = doc.data();
+            const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
+            html += `
+                <tr>
+                    <td>
+                        <div style="font-weight:900;">${o.customer}</div>
+                        <div style="font-size:0.8rem; color:var(--text-dim);">${o.phone || ''}</div>
+                    </td>
+                    <td>${o.item}</td>
+                    <td style="font-size:0.8rem;">${date}</td>
+                    <td><span class="status-badge">${o.status || 'جديد'}</span></td>
+                </tr>
+            `;
+        });
+        html += '</tbody></table>';
+        tabContent.innerHTML = html;
+        lucide.createIcons();
+    }
+
+    // --- 2. CATEGORIES ---
+    async function renderCategories() {
         const snap = await db.collection('settings').doc('storeTree').get();
         storeTreeData = snap.exists ? (snap.data().options || []) : [];
-        updateTreeView();
-    }
 
-    function updateTreeView() {
         tabContent.innerHTML = `
             <div class="actions-header">
-                <h3>خريطة الأقسام</h3>
-                <button onclick="window.openCategoryModal('root')" class="add-btn"><i data-lucide="plus-circle"></i> إضافة قسم رئيسي</button>
+                <h3>هيكل الأقسام</h3>
+                <button onclick="window.openCategoryModal('root')" class="add-btn"><i data-lucide="plus"></i> إضافة قسم رئيسي</button>
             </div>
-            <div id="tree-container" class="tree-view"></div>
-            <button id="sync-tree" class="add-btn" style="background:var(--accent); color:black; margin-top:3rem; width:100%; justify-content:center;">
-                <i data-lucide="save"></i> حفظ ونشر التغييرات على الموقع
+            <div id="tree-container"></div>
+            <button id="sync-tree" class="add-btn" style="width:100%; justify-content:center; margin-top:2rem; height:60px;">
+                <i data-lucide="save"></i> حفظ ونشر خريطة الموقع
             </button>
         `;
 
         const container = document.getElementById('tree-container');
         if (storeTreeData.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:var(--text-dim); padding:2rem;">لا توجد أقسام بعد.</p>';
+            container.innerHTML = '<p style="text-align:center; padding:3rem; color:var(--text-dim);">لم يتم إضافة أقسام بعد.</p>';
         } else {
             renderTreeView(storeTreeData, container);
         }
 
         document.getElementById('sync-tree').onclick = async () => {
             const btn = document.getElementById('sync-tree');
-            btn.innerText = "جاري الحفظ...";
-            btn.disabled = true;
-            try {
-                await db.collection('settings').doc('storeTree').set({
-                    name: "EL TOUFAN",
-                    options: storeTreeData
-                });
-                alert("✅ تم حفظ ونشر التغييرات بنجاح!");
-            } catch (e) { alert("❌ خطأ: " + e.message); }
-            btn.innerHTML = '<i data-lucide="save"></i> حفظ ونشر التغييرات على الموقع';
-            btn.disabled = false;
-            lucide.createIcons();
+            btn.innerText = "⏳ جاري النشر...";
+            await db.collection('settings').doc('storeTree').set({ options: storeTreeData });
+            alert("✅ تم نشر الأقسام بنجاح!");
+            btn.innerHTML = '<i data-lucide="save"></i> حفظ ونشر خريطة الموقع';
         };
         lucide.createIcons();
     }
 
     function renderTreeView(nodes, container, level = 0) {
-        nodes.forEach((node) => {
-            const item = document.createElement('div');
-            item.className = 'tree-item';
-            item.style.marginRight = `${level * 40}px`;
-            item.innerHTML = `
-                <span class="name">${node.name}</span>
+        nodes.forEach(node => {
+            const el = document.createElement('div');
+            el.className = 'tree-item';
+            el.style.marginRight = `${level * 40}px`;
+            el.innerHTML = `
+                <div style="flex-grow:1; display:flex; align-items:center; gap:10px;">
+                    <i data-lucide="${level === 0 ? 'folder' : 'chevron-left'}" style="width:18px; color:var(--accent);"></i>
+                    <span class="name">${node.name}</span>
+                </div>
                 <div class="item-actions">
-                    <button onclick="window.openCategoryModal('${node.id}')" class="action-link add"><i data-lucide="plus"></i> فرعي</button>
+                    <button onclick="window.openCategoryModal('${node.id}')" class="action-link add"><i data-lucide="plus-square"></i> فرعي</button>
                     <button onclick="window.deleteNode('${node.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
                 </div>
             `;
-            container.appendChild(item);
+            container.appendChild(el);
             if (node.options) renderTreeView(node.options, container, level + 1);
         });
     }
 
-    window.openCategoryModal = (parentId) => {
-        currentModalTarget = parentId;
+    window.openCategoryModal = (id) => {
+        currentModalTarget = id;
         document.getElementById('cat-name').value = '';
         document.getElementById('modal-category').classList.remove('hidden');
     };
 
-    window.closeModal = (id) => {
-        document.getElementById(id).classList.add('hidden');
-    };
+    window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
 
     document.getElementById('save-cat').onclick = () => {
         const name = document.getElementById('cat-name').value.trim();
-        if (!name) return alert("يرجى إدخال اسم القسم");
-        const newNode = { id: 'id_' + Date.now(), name: name, options: [] };
+        if (!name) return;
+        const newNode = { id: 'c_' + Date.now(), name: name, options: [] };
         if (currentModalTarget === 'root') storeTreeData.push(newNode);
-        else addNodeToParent(storeTreeData, currentModalTarget, newNode);
+        else findAndAdd(storeTreeData, currentModalTarget, newNode);
         window.closeModal('modal-category');
-        updateTreeView();
+        renderCategories();
     };
 
-    function addNodeToParent(nodes, parentId, newNode) {
-        for (let node of nodes) {
-            if (node.id === parentId) {
-                if (!node.options) node.options = [];
-                node.options.push(newNode);
-                return true;
-            }
-            if (node.options && addNodeToParent(node.options, parentId, newNode)) return true;
+    function findAndAdd(nodes, targetId, newNode) {
+        for (let n of nodes) {
+            if (n.id === targetId) { n.options.push(newNode); return true; }
+            if (n.options && findAndAdd(n.options, targetId, newNode)) return true;
         }
-        return false;
     }
 
     window.deleteNode = (id) => {
-        if (!confirm("هل متأكد من حذف هذا القسم؟")) return;
-        storeTreeData = removeNodeById(storeTreeData, id);
-        updateTreeView();
+        if (!confirm("هل تريد حذف هذا القسم وكل تفرعاته؟")) return;
+        storeTreeData = filterNodes(storeTreeData, id);
+        renderCategories();
     };
 
-    function removeNodeById(nodes, id) {
-        return nodes.filter(node => {
-            if (node.id === id) return false;
-            if (node.options) node.options = removeNodeById(node.options, id);
+    function filterNodes(nodes, targetId) {
+        return nodes.filter(n => {
+            if (n.id === targetId) return false;
+            if (n.options) n.options = filterNodes(n.options, targetId);
             return true;
         });
     }
 
-    // --- 4. PRODUCT MANAGER ---
-    const sizeSystems = {
-        clothes: ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'],
-        pants: ['28', '30', '32', '34', '36', '38', '40', '42'],
-        shoes: ['37', '38', '39', '40', '41', '42', '43', '44', '45']
-    };
-
-    window.updateSizeSystem = () => {
-        console.log("Size system updated");
-    };
-
-    async function renderProductManager() {
+    // --- 3. PRODUCTS ---
+    async function renderProducts() {
         tabContent.innerHTML = `
             <div class="actions-header">
-                <div>
-                    <h3>إدارة المنتجات</h3>
-                    <p style="color:var(--text-dim); font-size:0.85rem;">تحكم في صور وألوان ومقاسات منتجاتك</p>
-                </div>
+                <h3>إدارة المنتجات</h3>
                 <button onclick="window.openProductModal()" class="add-btn"><i data-lucide="plus-circle"></i> إضافة منتج جديد</button>
             </div>
-            <div id="products-list-grid" class="orders-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
-                <p style="text-align:center; grid-column: 1/-1; padding: 4rem; color:var(--text-dim);">جاري التحميل...</p>
-            </div>
+            <div id="products-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>
         `;
 
-        try {
-            const container = document.getElementById('products-list-grid');
-            const snap = await db.collection('products').orderBy('timestamp', 'desc').get();
-            if (snap.empty) {
-                container.innerHTML = '<div style="text-align:center; grid-column:1/-1; padding:5rem;"><p style="color:var(--text-dim);">لا توجد منتجات.</p></div>';
-            } else {
-                container.innerHTML = '';
-                snap.forEach(doc => {
-                    const p = doc.data();
-                    const card = document.createElement('div');
-                    card.className = 'tree-item';
-                    card.innerHTML = `
-                        <img src="${p.mainImage || ''}" style="width:60px; height:60px; border-radius:12px; object-fit:cover;">
-                        <div style="flex-grow:1; text-align:right;">
-                            <div style="font-weight:800;">${p.name}</div>
-                            <div style="color:var(--accent);">${p.price} ج.م</div>
-                        </div>
-                        <button onclick="window.deleteProduct('${doc.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
-                    `;
-                    container.appendChild(card);
-                });
-            }
-        } catch (e) { console.error(e); }
+        const grid = document.getElementById('products-grid');
+        const snap = await db.collection('products').orderBy('timestamp', 'desc').get();
+
+        if (snap.empty) {
+            grid.innerHTML = '<p style="text-align:center; grid-column:1/-1; padding:3rem; color:var(--text-dim);">لا توجد منتجات حالياً.</p>';
+        } else {
+            snap.forEach(doc => {
+                const p = doc.data();
+                const card = document.createElement('div');
+                card.className = 'product-item-card';
+                card.innerHTML = `
+                    <img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;">
+                    <div style="flex-grow:1;">
+                        <div style="font-weight:900;">${p.name}</div>
+                        <div style="color:var(--accent); font-weight:800; font-size:1.1rem;">${p.price} ج.م</div>
+                        <div style="font-size:0.75rem; color:var(--text-dim);">${p.categoryName || ''}</div>
+                    </div>
+                    <button onclick="window.deleteProduct('${doc.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
+                `;
+                grid.appendChild(card);
+            });
+        }
         lucide.createIcons();
     }
 
-    window.openProductModal = async () => {
-        const catSelect = document.getElementById('prod-category');
-        catSelect.innerHTML = '<option value="">-- اختر القسم --</option>';
-        document.getElementById('prod-name').value = '';
-        document.getElementById('prod-price').value = '';
-        document.getElementById('prod-main-img').value = '';
-        document.getElementById('color-variants-container').innerHTML = '';
-
+    window.openProductModal = () => {
+        const select = document.getElementById('prod-category');
+        select.innerHTML = '<option value="">-- اختر القسم --</option>';
         const categories = [];
         const flatten = (nodes, path = "") => {
             nodes.forEach(n => {
-                const currentPath = path ? `${path} > ${n.name}` : n.name;
-                categories.push({ id: n.id, name: currentPath });
-                if (n.options) flatten(n.options, currentPath);
+                const fullPath = path ? `${path} > ${n.name}` : n.name;
+                categories.push({ id: n.id, name: fullPath });
+                if (n.options) flatten(n.options, fullPath);
             });
         };
         flatten(storeTreeData);
@@ -236,158 +245,110 @@ document.addEventListener('DOMContentLoaded', () => {
             opt.value = c.id;
             opt.dataset.name = c.name;
             opt.innerText = c.name;
-            catSelect.appendChild(opt);
+            select.appendChild(opt);
         });
+
+        document.getElementById('prod-name').value = '';
+        document.getElementById('prod-price').value = '';
+        document.getElementById('prod-main-img').value = '';
+        document.getElementById('color-variants-container').innerHTML = '';
+        window.updateSizeSystem();
         document.getElementById('modal-product').classList.remove('hidden');
+    };
+
+    window.updateSizeSystem = () => {
+        // Refresh any existing variant rows with new chips if needed, but usually just for new ones
+        console.log("Size system updated globally");
     };
 
     window.addColorVariant = () => {
         const container = document.getElementById('color-variants-container');
         const system = document.getElementById('size-type-selector').value;
-        const availableSizes = sizeSystems[system] || sizeSystems.clothes;
+        const availableSizes = sizeSystems[system];
+        const rowId = 'v_' + Date.now();
 
-        const rowId = 'color_' + Date.now();
-        const row = document.createElement('div');
-        row.className = 'color-variant-row';
-        row.id = rowId;
-
-        row.innerHTML = `
-            <div class="variant-header">
+        const div = document.createElement('div');
+        div.className = 'variant-card';
+        div.id = rowId;
+        div.innerHTML = `
+            <div class="variant-top">
                 <input type="text" placeholder="اسم اللون" class="v-name">
                 <input type="file" accept="image/*" class="v-img">
-                <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:none; border:none; color:red; cursor:pointer;"><i data-lucide="x"></i></button>
+                <button type="button" onclick="document.getElementById('${rowId}').remove()" class="action-link del"><i data-lucide="trash-2"></i></button>
             </div>
-            <div class="v-sizes" style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
-                ${availableSizes.map(s => `
-                    <label class="size-chip"><input type="checkbox" value="${s}"> ${s}</label>
-                `).join('')}
+            <div class="v-size-grid">
+                ${availableSizes.map(s => `<label class="size-chip"><input type="checkbox" value="${s}"> ${s}</label>`).join('')}
             </div>
         `;
-        container.appendChild(row);
+        container.appendChild(div);
         lucide.createIcons();
     };
 
-    // Helper to convert file to Base64 with compression
-    const fileToBase64 = (file) => new Promise((resolve, reject) => {
-        if (!file) return resolve(null);
-
+    const fileToBase64 = (file) => new Promise((resolve) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = (event) => {
+        reader.onload = (e) => {
             const img = new Image();
-            img.src = event.target.result;
+            img.src = e.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800; // Good balance for store images
-                let width = img.width;
-                let height = img.height;
-
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
+                const MAX = 800;
+                let w = img.width, h = img.height;
+                if (w > MAX) { h *= MAX / w; w = MAX; }
+                canvas.width = w; canvas.height = h;
                 const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                // Compress to 0.7 quality to save space in DB
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                resolve(dataUrl);
+                ctx.drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
             };
         };
-        reader.onerror = error => reject(error);
     });
 
     document.getElementById('save-product').onclick = async () => {
-        const nameInput = document.getElementById('prod-name');
-        const priceInput = document.getElementById('prod-price');
+        const name = document.getElementById('prod-name').value.trim();
+        const price = document.getElementById('prod-price').value;
         const catSelect = document.getElementById('prod-category');
-        const mainImgInput = document.getElementById('prod-main-img');
-        const mainImgFile = mainImgInput.files[0];
+        const mainImg = document.getElementById('prod-main-img').files[0];
 
-        const name = nameInput.value.trim();
-        const price = priceInput.value.trim();
-        const catId = catSelect.value;
-        const selectedOpt = catSelect.options[catSelect.selectedIndex];
-        const catName = selectedOpt ? selectedOpt.dataset.name : "";
-
-        // Collect Colors & Sizes
-        const colorRows = document.querySelectorAll('.color-variant-row');
-
-        if (!name || !price || !catId || !mainImgFile) {
-            return alert("❌ من فضلك اكمل البيانات الأساسية!");
-        }
+        if (!name || !price || !catSelect.value || !mainImg) return alert("❌ يرجى إكمال البيانات الأساسية");
 
         const btn = document.getElementById('save-product');
-        const originalText = btn.innerText;
-        btn.disabled = true;
-        btn.innerText = "⏳ جاري الحفظ...";
+        btn.disabled = true; btn.innerText = "⏳ جاري المعالجة...";
 
         try {
-            // 1. Convert Main Image to Base64
-            const mainBase64 = await fileToBase64(mainImgFile);
+            const mainBase64 = await fileToBase64(mainImg);
+            const variants = [];
+            const rows = document.querySelectorAll('.variant-card');
 
-            // 2. Convert Color Variants
-            const colorsData = [];
-            for (let [index, row] of Array.from(colorRows).entries()) {
-                const nameV = row.querySelector('.v-name').value.trim();
-                const fileV = row.querySelector('.v-img').files[0];
-                const sizesV = Array.from(row.querySelectorAll('.v-sizes input:checked')).map(cb => cb.value);
+            for (let row of rows) {
+                const vName = row.querySelector('.v-name').value.trim();
+                const vFile = row.querySelector('.v-img').files[0];
+                const vSizes = Array.from(row.querySelectorAll('input:checked')).map(c => c.value);
 
-                if (nameV && fileV) {
-                    btn.innerText = `⏳ معالجة اللون ${index + 1}/${colorRows.length}...`;
-                    const colorBase64 = await fileToBase64(fileV);
-                    colorsData.push({ name: nameV, image: colorBase64, sizes: sizesV });
+                if (vName && vFile) {
+                    const vBase64 = await fileToBase64(vFile);
+                    variants.push({ name: vName, image: vBase64, sizes: vSizes });
                 }
             }
 
-            // 3. Save to Firestore DIRECTLY
-            btn.innerText = "⏳ جاري الحفظ في الداتابيز...";
             await db.collection('products').add({
-                name,
-                price: parseFloat(price),
-                categoryId: catId,
-                categoryName: catName,
+                name, price: parseFloat(price),
+                categoryId: catSelect.value,
+                categoryName: catSelect.options[catSelect.selectedIndex].dataset.name,
                 mainImage: mainBase64,
-                colors: colorsData,
+                colors: variants,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             window.closeModal('modal-product');
-            alert("✅ تم الحفظ بنجاح!");
-            renderProductManager();
-        } catch (e) {
-            console.error(e);
-            alert("❌ خطأ: " + e.message);
-        } finally {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
+            alert("✅ تم نشر المنتج بنجاح!");
+            renderProducts();
+        } catch (e) { alert("❌ خطأ: " + e.message); }
+        btn.disabled = false; btn.innerText = "حفظ ونشر المنتج";
     };
 
     window.deleteProduct = async (id) => {
-        if (!confirm("حذف المنتج؟")) return;
+        if (!confirm("هل تريد حذف هذا المنتج؟")) return;
         await db.collection('products').doc(id).delete();
-        renderProductManager();
+        renderProducts();
     };
-
-    // --- 5. ORDER VIEWER ---
-    async function renderOrderViewer() {
-        const snap = await db.collection('orders').orderBy('timestamp', 'desc').limit(50).get();
-        if (snap.empty) {
-            tabContent.innerHTML = '<p style="text-align:center; padding:3rem;">لا توجد طلبات.</p>';
-            return;
-        }
-        let html = '<table class="orders-table"><thead><tr><th>العميل</th><th>الطلب</th><th>الوقت</th><th>الحالة</th></tr></thead><tbody>';
-        snap.forEach(doc => {
-            const o = doc.data();
-            const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : '';
-            html += `<tr><td>${o.customer}</td><td>${o.item}</td><td>${date}</td><td><span class="status-badge">${o.status}</span></td></tr>`;
-        });
-        html += '</tbody></table>';
-        tabContent.innerHTML = html;
-        lucide.createIcons();
-    }
 });

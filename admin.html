@@ -14,63 +14,79 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <link rel="stylesheet" href="admin.css">
 </head>
 
 <body>
+
     <!-- Login Screen -->
     <div id="login-screen" class="login-overlay">
         <div class="login-card">
-            <h1 class="brand">EL TOUFAN</h1>
-            <p style="color: var(--text-dim); margin-bottom: 2rem;">لوحة التحكم في المتجر</p>
-            <input type="email" id="email" placeholder="البريد الإلكتروني">
-            <input type="password" id="password" placeholder="كلمة المرور">
-            <button id="login-btn">تسجيل الدخول</button>
+            <h1 class="brand-lg">EL TOUFAN</h1>
+            <p style="color: var(--text-dim); margin-bottom: 2.5rem; font-weight:700;">لوحة التحكم الاحترافية للمسؤول
+            </p>
+            <div class="input-group">
+                <input type="email" id="email" placeholder="البريد الإلكتروني للوكيل">
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" placeholder="كلمة المرور">
+            </div>
+            <button id="login-btn" class="add-btn"
+                style="width:100%; justify-content:center; height:60px; font-size:1.2rem;">تسجيل الدخول الآمن</button>
         </div>
     </div>
 
-    <!-- Admin Panel -->
+    <!-- Admin Panel Layout -->
     <div id="admin-panel" class="admin-container hidden">
+        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <span class="logo">EL TOUFAN</span>
             </div>
             <nav class="side-nav">
                 <button class="nav-item active" data-tab="orders">
-                    <i data-lucide="shopping-bag"></i> الطلبات
+                    <i data-lucide="shopping-bag"></i>
+                    <span>الطلبات</span>
                 </button>
                 <button class="nav-item" data-tab="categories">
-                    <i data-lucide="map"></i> خريطة الأقسام
+                    <i data-lucide="git-branch"></i>
+                    <span>خريطة الأقسام</span>
                 </button>
                 <button class="nav-item" data-tab="products">
-                    <i data-lucide="package"></i> المنتجات
+                    <i data-lucide="box"></i>
+                    <span>إدارة المنتجات</span>
                 </button>
                 <button id="logout-btn" class="nav-item logout">
-                    <i data-lucide="log-out"></i> تسجيل الخروج
+                    <i data-lucide="log-out"></i>
+                    <span>خروج</span>
                 </button>
             </nav>
         </aside>
 
+        <!-- Main Content -->
         <main class="content">
             <header class="top-bar">
-                <h2 id="tab-title">الطلبات</h2>
-                <div class="user-info">حساب المسؤول الرئيسي</div>
+                <h2 id="tab-title">الطلبات الواردة</h2>
+                <div class="user-info">المسؤول الرئيسي | <span style="color:var(--accent);">متصل الآن</span></div>
             </header>
 
             <div id="tab-content" class="tab-content">
-                <!-- Dynamic Content Load Here -->
+                <!-- Loaded via JS -->
             </div>
         </main>
     </div>
 
-    <!-- Modals -->
+    <!-- Modal: Category Editor -->
     <div id="modal-category" class="admin-modal hidden">
         <div class="modal-card">
-            <i data-lucide="layers" style="width: 40px; height: 40px; color: var(--accent); margin-bottom: 1rem;"></i>
-            <h3>إضافة قسم جديد</h3>
-            <p style="color: var(--text-dim); margin-bottom: 1.5rem;">أدخل اسم القسم ليظهر للعملاء في الموقع</p>
-            <input type="text" id="cat-name" placeholder="مثلاً: رجالي أو بناطيل">
+            <div class="modal-header">
+                <h3>إضافة قسم جديد</h3>
+                <button onclick="closeModal('modal-category')" class="close-modal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="input-group">
+                <label>اسم القسم:</label>
+                <input type="text" id="cat-name" placeholder="مثلاً: رجالي أو أطفال">
+            </div>
             <div class="modal-btns">
                 <button id="save-cat" class="save-btn">إضافة الآن</button>
                 <button onclick="closeModal('modal-category')" class="cancel-btn">إلغاء</button>
@@ -78,84 +94,70 @@
         </div>
     </div>
 
-    <!-- Product Modal -->
+    <!-- Modal: Product Editor -->
     <div id="modal-product" class="admin-modal hidden">
-        <div class="modal-card product-modal-custom">
-            <header
-                style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; border-bottom:1px solid #222; padding-bottom:1rem;">
-                <div style="display:flex; align-items:center; gap:15px;">
-                    <div style="background:var(--accent); color:black; padding:10px; border-radius:12px;"><i
-                            data-lucide="package"></i></div>
-                    <h3 style="margin:0;">إضافة منتج احترافي جديد</h3>
-                </div>
-                <button onclick="closeModal('modal-product')"
-                    style="background:none; border:none; color:var(--text-dim); cursor:pointer;"><i
-                        data-lucide="x"></i></button>
-            </header>
+        <div class="modal-card product-modal-lg">
+            <div class="modal-header">
+                <h3>إضافة منتج احترافي</h3>
+                <button onclick="closeModal('modal-product')" class="close-modal"><i data-lucide="x"></i></button>
+            </div>
 
-            <div class="form-section" style="margin-bottom:2rem;">
-                <h4
-                    style="color:var(--accent); border-right:4px solid var(--accent); padding-right:10px; margin-bottom:1.5rem;">
-                    1. المعلومات الأساسية</h4>
-                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:15px;">
+            <div class="form-section">
+                <div class="form-section-title">1. المعلومات الجوهرية</div>
+                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;">
                     <div class="input-group">
-                        <label>إسم المنتج:</label>
-                        <input type="text" id="prod-name" placeholder="مثلاً: هودي شتوي تركي">
+                        <label>اسم المنتج:</label>
+                        <input type="text" id="prod-name" placeholder="مثلاً: قميص أوكسفورد ملكي">
                     </div>
                     <div class="input-group">
                         <label>السعر (ج.م):</label>
-                        <input type="number" id="prod-price" placeholder="100">
+                        <input type="number" id="prod-price" placeholder="500">
                     </div>
                 </div>
-                <div class="input-group" style="margin-top:15px;">
-                    <label>القسم (Category):</label>
-                    <select id="prod-category" style="background:#111; border-color:#333;">
+                <div class="input-group">
+                    <label>القسم المخصص:</label>
+                    <select id="prod-category">
                         <option value="">اختر القسم...</option>
                     </select>
                 </div>
             </div>
 
-            <div class="form-section" style="margin-bottom:2rem;">
-                <h4
-                    style="color:var(--accent); border-right:4px solid var(--accent); padding-right:10px; margin-bottom:1.5rem;">
-                    2. نوع المقاسات والصور</h4>
+            <div class="form-section">
+                <div class="form-section-title">2. الهوية البصرية والمقاسات</div>
                 <div class="input-group">
-                    <label>نظام المقاسات للمنتج:</label>
-                    <select id="size-type-selector" onchange="window.updateSizeSystem()"
-                        style="background:#111; border-color:var(--accent);">
+                    <label>تحديد نظام المقاسات:</label>
+                    <select id="size-type-selector" onchange="window.updateSizeSystem()">
                         <option value="clothes">ملابس (S, M, L...)</option>
-                        <option value="pants">بنطلونات (28, 30, 32...)</option>
+                        <option value="pants">بناطيل (28, 30, 32...)</option>
                         <option value="shoes">أحذية (37, 38, 39...)</option>
                     </select>
                 </div>
-                <div class="input-group" style="margin-top:15px;">
-                    <label>الصورة الأساسية (تظهر في الواجهة):</label>
-                    <input type="file" id="prod-main-img" accept="image/*"
-                        style="border:1px dashed #444; padding:20px;">
+                <div class="input-group">
+                    <label>الصورة الرئيسية للمنتج (التي تظهر أولاً):</label>
+                    <input type="file" id="prod-main-img" accept="image/*">
                 </div>
+                <p style="color:var(--text-dim); font-size:0.75rem; margin-top:-10px;">* يرجى اختيار صورة واضحة ومميزة.
+                </p>
             </div>
 
-            <div class="form-section" style="margin-bottom:2rem;">
-                <h4
-                    style="color:var(--accent); border-right:4px solid var(--accent); padding-right:10px; margin-bottom:1.5rem;">
-                    3. الألوان والبدائل (Variants)</h4>
-                <p style="font-size:0.8rem; color:var(--text-dim); margin-bottom:1rem;">أضف كل لون متاح مع صورة مخصصة
-                    له:</p>
+            <div class="form-section">
+                <div class="form-section-title">3. الألوان والبدائل المتاحة</div>
                 <div id="color-variants-container"></div>
                 <button type="button" onclick="window.addColorVariant()" class="add-btn"
-                    style="background:#111; border:1px solid #333; width:100%; justify-content:center; margin-top:1rem;">
-                    <i data-lucide="plus"></i> إضافة لون/بديل جديد
+                    style="width:100%; justify-content:center; background:var(--sidebar); border:1px solid #333; color:#fff;">
+                    <i data-lucide="plus"></i> إضافة لون أو بديل جديد
                 </button>
             </div>
 
-            <div class="modal-btns" style="margin-top:3rem; border-top:1px solid #222; padding-top:2rem;">
-                <button id="save-product" class="save-btn" style="height:55px; font-size:1.1rem;">نشر المنتج
-                    الآن</button>
-                <button onclick="closeModal('modal-product')" class="cancel-btn">إلغاء</button>
+            <div class="modal-btns" style="margin-top:4rem; padding-top:2rem; border-top:1px solid #333;">
+                <button id="save-product" class="save-btn" style="height:60px; font-size:1.2rem;">حفظ ونشر
+                    المنتج</button>
+                <button onclick="closeModal('modal-product')" class="cancel-btn">إغلاق</button>
             </div>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="firebase-config.js"></script>
     <script src="admin.js"></script>
 </body>
