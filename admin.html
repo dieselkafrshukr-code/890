@@ -78,6 +78,23 @@
         </div>
     </div>
 
+    <!-- Product Modal -->
+    <div id="modal-product" class="admin-modal hidden">
+        <div class="modal-card">
+            <i data-lucide="package" style="width: 40px; height: 40px; color: var(--accent); margin-bottom: 1rem;"></i>
+            <h3>إضافة منتج جديد</h3>
+            <input type="text" id="prod-name" placeholder="اسم المنتج">
+            <input type="number" id="prod-price" placeholder="السعر (ج.م)">
+            <select id="prod-category">
+                <option value="">اختر القسم...</option>
+            </select>
+            <div class="modal-btns">
+                <button id="save-product" class="save-btn">حفظ المنتج</button>
+                <button onclick="closeModal('modal-product')" class="cancel-btn">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
     <script src="firebase-config.js"></script>
     <script src="admin.js"></script>
 </body>

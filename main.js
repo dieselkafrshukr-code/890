@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 4. RENDER LOGIC ---
-    function renderStage() {
+    async function renderStage() {
         stageTitle.innerText = currentLevel.name || "EL TOUFAN";
         stageDesc.innerText = currentLevel.desc || "اختر من الخيارات المتاحة";
 
@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         optionsGrid.innerHTML = '';
 
+        // 1. Render Sub-Categories if any
         if (currentLevel.options && currentLevel.options.length > 0) {
             currentLevel.options.forEach(opt => {
                 const btn = document.createElement('button');
@@ -99,24 +100,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.onclick = () => selectOption(opt);
                 optionsGrid.appendChild(btn);
             });
-        } else if (currentLevel.name !== "EL TOUFAN") {
-            // Leaf node: Final Item
-            const msg = document.createElement('div');
-            msg.className = 'stage-desc';
-            msg.style.width = '100%';
-            msg.innerHTML = `<p style="color: var(--gold); font-size: 1.5rem; font-weight: 700;">تم اختيار: ${currentLevel.name}</p>`;
-            optionsGrid.appendChild(msg);
+        }
 
-            const addBtn = document.createElement('button');
-            addBtn.className = 'opt-btn active';
-            addBtn.innerHTML = `<i data-lucide="shopping-cart"></i> اطلب الآن (واتساب + تسجيل)`;
-            addBtn.onclick = () => sendOrder(currentLevel.name);
-            optionsGrid.appendChild(addBtn);
-            lucide.createIcons();
+        // 2. Render Products for this leaf category (or any level)
+        if (currentLevel.id) {
+            try {
+                const prodSnap = await db.collection('products').where('categoryId', '==', currentLevel.id).get();
+                if (!prodSnap.empty) {
+                    const header = document.createElement('div');
+                    header.style.width = '100%';
+                    header.style.marginTop = '2rem';
+                    header.innerHTML = `<p style="color:var(--accent); font-weight:900;">المنتجات المتاحة في ${currentLevel.name}:</p>`;
+                    optionsGrid.appendChild(header);
+
+                    prodSnap.forEach(doc => {
+                        const p = doc.data();
+                        const btn = document.createElement('button');
+                        btn.className = 'opt-btn active';
+                        btn.style.margin = '5px';
+                        btn.innerHTML = `${p.name} - <span style="color:#fff">${p.price} ج.م</span>`;
+                        btn.onclick = () => sendOrder(`${p.name} (${p.price} ج.م) من قسم ${currentLevel.name}`);
+                        optionsGrid.appendChild(btn);
+                    });
+                }
+            } catch (e) {
+                console.error("Error fetching products:", e);
+            }
+        }
+
+        // 3. Fallback message if totally empty
+        if ((!currentLevel.options || currentLevel.options.length === 0) && currentLevel.name !== "EL TOUFAN") {
+            const prodSnapCheck = await db.collection('products').where('categoryId', '==', currentLevel.id).get();
+            if (prodSnapCheck.empty) {
+                optionsGrid.innerHTML += `<p style="color:var(--text-dim); width:100%; margin-top:20px;">لا توجد منتجات حالياً في هذا القسم.</p>`;
+            }
         }
 
         backBtn.classList.toggle('hidden', navigationStack.length <= 1);
         resetBtn.classList.toggle('hidden', navigationStack.length <= 1);
+        lucide.createIcons();
     }
 
     async function sendOrder(itemName) {
@@ -146,18 +168,18 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStage();
     }
 
-    window.goBack = () => {
+    window.goBack = async () => {
         if (navigationStack.length > 1) {
             navigationStack.pop();
             currentLevel = navigationStack[navigationStack.length - 1];
-            renderStage();
+            await renderStage();
         }
     };
 
-    window.resetApp = () => {
+    window.resetApp = async () => {
         currentLevel = storeTree;
         navigationStack = [storeTree];
-        renderStage();
+        await renderStage();
     };
 
     backBtn.onclick = window.goBack;

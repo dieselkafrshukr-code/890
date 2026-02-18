@@ -181,7 +181,106 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 4. ORDER VIEWER ---
+    // --- 4. PRODUCT MANAGER ---
+    async function renderProductManager() {
+        tabContent.innerHTML = `
+            <div class="actions-header">
+                <h3>إدارة المنتجات</h3>
+                <button onclick="window.openProductModal()" class="add-btn"><i data-lucide="plus-circle"></i> إضافة منتج جديد</button>
+            </div>
+            <div id="products-list" class="orders-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
+                <p style="text-align:center; grid-column: 1/-1;">جاري تحميل المنتجات...</p>
+            </div>
+        `;
+
+        const productsContainer = document.getElementById('products-list');
+        const snap = await db.collection('products').orderBy('timestamp', 'desc').get();
+
+        if (snap.empty) {
+            productsContainer.innerHTML = '<p style="text-align:center; grid-column: 1/-1; color:var(--text-dim);">لا توجد منتجات حالياً.</p>';
+        } else {
+            productsContainer.innerHTML = '';
+            snap.forEach(doc => {
+                const p = doc.data();
+                const card = document.createElement('div');
+                card.className = 'tree-item'; // Reusing style
+                card.style.flexDirection = 'column';
+                card.style.alignItems = 'flex-start';
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; width:100%; margin-bottom:10px;">
+                        <span class="name">${p.name}</span>
+                        <span style="color:var(--accent); font-weight:900;">${p.price} ج.م</span>
+                    </div>
+                    <div style="color:var(--text-dim); font-size:0.8rem; margin-bottom:10px;">
+                        <i data-lucide="tag" style="width:12px;"></i> ${p.categoryName || 'بدون قسم'}
+                    </div>
+                    <button onclick="window.deleteProduct('${doc.id}')" class="action-link del"><i data-lucide="trash-2"></i> حذف المنتج</button>
+                `;
+                productsContainer.appendChild(card);
+            });
+        }
+        lucide.createIcons();
+    }
+
+    window.openProductModal = async () => {
+        const catSelect = document.getElementById('prod-category');
+        catSelect.innerHTML = '<option value="">اختر القسم...</option>';
+
+        // Flatten the tree for the select dropdown
+        const categories = [];
+        const flatten = (nodes, path = "") => {
+            nodes.forEach(n => {
+                const currentPath = path ? `${path} > ${n.name}` : n.name;
+                categories.push({ id: n.id, name: currentPath });
+                if (n.options) flatten(n.options, currentPath);
+            });
+        };
+        flatten(storeTreeData);
+
+        categories.forEach(c => {
+            catSelect.innerHTML += `<option value="${c.id}" data-name="${c.name}">${c.name}</option>`;
+        });
+
+        document.getElementById('modal-product').classList.remove('hidden');
+    };
+
+    document.getElementById('save-product').onclick = async () => {
+        const name = document.getElementById('prod-name').value.trim();
+        const price = document.getElementById('prod-price').value.trim();
+        const catSelect = document.getElementById('prod-category');
+        const catId = catSelect.value;
+        const catName = catSelect.options[catSelect.selectedIndex].dataset.name;
+
+        if (!name || !price || !catId) return alert("يرجى ملء جميع البيانات");
+
+        const btn = document.getElementById('save-product');
+        btn.innerText = "جاري الحفظ...";
+        btn.disabled = true;
+
+        try {
+            await db.collection('products').add({
+                name,
+                price,
+                categoryId: catId,
+                categoryName: catName,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            window.closeModal('modal-product');
+            renderProductManager();
+        } catch (e) {
+            alert("خطأ في الحفظ: " + e.message);
+        }
+        btn.innerText = "حفظ المنتج";
+        btn.disabled = false;
+    };
+
+    window.deleteProduct = async (id) => {
+        if (!confirm("هل أنت متأكد من حذف هذا المنتج؟")) return;
+        await db.collection('products').doc(id).delete();
+        renderProductManager();
+    };
+
+    // --- 5. ORDER VIEWER ---
     async function renderOrderViewer() {
         const snap = await db.collection('orders').orderBy('timestamp', 'desc').limit(50).get();
         if (snap.empty) {
