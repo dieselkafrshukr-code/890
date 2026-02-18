@@ -14,9 +14,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 2. STATE MANAGEMENT ---
     let navigationStack = [];
     let currentLevel = storeTree;
-    let cartCount = 0;
+    let cart = []; // Real shopping cart array
 
     // --- 3. DOM ELEMENTS ---
+    const cartDrawer = document.getElementById('cart-drawer');
+    const cartItemsContainer = document.getElementById('cart-items');
+    const cartTrigger = document.querySelector('.cart-trigger');
+    const badge = document.querySelector('.badge');
+    const cartTotalDisplay = document.getElementById('cart-total');
+
     const introScreen = document.getElementById('intro-screen');
     const mainApp = document.getElementById('main-app');
     const optionsGrid = document.getElementById('options-grid');
@@ -25,6 +31,70 @@ document.addEventListener('DOMContentLoaded', () => {
     const backBtn = document.getElementById('back-btn');
     const resetBtn = document.getElementById('reset-btn');
     const steps = document.querySelectorAll('.step');
+
+    // Cart Logic
+    if (cartTrigger) cartTrigger.onclick = () => window.toggleCart();
+
+    window.toggleCart = () => {
+        cartDrawer.classList.toggle('hidden');
+    };
+
+    window.addToCart = (name, price) => {
+        cart.push({ name, price: parseFloat(price) });
+        updateCartUI();
+        alert(`تم إضافة ${name} إلى السلة`);
+    };
+
+    function updateCartUI() {
+        if (badge) badge.innerText = cart.length;
+        if (cart.length === 0) {
+            cartItemsContainer.innerHTML = '<p style="text-align:center; color:var(--text-dim); padding:2rem;">السلة فارغة حالياً</p>';
+            cartTotalDisplay.innerText = "0 ج.م";
+            return;
+        }
+        let total = 0;
+        cartItemsContainer.innerHTML = cart.map((item, idx) => {
+            total += item.price;
+            return `
+                <div class="cart-item">
+                    <div>
+                        <div style="font-weight:700;">${item.name}</div>
+                        <div style="color:var(--accent); font-size:0.9rem;">${item.price} ج.م</div>
+                    </div>
+                    <button onclick="window.removeFromCart(${idx})" style="background:none; border:none; color:#ff3e3e; cursor:pointer;"><i data-lucide="trash-2"></i></button>
+                </div>
+            `;
+        }).join('');
+        cartTotalDisplay.innerText = `${total} ج.م`;
+        lucide.createIcons();
+    }
+
+    window.removeFromCart = (index) => {
+        cart.splice(index, 1);
+        updateCartUI();
+    };
+
+    window.confirmOrder = async () => {
+        if (cart.length === 0) return alert("السلة فارغة!");
+        const orderText = cart.map(item => `- ${item.name} (${item.price} ج.م)`).join('\n');
+        const total = cart.reduce((sum, item) => sum + item.price, 0);
+        try {
+            await db.collection('orders').add({
+                item: orderText,
+                total: total,
+                customer: "عميل ويب",
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                status: 'new'
+            });
+        } catch (e) { console.error("Firebase Order Error:", e); }
+        const phone = "201020304050";
+        const finalMsg = encodeURIComponent(`طلب جديد من EL TOUFAN:\n${orderText}\n\nالإجمالي: ${total} ج.م`);
+        window.open(`https://wa.me/${phone}?text=${finalMsg}`, '_blank');
+        alert("تم إرسال طلبك وتسجيله بنجاح!");
+        cart = [];
+        updateCartUI();
+        window.toggleCart();
+    };
 
     const typeText = async (element, text, speed = 100) => {
         for (let i = 0; i < text.length; i++) {
@@ -118,8 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const btn = document.createElement('button');
                         btn.className = 'opt-btn active';
                         btn.style.margin = '5px';
-                        btn.innerHTML = `${p.name} - <span style="color:#fff">${p.price} ج.م</span>`;
-                        btn.onclick = () => sendOrder(`${p.name} (${p.price} ج.م) من قسم ${currentLevel.name}`);
+                        btn.innerHTML = `+ ${p.name} - <span style="color:#fff">${p.price} ج.م</span>`;
+                        btn.onclick = () => window.addToCart(p.name, p.price);
                         optionsGrid.appendChild(btn);
                     });
                 }
@@ -139,27 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
         backBtn.classList.toggle('hidden', navigationStack.length <= 1);
         resetBtn.classList.toggle('hidden', navigationStack.length <= 1);
         lucide.createIcons();
-    }
-
-    async function sendOrder(itemName) {
-        // 1. Save to Firebase
-        try {
-            await db.collection('orders').add({
-                item: itemName,
-                customer: "عميل ويب",
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                status: 'new'
-            });
-        } catch (e) {
-            console.error("Firebase Order Error:", e);
-        }
-
-        // 2. WhatsApp
-        const phone = "20123456789"; // Replace with your number
-        const text = encodeURIComponent(`طلب جديد من EL TOUFAN: ${itemName}`);
-        window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
-
-        alert("تم تسجيل طلبك وإرساله عبر واتساب!");
     }
 
     async function selectOption(opt) {

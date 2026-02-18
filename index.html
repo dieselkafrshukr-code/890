@@ -87,6 +87,26 @@
     </div>
     </div>
 
+    <!-- Cart Drawer (Salla) -->
+    <div id="cart-drawer" class="cart-drawer hidden">
+        <div class="cart-header">
+            <h3>سلّة المشتريات</h3>
+            <button onclick="window.toggleCart()" class="close-cart"><i data-lucide="x"></i></button>
+        </div>
+        <div id="cart-items" class="cart-items">
+            <!-- Items added will appear here -->
+            <p style="text-align:center; color:var(--text-dim); padding:2rem;">السلة فارغة حالياً</p>
+        </div>
+        <div class="cart-footer">
+            <div class="total-row">
+                <span>الإجمالي:</span>
+                <span id="cart-total">0 ج.م</span>
+            </div>
+            <button id="confirm-order-btn" class="opt-btn active" style="width:100%;"
+                onclick="window.confirmOrder()">إتمام الطلب (واتساب)</button>
+        </div>
+    </div>
+
     <script src="main.js"></script>
 </body>
 
