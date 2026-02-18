@@ -60,82 +60,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function initApp() {
         mainApp.classList.remove('hidden');
-        await syncData();
-        await renderStage();
-    }
-
-    async function syncData() {
-        try {
-            const snap = await db.collection('settings').doc('storeTree').get();
-            if (snap.exists) {
-                storeTree = snap.data();
-                currentLevel = storeTree;
-                navigationStack = [storeTree];
-            } else {
-                useDefaultData();
-            }
-        } catch (e) { useDefaultData(); }
-    }
-
-    function useDefaultData() {
-        storeTree.options = defaultData;
-        currentLevel = storeTree;
-        navigationStack = [storeTree];
+        renderStage();
     }
 
     // --- 5. RENDER LOGIC ---
     async function renderStage() {
-        stageTitle.innerText = currentLevel.name || "EL TOUFAN";
-
-        const levelIdx = navigationStack.length;
-        steps.forEach((s, i) => s.classList.toggle('active', i + 1 <= levelIdx));
-        optionsGrid.innerHTML = '';
-
-        // Sub-Categories
-        if (currentLevel.options && currentLevel.options.length > 0) {
-            currentLevel.options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'opt-btn';
-                btn.innerText = opt.name;
-                btn.onclick = () => selectOption(opt);
-                optionsGrid.appendChild(btn);
-            });
-        }
-
-        // Products
-        if (currentLevel.id) {
-            try {
-                const prodSnap = await db.collection('products').where('categoryId', '==', currentLevel.id).get();
-                if (!prodSnap.empty) {
-                    prodSnap.forEach(doc => {
-                        const p = doc.data();
-                        const card = document.createElement('div');
-                        card.className = 'product-card';
-                        card.innerHTML = `
-                            <div class="product-card-img">
-                                <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${p.name}">
-                            </div>
-                            <div class="product-card-info">
-                                <div class="product-card-name">${p.name}</div>
-                                <div class="product-card-price">${p.price} ج.م</div>
-                            </div>
-                        `;
-                        card.onclick = () => window.openProductDetail(doc.id);
-                        optionsGrid.appendChild(card);
-                    });
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        backBtn.classList.toggle('hidden', navigationStack.length <= 1);
-        resetBtn.classList.toggle('hidden', navigationStack.length <= 1);
-        lucide.createIcons();
+        stageTitle.innerText = "EL TOUFAN";
+        stageDesc.innerText = "جاري التحديث...";
+        optionsGrid.innerHTML = '<p style="text-align:center; padding:3rem; color:var(--text-dim);">الموقع تحت الصيانة حالياً.</p>';
+        backBtn.classList.add('hidden');
+        resetBtn.classList.add('hidden');
     }
 
     async function selectOption(opt) {
-        navigationStack.push(currentLevel);
-        currentLevel = opt;
-        await renderStage();
+        // Disabled
     }
 
     window.goBack = async () => {
