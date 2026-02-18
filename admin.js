@@ -351,7 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 categoryId: catId,
                 categoryName: catName,
                 mainImage: mainBase64,
-                mainSizes: mainSizes,
                 colors: colorsData,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });

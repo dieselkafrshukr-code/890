@@ -519,11 +519,16 @@ body {
 
 /* Center all things in viewports */
 .admin-modal {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: none;
+    /* Default hidden */
+    align-items: center;
+    justify-content: center;
     overflow-y: auto;
     padding: 20px 0;
+}
+
+.admin-modal:not(.hidden) {
+    display: flex !important;
 }
 
 .tree-item {
