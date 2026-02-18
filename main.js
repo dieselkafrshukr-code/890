@@ -1,174 +1,118 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize Lucide Icons
-    lucide.createIcons();
+    // 1. Intro Animation
+    const introTitle = document.getElementById('intro-title');
+    const introSub = document.getElementById('intro-sub');
+    const preloader = document.getElementById('preloader');
+    const appContent = document.getElementById('app-content');
 
-    // Data Structure from User Requirements
-    const storeData = {
-        men: {
-            title: "رجالي",
-            groups: [
-                {
-                    name: "ملابس",
-                    items: ["بنطلون", "تيشيرت", "قميص", "جاكيت", "سويسرت", "بلوفر", "بدلة", "شورت"]
-                },
-                {
-                    name: "أحذية",
-                    items: ["كوتشي", "جزمة كلاسيك", "بوت", "صندل"]
-                },
-                {
-                    name: "آخر",
-                    items: ["إكسسوارات", "برفانات", "داخلي"]
-                }
-            ]
-        },
-        women: {
-            title: "حريمي",
-            groups: [
-                {
-                    name: "ملابس",
-                    items: ["فستان", "بلوزة", "جيبة", "بنطلون", "جاكيت", "عباية", "ترينج"]
-                },
-                {
-                    name: "أحذية",
-                    items: ["هيلز", "فلات", "سنيكرز", "بوت", "صندل"]
-                },
-                {
-                    name: "إكسسوارات وجمال",
-                    items: ["شنط", "ميك أب", "إكسسوارات", "برفانات", "داخلي"]
-                }
-            ]
-        },
-        unisex: {
-            title: "محير (يونيسكس)",
-            groups: [
-                {
-                    name: "ملابس",
-                    items: ["تيشيرت", "هودي", "سويسرت", "ترينج"]
-                },
-                {
-                    name: "أحذية",
-                    items: ["سنيكرز", "كاجوال"]
-                }
-            ]
-        },
-        kids: {
-            title: "أطفال",
-            subSections: [
-                {
-                    name: "أولادي",
-                    nested: [
-                        { name: "ملابس", items: ["تيشيرت", "بنطلون", "جاكيت", "ترينج"] },
-                        { name: "أحذية", items: ["سنيكرز", "صندل", "بوت"] }
-                    ]
-                },
-                {
-                    name: "بناتي",
-                    nested: [
-                        { name: "ملابس", items: ["فستان", "بلوزة", "جيبة", "ترينج"] },
-                        { name: "أحذية", items: ["هيلز أطفال", "فلات", "صندل", "سنيكرز"] }
-                    ]
-                }
-            ]
+    const typeText = async (element, text, speed = 100) => {
+        for (let i = 0; i < text.length; i++) {
+            element.textContent += text[i];
+            await new Promise(resolve => setTimeout(resolve, speed));
         }
     };
 
-    // DOM Elements
-    const modal = document.getElementById('category-modal');
-    const modalBody = document.getElementById('modal-body');
-    const closeModal = document.querySelector('.close-modal');
-    const mainCats = document.querySelectorAll('.main-cat');
+    const startIntro = async () => {
+        await typeText(introTitle, "EL TOUFAN", 120);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await typeText(introSub, "KAFR SHUKR", 100);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        preloader.style.transition = 'opacity 1s ease';
+        preloader.style.opacity = '0';
+        setTimeout(() => {
+            preloader.style.display = 'none';
+            appContent.style.opacity = '1';
+            initApp();
+        }, 1000);
+    };
 
-    // Navigation Scroll Effect
-    window.addEventListener('scroll', () => {
-        const nav = document.querySelector('.glass-nav');
-        if (window.scrollY > 50) {
-            nav.style.height = '70px';
-            nav.style.background = 'rgba(10, 10, 11, 0.95)';
-        } else {
-            nav.style.height = '80px';
-            nav.style.background = 'rgba(18, 18, 20, 0.8)';
-        }
-    });
+    startIntro();
 
-    // Open Modal with Category Content
-    mainCats.forEach(cat => {
-        cat.addEventListener('click', () => {
-            const catKey = cat.getAttribute('data-category');
-            renderCategoryInModal(catKey);
-            modal.style.display = 'block';
-            document.body.style.overflow = 'hidden'; // Prevent scroll
-        });
-    });
-
-    // Close Modal
-    closeModal.addEventListener('click', () => {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-    });
-
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-    });
-
-    function renderCategoryInModal(key) {
-        const data = storeData[key];
-        let html = `
-            <div class="modal-header">
-                <h2>${data.title}</h2>
-                <p>تصفح التشكيلة الكاملة لقسم ${data.title}</p>
-            </div>
-            <div class="modal-grid">
-        `;
-
-        // Handle regular categories (Men, Women, Unisex)
-        if (data.groups) {
-            data.groups.forEach(group => {
-                html += `
-                    <div class="sub-cat-group">
-                        <h4>${group.name}</h4>
-                        <ul>
-                            ${group.items.map(item => `<li>${item}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
-            });
-        } 
-        // Handle Kids category (Special structure)
-        else if (data.subSections) {
-            data.subSections.forEach(section => {
-                html += `
-                    <div class="sub-cat-group wide">
-                        <h3>قـسم ${section.name}</h3>
-                        ${section.nested.map(nest => `
-                            <div class="nested-group">
-                                <h4>${nest.name}</h4>
-                                <ul>
-                                    ${nest.items.map(item => `<li>${item}</li>`).join('')}
-                                </ul>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            });
-        }
-
-        html += `</div>`;
-        modalBody.innerHTML = html;
+    function initApp() {
+        lucide.createIcons();
+        renderMainTabs();
     }
 
-    // Rough cart animation
-    let count = 0;
-    const cartCountEl = document.querySelector('.cart-count');
-    document.addEventListener('click', (e) => {
-        if (e.target.tagName === 'LI' && modal.style.display === 'block') {
-            count++;
-            cartCountEl.textContent = count;
-            // Simple toast or animation could go here
-            e.target.style.color = '#d4af37';
-            setTimeout(() => { e.target.style.color = ''; }, 500);
+    // 2. Data Structure
+    const storeData = [
+        {
+            id: 'men',
+            name: 'رجالي',
+            sub: [
+                { id: 'm-clothes', name: 'ملابس', items: ["بنطلون", "تيشيرت", "قميص", "جاكيت", "سويسرت", "بلوفر", "بدلة", "شورت"] },
+                { id: 'm-shoes', name: 'أحذية', items: ["كوتشي", "جزمة كلاسيك", "بوت", "صندل"] },
+                { id: 'm-acc', name: 'إكسسوارات', items: ["ساعة", "نظارة", "حزام", "محفظة"] }
+            ]
+        },
+        {
+            id: 'women',
+            name: 'حريمي',
+            sub: [
+                { id: 'w-clothes', name: 'ملابس', items: ["فستان", "بلوزة", "جيبة", "بنطلون", "جاكيت", "عباية", "ترينج"] },
+                { id: 'w-shoes', name: 'أحذية', items: ["هيلز", "فلات", "سنيكرز", "بوت", "صندل"] },
+                { id: 'w-acc', name: 'حقائب وجمال', items: ["شنطة", "ميك أب", "إكسسوارات", "برفان"] }
+            ]
+        },
+        {
+            id: 'kids',
+            name: 'أطفال',
+            sub: [
+                { id: 'k-boys', name: 'أولادي', items: ["تيشيرت", "بنطلون", "جاكيت", "ترينج", "سنيكرز", "صندل"] },
+                { id: 'k-girls', name: 'بناتي', items: ["فستان", "بلوزة", "جيبة", "ترينج", "فلات", "صندل"] }
+            ]
+        },
+        {
+            id: 'unisex',
+            name: 'محير',
+            sub: [
+                { id: 'u-clothes', name: 'ملابس', items: ["تيشيرت", "هودي", "سويسرت", "ترينج"] },
+                { id: 'u-shoes', name: 'أحذية', items: ["سنيكرز", "كاجوال"] }
+            ]
         }
-    });
+    ];
+
+    let activeCategory = storeData[0];
+    let activeSub = activeCategory.sub[0];
+
+    // 3. UI Rendering Logic
+    function renderMainTabs() {
+        const container = document.getElementById('main-tabs');
+        container.innerHTML = storeData.map(cat => `
+            <button class="tab-btn ${cat.id === activeCategory.id ? 'active' : ''}" 
+                    onclick="selectCategory('${cat.id}')">
+                ${cat.name}
+            </button>
+        `).join('');
+        renderSubFilters();
+    }
+
+    function renderSubFilters() {
+        const container = document.getElementById('sub-filters');
+        container.innerHTML = activeCategory.sub.map((sub, idx) => `
+            <button class="filter-btn ${sub.id === activeSub.id ? 'active' : ''}" 
+                    onclick="selectSub('${sub.id}')">
+                ${sub.name}
+            </button>
+        `).join('');
+        renderItems();
+    }
+
+    function renderItems() {
+        const container = document.getElementById('final-items-grid');
+        container.innerHTML = activeSub.items.map(item => `
+            <div class="item-chip">${item}</div>
+        `).join('');
+    }
+
+    // 4. Global Event Handlers
+    window.selectCategory = (id) => {
+        activeCategory = storeData.find(c => c.id === id);
+        activeSub = activeCategory.sub[0];
+        renderMainTabs();
+    };
+
+    window.selectSub = (id) => {
+        activeSub = activeCategory.sub.find(s => s.id === id);
+        renderSubFilters();
+    };
 });

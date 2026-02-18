@@ -4,196 +4,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ستور - عالم الموضة والأناقة</title>
-    <meta name="description"
-        content="متجر ملابس عصري يقدم أحدث صيحات الموضة للرجال والنساء والأطفال. اكتشف مجموعتنا المميزة من الملابس والأحذية والإكسسوارات.">
-    <!-- Google Fonts -->
+    <title>EL TOUFAN | الطوفان</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Cairo:wght@400;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap"
         rel="stylesheet">
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div id="app">
-        <!-- Navigation -->
-        <nav class="glass-nav">
+    <!-- Intro Animation -->
+    <div id="preloader" class="preloader">
+        <div class="intro-content">
+            <h1 id="intro-title"></h1>
+            <div class="sub-intro">
+                <span id="intro-sub"></span><span class="cursor">_</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-content">
+        <div class="glow-bg"></div>
+
+        <nav class="navbar">
             <div class="nav-container">
-                <div class="logo">
-                    <span class="logo-text">STORE</span>
+                <div class="logo-area">
+                    <img src="logo/WhatsApp Image 2026-02-18 at 19.18.38.jpeg" alt="EL TOUFAN" class="main-logo">
+                    <div class="logo-text-group">
+                        <span class="brand-name">EL TOUFAN</span>
+                        <span class="brand-tag">PREMIUM WEAR</span>
+                    </div>
                 </div>
                 <div class="nav-links">
-                    <a href="#home" class="active">الرئيسية</a>
-                    <a href="#retail">قطاعي</a>
-                    <a href="#wholesale">جملة</a>
-                    <a href="#about">عن المتجر</a>
+                    <a href="#home">الرئيسية</a>
+                    <a href="#store-section">المتجر</a>
+                    <a href="#about">تواصل معنا</a>
                 </div>
                 <div class="nav-actions">
-                    <button id="search-btn"><i data-lucide="search"></i></button>
-                    <button id="cart-btn"><i data-lucide="shopping-bag"></i><span class="cart-count">0</span></button>
-                    <button id="menu-btn" class="mobile-only"><i data-lucide="menu"></i></button>
+                    <button class="icon-btn cart-trigger">
+                        <i data-lucide="shopping-cart"></i>
+                        <span class="badge">0</span>
+                    </button>
                 </div>
             </div>
         </nav>
 
-        <!-- Hero Section -->
-        <header id="home" class="hero">
+        <section id="home" class="hero-section">
             <div class="hero-content">
-                <h1 class="fade-in">اكتشف أناقتك الحقيقية</h1>
-                <p class="fade-in-delay">أرقى الموديلات العالمية بأعلى جودة وأفضل الأسعار. جملة وقطاعي.</p>
-                <div class="hero-btns">
-                    <a href="#retail" class="btn btn-primary">تسوق الأن</a>
-                    <a href="#wholesale" class="btn btn-secondary">قسم الجملة</a>
-                </div>
-            </div>
-            <div class="hero-overlay"></div>
-        </header>
-
-        <!-- Sale Type Selection -->
-        <section class="sale-types">
-            <div class="container">
-                <div class="section-title">
-                    <h2>اختر نوع الشراء</h2>
-                    <p>نقدم خدماتنا للأفراد والتجار على حد سواء</p>
-                </div>
-                <div class="type-cards">
-                    <div class="type-card" id="card-retail">
-                        <div class="card-icon"><i data-lucide="user"></i></div>
-                        <h3>قطاعي</h3>
-                        <p>تسوق لأجلك ولعائلتك بأفضل الأسعار</p>
-                        <ul class="type-features">
-                            <li><i data-lucide="check"></i> ملابس رجالي وحريمي</li>
-                            <li><i data-lucide="check"></i> قسم خاص للأطفال</li>
-                            <li><i data-lucide="check"></i> أحذية وإكسسوارات</li>
-                        </ul>
-                    </div>
-                    <div class="type-card featured" id="card-wholesale">
-                        <div class="card-icon"><i data-lucide="truck"></i></div>
-                        <h3>جملة</h3>
-                        <p>أسعار خاصة للتجار والكميات الكبيرة</p>
-                        <ul class="type-features">
-                            <li><i data-lucide="check"></i> خصومات هائلة للكميات</li>
-                            <li><i data-lucide="check"></i> توريد للمحلات</li>
-                            <li><i data-lucide="check"></i> شحن لجميع المحافظات</li>
-                        </ul>
-                    </div>
+                <h1 class="glitch-text" data-text="EL TOUFAN">EL TOUFAN</h1>
+                <h2 class="sub-hero">أقوى تشكيلة ملابس في مصر</h2>
+                <div class="hero-actions">
+                    <button class="btn-glow" onclick="document.getElementById('store-section').scrollIntoView()">تصفح
+                        الأقسام</button>
                 </div>
             </div>
         </section>
 
-        <!-- Main Categories (Retail) -->
-        <section id="retail" class="categories-section">
+        <!-- Dynamic Store Section -->
+        <section id="store-section" class="store-explorer">
             <div class="container">
-                <div class="section-title">
-                    <h2>الأقسام الرئيسية</h2>
-                    <p>استكشف تشكيلتنا الواسعة في عالم الموضة</p>
+                <div class="section-header">
+                    <span class="accent-line"></span>
+                    <h2>تصفح حسب الفئة</h2>
+                    <p>اختر القسم لرؤية الخيارات المتاحة</p>
                 </div>
-                <div class="category-grid">
-                    <!-- Men -->
-                    <div class="cat-item main-cat" data-category="men">
-                        <div class="cat-img-wrapper">
-                            <img src="https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?auto=format&fit=crop&w=800&q=80"
-                                alt="رجالي">
-                        </div>
-                        <div class="cat-info">
-                            <h3>رجالي</h3>
-                            <div class="sub-cats">
-                                <span>ملابس</span> • <span>أحذية</span> • <span>إكسسوارات</span>
-                            </div>
-                            <button class="view-btn">عرض المزيد</button>
-                        </div>
-                    </div>
-                    <!-- Women -->
-                    <div class="cat-item main-cat" data-category="women">
-                        <div class="cat-img-wrapper">
-                            <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80"
-                                alt="حريمي">
-                        </div>
-                        <div class="cat-info">
-                            <h3>حريمي</h3>
-                            <div class="sub-cats">
-                                <span>ملابس</span> • <span>أحذية</span> • <span>شنط</span>
-                            </div>
-                            <button class="view-btn">عرض المزيد</button>
-                        </div>
-                    </div>
-                    <!-- Unisex -->
-                    <div class="cat-item main-cat" data-category="unisex">
-                        <div class="cat-img-wrapper">
-                            <img src="https://images.unsplash.com/photo-1523381235208-259227ef72fa?auto=format&fit=crop&w=800&q=80"
-                                alt="محير/يونيسكس">
-                        </div>
-                        <div class="cat-info">
-                            <h3>محير (يونيسكس)</h3>
-                            <div class="sub-cats">
-                                <span>تيشيرت</span> • <span>هودي</span> • <span>سنيكرز</span>
-                            </div>
-                            <button class="view-btn">عرض المزيد</button>
-                        </div>
-                    </div>
-                    <!-- Kids -->
-                    <div class="cat-item main-cat" data-category="kids">
-                        <div class="cat-img-wrapper">
-                            <img src="https://images.unsplash.com/photo-1514090458221-65bb69cf63e6?auto=format&fit=crop&w=800&q=80"
-                                alt="أطفال">
-                        </div>
-                        <div class="cat-info">
-                            <h3>أطفال</h3>
-                            <div class="sub-cats">
-                                <span>أولادي</span> • <span>بناتي</span> • <span>أحذية</span>
-                            </div>
-                            <button class="view-btn">عرض المزيد</button>
-                        </div>
-                    </div>
+
+                <!-- Main Tabs (Men, Women, etc.) -->
+                <div class="tabs-container" id="main-tabs">
+                    <!-- Dynamic -->
+                </div>
+
+                <!-- Sub-Category Filters (Clothes, Shoes, etc.) -->
+                <div class="filters-container" id="sub-filters">
+                    <!-- Dynamic -->
+                </div>
+
+                <!-- Final Items (Pants, T-shirts, etc.) -->
+                <div class="items-grid" id="final-items-grid">
+                    <!-- Dynamic chips like the user photo -->
                 </div>
             </div>
         </section>
 
-        <!-- Category Detail Modal (Dynamic Content Based on User Hierarchy) -->
-        <div id="category-modal" class="modal">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <div id="modal-body">
-                    <!-- Dynamic content will be injected here -->
-                </div>
-            </div>
-        </div>
-
-        <footer id="about">
-            <div class="container footer-content">
-                <div class="footer-logo">
-                    <h2>STORE</h2>
-                    <p>وجهتك الأولى للأناقة والجودة.</p>
-                </div>
-                <div class="footer-links">
-                    <h4>روابط سريعة</h4>
-                    <ul>
-                        <li><a href="#">الرئيسية</a></li>
-                        <li><a href="#">الشروط والأحكام</a></li>
-                        <li><a href="#">سياسة الاسترجاع</a></li>
-                        <li><a href="#">تواصل معنا</a></li>
-                    </ul>
+        <footer class="modern-footer" id="about">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <img src="logo/WhatsApp Image 2026-02-18 at 19.18.38.jpeg" alt="EL TOUFAN">
+                    <h3>EL TOUFAN</h3>
+                    <p>المكان الذي تجتمع فيه الجودة مع الأناقة. الطوفان للملابس الجاهزة.</p>
                 </div>
                 <div class="footer-contact">
                     <h4>تواصل معنا</h4>
-                    <p><i data-lucide="phone"></i> +20 123 456 7890</p>
-                    <p><i data-lucide="mail"></i> info@store.com</p>
-                    <div class="social-icons">
+                    <div class="contact-item"><i data-lucide="phone"></i> <span>0123456789</span></div>
+                    <div class="contact-item"><i data-lucide="map-pin"></i> <span>كفر شكر، القليوبية</span></div>
+                    <div class="social-links">
                         <a href="#"><i data-lucide="facebook"></i></a>
                         <a href="#"><i data-lucide="instagram"></i></a>
-                        <a href="#"><i data-lucide="twitter"></i></a>
+                        <a href="#"><i data-lucide="message-circle"></i></a>
                     </div>
                 </div>
             </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 ستور. جميع الحقوق محفوظة.</p>
+            <div class="copyright">
+                <p>&copy; 2026 EL TOUFAN. All Rights Reserved.</p>
             </div>
         </footer>
     </div>
+
     <script src="main.js"></script>
 </body>
 
