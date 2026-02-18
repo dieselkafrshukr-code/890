@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ستور - عالم الموضة والأناقة</title>
+    <meta name="description" content="متجر ملابس عصري يقدم أحدث صيحات الموضة للرجال والنساء والأطفال. اكتشف مجموعتنا المميزة من الملابس والأحذية والإكسسوارات.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="glass-nav">
+            <div class="nav-container">
+                <div class="logo">
+                    <span class="logo-text">STORE</span>
+                </div>
+                <div class="nav-links">
+                    <a href="#home" class="active">الرئيسية</a>
+                    <a href="#retail">قطاعي</a>
+                    <a href="#wholesale">جملة</a>
+                    <a href="#about">عن المتجر</a>
+                </div>
+                <div class="nav-actions">
+                    <button id="search-btn"><i data-lucide="search"></i></button>
+                    <button id="cart-btn"><i data-lucide="shopping-bag"></i><span class="cart-count">0</span></button>
+                    <button id="menu-btn" class="mobile-only"><i data-lucide="menu"></i></button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <header id="home" class="hero">
+            <div class="hero-content">
+                <h1 class="fade-in">اكتشف أناقتك الحقيقية</h1>
+                <p class="fade-in-delay">أرقى الموديلات العالمية بأعلى جودة وأفضل الأسعار. جملة وقطاعي.</p>
+                <div class="hero-btns">
+                    <a href="#retail" class="btn btn-primary">تسوق الأن</a>
+                    <a href="#wholesale" class="btn btn-secondary">قسم الجملة</a>
+                </div>
+            </div>
+            <div class="hero-overlay"></div>
+        </header>
+
+        <!-- Sale Type Selection -->
+        <section class="sale-types">
+            <div class="container">
+                <div class="section-title">
+                    <h2>اختر نوع الشراء</h2>
+                    <p>نقدم خدماتنا للأفراد والتجار على حد سواء</p>
+                </div>
+                <div class="type-cards">
+                    <div class="type-card" id="card-retail">
+                        <div class="card-icon"><i data-lucide="user"></i></div>
+                        <h3>قطاعي</h3>
+                        <p>تسوق لأجلك ولعائلتك بأفضل الأسعار</p>
+                        <ul class="type-features">
+                            <li><i data-lucide="check"></i> ملابس رجالي وحريمي</li>
+                            <li><i data-lucide="check"></i> قسم خاص للأطفال</li>
+                            <li><i data-lucide="check"></i> أحذية وإكسسوارات</li>
+                        </ul>
+                    </div>
+                    <div class="type-card featured" id="card-wholesale">
+                        <div class="card-icon"><i data-lucide="truck"></i></div>
+                        <h3>جملة</h3>
+                        <p>أسعار خاصة للتجار والكميات الكبيرة</p>
+                        <ul class="type-features">
+                            <li><i data-lucide="check"></i> خصومات هائلة للكميات</li>
+                            <li><i data-lucide="check"></i> توريد للمحلات</li>
+                            <li><i data-lucide="check"></i> شحن لجميع المحافظات</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Categories (Retail) -->
+        <section id="retail" class="categories-section">
+            <div class="container">
+                <div class="section-title">
+                    <h2>الأقسام الرئيسية</h2>
+                    <p>استكشف تشكيلتنا الواسعة في عالم الموضة</p>
+                </div>
+                <div class="category-grid">
+                    <!-- Men -->
+                    <div class="cat-item main-cat" data-category="men">
+                        <div class="cat-img-wrapper">
+                            <img src="https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?auto=format&fit=crop&w=800&q=80" alt="رجالي">
+                        </div>
+                        <div class="cat-info">
+                            <h3>رجالي</h3>
+                            <div class="sub-cats">
+                                <span>ملابس</span> • <span>أحذية</span> • <span>إكسسوارات</span>
+                            </div>
+                            <button class="view-btn">عرض المزيد</button>
+                        </div>
+                    </div>
+                    <!-- Women -->
+                    <div class="cat-item main-cat" data-category="women">
+                        <div class="cat-img-wrapper">
+                            <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80" alt="حريمي">
+                        </div>
+                        <div class="cat-info">
+                            <h3>حريمي</h3>
+                            <div class="sub-cats">
+                                <span>ملابس</span> • <span>أحذية</span> • <span>شنط</span>
+                            </div>
+                            <button class="view-btn">عرض المزيد</button>
+                        </div>
+                    </div>
+                    <!-- Unisex -->
+                    <div class="cat-item main-cat" data-category="unisex">
+                        <div class="cat-img-wrapper">
+                            <img src="https://images.unsplash.com/photo-1523381235208-259227ef72fa?auto=format&fit=crop&w=800&q=80" alt="محير/يونيسكس">
+                        </div>
+                        <div class="cat-info">
+                            <h3>محير (يونيسكس)</h3>
+                            <div class="sub-cats">
+                                <span>تيشيرت</span> • <span>هودي</span> • <span>سنيكرز</span>
+                            </div>
+                            <button class="view-btn">عرض المزيد</button>
+                        </div>
+                    </div>
+                    <!-- Kids -->
+                    <div class="cat-item main-cat" data-category="kids">
+                        <div class="cat-img-wrapper">
+                            <img src="https://images.unsplash.com/photo-1514090458221-65bb69cf63e6?auto=format&fit=crop&w=800&q=80" alt="أطفال">
+                        </div>
+                        <div class="cat-info">
+                            <h3>أطفال</h3>
+                            <div class="sub-cats">
+                                <span>أولادي</span> • <span>بناتي</span> • <span>أحذية</span>
+                            </div>
+                            <button class="view-btn">عرض المزيد</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Category Detail Modal (Dynamic Content Based on User Hierarchy) -->
+        <div id="category-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <div id="modal-body">
+                    <!-- Dynamic content will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <footer id="about">
+            <div class="container footer-content">
+                <div class="footer-logo">
+                    <h2>STORE</h2>
+                    <p>وجهتك الأولى للأناقة والجودة.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>روابط سريعة</h4>
+                    <ul>
+                        <li><a href="#">الرئيسية</a></li>
+                        <li><a href="#">الشروط والأحكام</a></li>
+                        <li><a href="#">سياسة الاسترجاع</a></li>
+                        <li><a href="#">تواصل معنا</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>تواصل معنا</h4>
+                    <p><i data-lucide="phone"></i> +20 123 456 7890</p>
+                    <p><i data-lucide="mail"></i> info@store.com</p>
+                    <div class="social-icons">
+                        <a href="#"><i data-lucide="facebook"></i></a>
+                        <a href="#"><i data-lucide="instagram"></i></a>
+                        <a href="#"><i data-lucide="twitter"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 ستور. جميع الحقوق محفوظة.</p>
+            </div>
+        </footer>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>
