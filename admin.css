@@ -1,11 +1,14 @@
 :root {
     --bg-admin: #050505;
-    --sidebar: #0f0f0f;
-    --card: #151515;
+    --sidebar: #0a0a0a;
+    --card: #121212;
     --primary: #ff1a1a;
     --accent: #d4af37;
     --text: #ffffff;
-    --border: #222;
+    --text-dim: #777777;
+    --border: #1a1a1a;
+    --glass: rgba(255, 255, 255, 0.03);
+    --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
@@ -13,170 +16,336 @@ body {
     color: var(--text);
     font-family: 'Cairo', sans-serif;
     margin: 0;
+    overflow: hidden;
 }
 
 .hidden {
     display: none !important;
 }
 
-/* Login */
-.login-overlay {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #000;
-    z-index: 1000;
-}
-
-.login-card {
-    background: var(--card);
-    padding: 3rem;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    text-align: center;
-    width: 400px;
-}
-
-.login-card .brand {
-    font-family: 'Orbitron';
-    font-weight: 900;
-    color: var(--accent);
-    margin-bottom: 1rem;
-}
-
-.login-card input {
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    background: #111;
-    border: 1px solid var(--border);
-    color: white;
-    border-radius: 8px;
-}
-
-.login-card button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 20px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 700;
-}
-
 /* Dashboard Layout */
 .admin-container {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 1fr 280px;
+    /* Sidebar on the right for RTL */
     height: 100vh;
 }
 
 .sidebar {
     background: var(--sidebar);
-    border-left: 1px solid var(--border);
-    padding: 2rem;
+    border-right: 1px solid var(--border);
+    padding: 2rem 1.5rem;
     display: flex;
     flex-direction: column;
+    z-index: 100;
+}
+
+.sidebar-header {
+    text-align: center;
+    margin-bottom: 3rem;
 }
 
 .sidebar-header .logo {
     font-family: 'Orbitron';
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 900;
     color: var(--accent);
+    letter-spacing: 2px;
 }
 
 .side-nav {
-    margin-top: 3rem;
     flex-grow: 1;
 }
 
 .nav-item {
     width: 100%;
-    padding: 15px;
-    margin-bottom: 5px;
+    padding: 14px 20px;
+    margin-bottom: 10px;
     background: transparent;
-    border: none;
-    color: #888;
+    border: 1px solid transparent;
+    color: var(--text-dim);
     text-align: right;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 15px;
     cursor: pointer;
-    border-radius: 10px;
-    transition: 0.3s;
+    border-radius: 12px;
+    transition: var(--transition);
+    font-weight: 600;
 }
 
-.nav-item:hover,
+.nav-item i {
+    width: 20px;
+}
+
+.nav-item:hover {
+    background: var(--glass);
+    color: #fff;
+}
+
 .nav-item.active {
     background: rgba(212, 175, 55, 0.1);
     color: var(--accent);
+    border-color: rgba(212, 175, 55, 0.2);
 }
 
 .nav-item.logout {
     margin-top: auto;
     color: #ff3e3e;
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+    border-radius: 0;
 }
 
+/* Main Content Area */
 .content {
     background: var(--bg-admin);
     overflow-y: auto;
+    padding-bottom: 5rem;
 }
 
 .top-bar {
-    padding: 1.5rem 2rem;
+    padding: 1.5rem 3rem;
     border-bottom: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: sticky;
+    top: 0;
+    background: rgba(5, 5, 5, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+}
+
+.top-bar h2 {
+    font-weight: 900;
+    font-size: 1.5rem;
+}
+
+.user-info {
+    color: var(--text-dim);
+    font-size: 0.9rem;
 }
 
 .tab-content {
-    padding: 2rem;
+    padding: 3rem;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-/* Components */
-.admin-modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-}
-
-.modal-card {
+/* Category Map Styling */
+.actions-header {
     background: var(--card);
-    padding: 2rem;
-    width: 500px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-}
-
-.tree-view {
-    list-style: none;
-    padding-right: 20px;
-}
-
-.tree-item {
-    background: #111;
-    padding: 12px;
-    margin-bottom: 8px;
-    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    border-radius: 16px;
     border: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 2rem;
 }
 
-.badge-count {
-    background: var(--border);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
+.add-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 26, 26, 0.3);
+}
+
+.tree-view {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tree-item {
+    background: var(--card);
+    padding: 16px 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition);
+}
+
+.tree-item:hover {
+    border-color: #333;
+    background: #181818;
+}
+
+.tree-item .name {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.item-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.action-link {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: 0.2s;
+}
+
+.action-link.add {
+    color: var(--accent);
+}
+
+.action-link.del {
+    color: #ff3e3e;
+}
+
+.action-link:hover {
+    opacity: 0.7;
+}
+
+/* Modals - MUCH BETTER DESIGN */
+.admin-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+}
+
+.modal-card {
+    background: var(--card);
+    padding: 2.5rem;
+    width: 450px;
+    border-radius: 24px;
+    border: 1px solid #222;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.modal-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    font-weight: 800;
+}
+
+.modal-card input,
+.modal-card select {
+    width: 100%;
+    padding: 14px 20px;
+    background: #000;
+    border: 1px solid var(--border);
+    color: white;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.modal-btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 1.5rem;
+}
+
+.save-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background: #1a1a1a;
+    color: #888;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Table Styling */
+.orders-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+}
+
+.orders-table th {
+    padding: 15px 20px;
+    color: var(--text-dim);
+    text-align: right;
+    font-weight: 400;
+}
+
+.orders-table tr td {
+    background: var(--card);
+    padding: 20px;
+    border: 1px solid var(--border);
+}
+
+.orders-table tr td:first-child {
+    border-radius: 0 15px 15px 0;
+    border-left: none;
+}
+
+.orders-table tr td:last-child {
+    border-radius: 15px 0 0 15px;
+    border-right: none;
+}
+
+.status-badge {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    background: rgba(255, 26, 26, 0.1);
+    color: var(--primary);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-admin);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #222;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #333;
 }

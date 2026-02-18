@@ -4,9 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EL TOUFAN | Admin Dashboard</title>
+    <title>EL TOUFAN | لوحة الإدارة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@400;700;900&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -17,51 +19,60 @@
 </head>
 
 <body>
+    <!-- Login Screen -->
     <div id="login-screen" class="login-overlay">
         <div class="login-card">
             <h1 class="brand">EL TOUFAN</h1>
-            <p>Admin Access Only</p>
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="password" placeholder="Password">
-            <button id="login-btn">Login</button>
+            <p style="color: var(--text-dim); margin-bottom: 2rem;">لوحة التحكم في المتجر</p>
+            <input type="email" id="email" placeholder="البريد الإلكتروني">
+            <input type="password" id="password" placeholder="كلمة المرور">
+            <button id="login-btn">تسجيل الدخول</button>
         </div>
     </div>
 
+    <!-- Admin Panel -->
     <div id="admin-panel" class="admin-container hidden">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <span class="logo">EL TOUFAN</span>
-            </div>
-            <nav class="side-nav">
-                <button class="nav-item active" data-tab="orders"><i data-lucide="shopping-cart"></i> الطلبات</button>
-                <button class="nav-item" data-tab="categories"><i data-lucide="map"></i> الأقسام (الخريطة)</button>
-                <button class="nav-item" data-tab="products"><i data-lucide="package"></i> المنتجات</button>
-                <button id="logout-btn" class="nav-item logout"><i data-lucide="log-out"></i> خروج</button>
-            </nav>
-        </aside>
-
         <main class="content">
             <header class="top-bar">
                 <h2 id="tab-title">الطلبات</h2>
-                <div class="user-info">Admin Account</div>
+                <div class="user-info">حساب المسؤول الرئيسي</div>
             </header>
 
             <div id="tab-content" class="tab-content">
                 <!-- Dynamic Content Load Here -->
             </div>
         </main>
+
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo">EL TOUFAN</span>
+            </div>
+            <nav class="side-nav">
+                <button class="nav-item active" data-tab="orders">
+                    <i data-lucide="shopping-bag"></i> الطلبات
+                </button>
+                <button class="nav-item" data-tab="categories">
+                    <i data-lucide="map"></i> خريطة الأقسام
+                </button>
+                <button class="nav-item" data-tab="products">
+                    <i data-lucide="package"></i> المنتجات
+                </button>
+                <button id="logout-btn" class="nav-item logout">
+                    <i data-lucide="log-out"></i> تسجيل الخروج
+                </button>
+            </nav>
+        </aside>
     </div>
 
     <!-- Modals -->
     <div id="modal-category" class="admin-modal hidden">
         <div class="modal-card">
-            <h3>إضافة/تعديل قسم</h3>
-            <input type="text" id="cat-name" placeholder="اسم القسم">
-            <select id="cat-parent">
-                <option value="root">قسم رئيسي</option>
-            </select>
+            <i data-lucide="layers" style="width: 40px; height: 40px; color: var(--accent); margin-bottom: 1rem;"></i>
+            <h3>إضافة قسم جديد</h3>
+            <p style="color: var(--text-dim); margin-bottom: 1.5rem;">أدخل اسم القسم ليظهر للعملاء في الموقع</p>
+            <input type="text" id="cat-name" placeholder="مثلاً: رجالي أو بناطيل">
             <div class="modal-btns">
-                <button id="save-cat" class="save-btn">حفظ</button>
+                <button id="save-cat" class="save-btn">إضافة الآن</button>
                 <button onclick="closeModal('modal-category')" class="cancel-btn">إلغاء</button>
             </div>
         </div>
