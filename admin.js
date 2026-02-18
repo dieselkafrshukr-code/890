@@ -24,7 +24,18 @@ document.addEventListener('DOMContentLoaded', () => {
     loginBtn.onclick = () => {
         const email = document.getElementById('email').value;
         const pass = document.getElementById('password').value;
-        auth.signInWithEmailAndPassword(email, pass).catch(err => alert(err.message));
+
+        if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+            alert("⚠️ خطأ تقني: يجب عليك وضع كود الـ Firebase الخاص بك في ملف firebase-config.js أولاً!");
+            return;
+        }
+
+        loginBtn.innerText = "جاري الدخول...";
+        auth.signInWithEmailAndPassword(email, pass)
+            .catch(err => {
+                alert("❌ فشل الدخول: " + err.message);
+                loginBtn.innerText = "Login";
+            });
     };
 
     // Pre-fill credentials for the user
