@@ -298,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('prod-name').value = '';
         document.getElementById('prod-price').value = '';
         document.getElementById('prod-main-img').value = '';
+        document.getElementById('prod-main-sizes').value = ''; // Reset size input
         document.getElementById('color-variants-container').innerHTML = '';
         window.updateSizeSystem();
         document.getElementById('modal-product').classList.remove('hidden');
@@ -358,6 +359,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const mainBase64 = await fileToBase64(mainImg);
+            const mainSizesRaw = document.getElementById('prod-main-sizes').value;
+            const mainSizes = mainSizesRaw ? mainSizesRaw.split(',').map(s => s.trim()).filter(s => s) : [];
+
             const variants = [];
             const rows = document.querySelectorAll('.variant-card');
 
@@ -378,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 categoryId: catSelect.value,
                 categoryName: catSelect.options[catSelect.selectedIndex].dataset.name,
                 mainImage: mainBase64,
+                mainSizes: mainSizes,
                 colors: variants,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
