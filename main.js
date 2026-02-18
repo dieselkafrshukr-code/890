@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- 1. CONFIG & DATA ---
     const storeTree = {
-        name: "البداية",
+        name: "EL TOUFAN",
         options: [
             {
                 id: "wholesale",
@@ -132,8 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let cartCount = 0;
 
     // --- 3. DOM ELEMENTS ---
-    const introScreen = document.getElementById('intro-screen');
+    const introTitle = document.getElementById('intro-title');
+    const introSub = document.querySelector('.intro-sub-line');
+    const introScreen = document.getElementById('intro-screen'); // Corrected
     const mainApp = document.getElementById('main-app');
+
+    // Missing variables needed for renderStage
     const optionsGrid = document.getElementById('options-grid');
     const stageTitle = document.getElementById('stage-title');
     const stageDesc = document.getElementById('stage-desc');
@@ -141,18 +145,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetBtn = document.getElementById('reset-btn');
     const steps = document.querySelectorAll('.step');
 
-    // --- 4. INTRO ANIMATION ---
+    const typeText = async (element, text, speed = 100) => {
+        for (let i = 0; i < text.length; i++) {
+            element.textContent += text[i];
+            await new Promise(resolve => setTimeout(resolve, speed));
+        }
+    };
+
     const startIntro = async () => {
-        // Just a delay to show the CSS animation/structure
+        // Line 1: EL TOUFAN
+        const mainTitle = document.querySelector('.intro-main');
+        mainTitle.textContent = "";
+        await typeText(mainTitle, "EL TOUFAN", 120);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Fade out preloader
+        introScreen.style.transition = 'opacity 1s ease';
+        introScreen.classList.add('hidden');
+
         setTimeout(() => {
-            introScreen.classList.add('hidden');
-            setTimeout(() => {
-                introScreen.style.display = 'none';
-                mainApp.classList.remove('hidden');
-                renderStage();
-                lucide.createIcons();
-            }, 600);
-        }, 2500);
+            introScreen.style.display = 'none';
+            mainApp.classList.remove('hidden');
+            renderStage();
+            lucide.createIcons();
+        }, 1000);
     };
 
     // --- 5. RENDER LOGIC ---
