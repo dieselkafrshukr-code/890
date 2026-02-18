@@ -281,6 +281,28 @@ body {
     color: var(--primary);
 }
 
+.admin-access-footer {
+    margin-top: 5rem;
+    display: flex;
+    justify-content: center;
+    border-top: 1px solid #111;
+    padding-top: 2rem;
+}
+
+.admin-link-btn {
+    color: #444;
+    text-decoration: none;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.3s;
+}
+
+.admin-link-btn:hover {
+    color: var(--gold);
+}
+
 .footer {
     text-align: center;
     padding: 2rem 0;

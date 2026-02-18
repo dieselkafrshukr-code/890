@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
         auth.signInWithEmailAndPassword(email, pass).catch(err => alert(err.message));
     };
 
+    // Pre-fill credentials for the user
+    document.getElementById('email').value = "mm12@gmail.com";
+    document.getElementById('password').value = "0102030405060";
+
     logoutBtn.onclick = () => auth.signOut();
 
     // --- 2. TAB NAVIGATION ---
