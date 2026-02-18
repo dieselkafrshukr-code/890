@@ -12,22 +12,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     let storeTreeData = [];
     let currentModalTarget = null;
-    // Removed specific size systems based on user request for manual input.
+    let isManualLogin = false; // Flag to enforce manual login on reload
 
     // --- AUTH ---
-    // Force logout on every reload to require fresh login
+    // 1. Force logout initially to clear any persistence
     auth.signOut();
 
     auth.onAuthStateChanged(user => {
-        if (user) {
+        // Only allow entry if this session involved a manual login action
+        if (user && isManualLogin) {
             loginScreen.classList.add('hidden');
             adminPanel.classList.remove('hidden');
             loadTab('orders');
         } else {
+            // Otherwise, show login screen and ensure signed out
             loginScreen.classList.remove('hidden');
             adminPanel.classList.add('hidden');
+            if (user) auth.signOut();
         }
     });
+
+    loginBtn.onclick = () => {
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('password').value;
+        loginBtn.innerText = "⏳ جاري التحقق...";
+
+        auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+            .then(() => {
+                isManualLogin = true; // Allow the listener to proceed
+                return auth.signInWithEmailAndPassword(email, pass);
+            })
+            .catch(err => {
+                isManualLogin = false; // Reset on failure
+                alert("❌ خطأ: " + err.message);
+                loginBtn.innerText = "تسجيل الدخول الآمن";
+            });
+    };
 
     loginBtn.onclick = () => {
         const email = document.getElementById('email').value;
