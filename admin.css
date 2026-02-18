@@ -26,18 +26,33 @@ body {
 /* Dashboard Layout */
 .admin-container {
     display: grid;
-    grid-template-columns: 1fr 280px;
-    /* Sidebar on the right for RTL */
+    grid-template-columns: 280px 1fr;
+    /* Default LTR logic, but we'll use areas for safety */
+    grid-template-areas: "sidebar content";
     height: 100vh;
 }
 
+[dir="rtl"] .admin-container {
+    grid-template-areas: "content sidebar";
+    grid-template-columns: 1fr 280px;
+}
+
 .sidebar {
+    grid-area: sidebar;
     background: var(--sidebar);
-    border-right: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    /* Left border for RTL sidebar on right */
     padding: 2rem 1.5rem;
     display: flex;
     flex-direction: column;
     z-index: 100;
+}
+
+.content {
+    grid-area: content;
+    background: var(--bg-admin);
+    overflow-y: auto;
+    padding-bottom: 5rem;
 }
 
 .sidebar-header {
@@ -444,63 +459,61 @@ body {
     color: var(--primary);
 }
 
-/* Standard Professional Sidebar Layout */
-.admin-container {
-    display: grid !important;
-    grid-template-columns: 280px 1fr !important;
-    height: 100vh !important;
-    background: var(--bg-admin) !important;
-}
-
-.sidebar {
-    background: #000 !important;
-    border-right: 1px solid #1a1a1a !important;
-    padding: 2rem !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 2rem !important;
-    position: static !important;
-    height: auto !important;
-    width: 280px !important;
-}
-
-.side-nav {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0.5rem !important;
-}
-
-.nav-item {
-    width: 100% !important;
-    padding: 1rem !important;
-    border-radius: 12px !important;
-    border: none !important;
-    text-align: right !important;
-    flex-direction: row !important;
-    font-size: 1rem !important;
-    color: var(--text-dim) !important;
-    background: transparent !important;
-}
-
-.nav-item.active {
-    background: rgba(212, 175, 55, 0.1) !important;
-    color: var(--accent) !important;
-}
-
-.content {
-    padding: 2rem !important;
-    overflow-y: auto !important;
-    height: 100vh !important;
-}
-
 @media (max-width: 900px) {
     .admin-container {
         grid-template-columns: 1fr !important;
+        grid-template-areas: "sidebar" "content" !important;
+        height: auto !important;
+        overflow: visible !important;
     }
 
     .sidebar {
+        width: 100% !important;
+        height: auto !important;
+        padding: 1rem !important;
+        position: sticky !important;
+        top: 0 !important;
+        border-left: none !important;
+        border-bottom: 1px solid var(--border) !important;
+    }
+
+    .sidebar-header {
+        margin-bottom: 1rem !important;
+    }
+
+    .side-nav {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        gap: 10px !important;
+        padding-bottom: 5px !important;
+    }
+
+    .nav-item {
+        margin-bottom: 0 !important;
+        padding: 10px 15px !important;
+        white-space: nowrap !important;
+        font-size: 0.85rem !important;
+    }
+
+    .nav-item.logout {
+        margin-top: 0 !important;
+        border-top: none !important;
+        padding-top: 0 !important;
+    }
+
+    .content {
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .top-bar {
         display: none !important;
-        /* Simple hide for now to restore sanity */
+        /* Hide redundant title bar on mobile */
+    }
+
+    .tab-content {
+        padding: 1.5rem !important;
     }
 }
 
