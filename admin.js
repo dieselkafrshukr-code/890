@@ -193,37 +193,88 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 3. PRODUCTS ---
+    // --- 3. PRODUCTS & STATS ---
     async function renderProducts() {
         tabContent.innerHTML = `
+            <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:3rem;">
+                <div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center; position:relative; overflow:hidden;">
+                    <i data-lucide="package" style="position:absolute; top:-10px; left:-10px; width:80px; height:80px; color:rgba(255,255,255,0.03);"></i>
+                    <div style="font-size:2.5rem; font-weight:900; color:var(--accent);" id="stat-prods">-</div>
+                    <div style="color:var(--text-dim); font-weight:700;">عدد المنتجات</div>
+                </div>
+                <div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center; position:relative; overflow:hidden;">
+                    <i data-lucide="layers" style="position:absolute; top:-10px; left:-10px; width:80px; height:80px; color:rgba(255,255,255,0.03);"></i>
+                    <div style="font-size:2.5rem; font-weight:900; color:#fff;" id="stat-cats">-</div>
+                    <div style="color:var(--text-dim); font-weight:700;">عدد الأقسام</div>
+                </div>
+                 <div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center; position:relative; overflow:hidden;">
+                    <i data-lucide="shopping-bag" style="position:absolute; top:-10px; left:-10px; width:80px; height:80px; color:rgba(255,255,255,0.03);"></i>
+                    <div style="font-size:2.5rem; font-weight:900; color:#4caf50;" id="stat-orders">-</div>
+                    <div style="color:var(--text-dim); font-weight:700;">إجمالي الطلبات</div>
+                </div>
+            </div>
+
             <div class="actions-header">
                 <h3>إدارة المنتجات</h3>
                 <button onclick="window.openProductModal()" class="add-btn"><i data-lucide="plus-circle"></i> إضافة منتج جديد</button>
             </div>
-            <div id="products-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>
+            <div id="products-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px;">
+                <p style="text-align:center; grid-column:1/-1; color:var(--text-dim);">جاري تحميل المنتجات...</p>
+            </div>
         `;
 
-        const grid = document.getElementById('products-grid');
-        const snap = await db.collection('products').orderBy('timestamp', 'desc').get();
+        try {
+            // 1. Fetch Data Parallel
+            const [prodsSnap, ordersSnap, treeSnap] = await Promise.all([
+                db.collection('products').orderBy('timestamp', 'desc').get(),
+                db.collection('orders').get(),
+                storeTreeData.length === 0 ? db.collection('settings').doc('storeTree').get() : Promise.resolve(null)
+            ]);
 
-        if (snap.empty) {
-            grid.innerHTML = '<p style="text-align:center; grid-column:1/-1; padding:3rem; color:var(--text-dim);">لا توجد منتجات حالياً.</p>';
-        } else {
-            snap.forEach(doc => {
-                const p = doc.data();
-                const card = document.createElement('div');
-                card.className = 'product-item-card';
-                card.innerHTML = `
-                    <img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;">
-                    <div style="flex-grow:1;">
-                        <div style="font-weight:900;">${p.name}</div>
-                        <div style="color:var(--accent); font-weight:800; font-size:1.1rem;">${p.price} ج.م</div>
-                        <div style="font-size:0.75rem; color:var(--text-dim);">${p.categoryName || ''}</div>
-                    </div>
-                    <button onclick="window.deleteProduct('${doc.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
-                `;
-                grid.appendChild(card);
-            });
+            // 2. Update Tree Data if fetched
+            if (treeSnap && treeSnap.exists) {
+                storeTreeData = treeSnap.data().options || [];
+            }
+
+            // 3. Calculate Counts
+            const prodCount = prodsSnap.size;
+            const orderCount = ordersSnap.size;
+
+            let catCount = 0;
+            const countNodes = (nodes) => {
+                nodes.forEach(n => { catCount++; if (n.options) countNodes(n.options); });
+            };
+            countNodes(storeTreeData);
+
+            // 4. Update UI Stats
+            document.getElementById('stat-prods').innerText = prodCount;
+            document.getElementById('stat-orders').innerText = orderCount;
+            document.getElementById('stat-cats').innerText = catCount;
+
+            // 5. Render Products Grid
+            const grid = document.getElementById('products-grid');
+            if (prodsSnap.empty) {
+                grid.innerHTML = '<p style="text-align:center; grid-column:1/-1; padding:3rem; color:var(--text-dim);">لا توجد منتجات حالياً.</p>';
+            } else {
+                grid.innerHTML = '';
+                prodsSnap.forEach(doc => {
+                    const p = doc.data();
+                    const card = document.createElement('div');
+                    card.className = 'product-item-card';
+                    card.innerHTML = `
+                        <img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;">
+                        <div style="flex-grow:1;">
+                            <div style="font-weight:900;">${p.name}</div>
+                            <div style="color:var(--accent); font-weight:800; font-size:1.1rem;">${p.price} ج.م</div>
+                            <div style="font-size:0.75rem; color:var(--text-dim);">${p.categoryName || ''}</div>
+                        </div>
+                        <button onclick="window.deleteProduct('${doc.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+        } catch (e) {
+            console.error("Error loading dashboard:", e);
         }
         lucide.createIcons();
     }

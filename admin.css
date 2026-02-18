@@ -86,6 +86,11 @@ body {
     font-weight: 700;
 }
 
+.nav-item span {
+    flex: 1;
+    /* Ensure text takes space to push icon away if needed, but here we want icon-text */
+}
+
 .nav-item i {
     width: 22px;
     height: 22px;
@@ -311,6 +316,8 @@ body {
 
 .modal-header {
     display: flex;
+    flex-direction: row-reverse;
+    /* Force Title Right, Button Left in RTL */
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2.5rem;
@@ -322,13 +329,27 @@ body {
     font-size: 1.6rem;
     font-weight: 900;
     color: var(--accent);
+    margin: 0;
 }
 
 .close-modal {
-    background: none;
-    border: none;
-    color: var(--text-dim);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #333;
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s;
+}
+
+.close-modal:hover {
+    background: #ff3e3e;
+    border-color: #ff3e3e;
+    transform: rotate(90deg);
 }
 
 /* Forms */
