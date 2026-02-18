@@ -12,11 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     let storeTreeData = [];
     let currentModalTarget = null;
-    const sizeSystems = {
-        clothes: ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL'],
-        pants: ['28', '30', '32', '34', '36', '38', '40', '42'],
-        shoes: ['37', '38', '39', '40', '41', '42', '43', '44', '45']
-    };
+    // Removed specific size systems based on user request for manual input.
 
     // --- AUTH ---
     auth.onAuthStateChanged(user => {
@@ -308,27 +304,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.updateSizeSystem = () => {
-        // Refresh any existing variant rows with new chips if needed, but usually just for new ones
-        console.log("Size system updated globally");
+        // No-op or remove if not needed anymore
     };
 
     window.addColorVariant = () => {
         const container = document.getElementById('color-variants-container');
-        const system = document.getElementById('size-type-selector').value;
-        const availableSizes = sizeSystems[system];
         const rowId = 'v_' + Date.now();
 
         const div = document.createElement('div');
         div.className = 'variant-card';
         div.id = rowId;
         div.innerHTML = `
-            <div class="variant-top">
+            <div class="variant-top" style="grid-template-columns: 1fr 1fr 2fr auto;">
                 <input type="text" placeholder="اسم اللون" class="v-name">
                 <input type="file" accept="image/*" class="v-img">
+                <input type="text" placeholder="المقاسات (مثلاً: S, M, L, XL - افصل بفاصلة)" class="v-sizes-text" style="direction:ltr; text-align:right;">
                 <button type="button" onclick="document.getElementById('${rowId}').remove()" class="action-link del"><i data-lucide="trash-2"></i></button>
-            </div>
-            <div class="v-size-grid">
-                ${availableSizes.map(s => `<label class="size-chip"><input type="checkbox" value="${s}"> ${s}</label>`).join('')}
             </div>
         `;
         container.appendChild(div);
@@ -373,7 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let row of rows) {
                 const vName = row.querySelector('.v-name').value.trim();
                 const vFile = row.querySelector('.v-img').files[0];
-                const vSizes = Array.from(row.querySelectorAll('input:checked')).map(c => c.value);
+                const vSizesRaw = row.querySelector('.v-sizes-text').value; // Get text input
+                const vSizes = vSizesRaw.split(',').map(s => s.trim()).filter(s => s); // Split by comma
 
                 if (vName && vFile) {
                     const vBase64 = await fileToBase64(vFile);
