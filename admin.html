@@ -80,13 +80,17 @@
 
     <!-- Product Modal -->
     <div id="modal-product" class="admin-modal hidden">
-        <div class="modal-card"
-            style="width: 700px; max-height: 90vh; overflow-y: auto; text-align: right; border: 2px solid var(--accent);">
+        <div class="modal-card product-modal-custom">
             <header
-                style="display:flex; align-items:center; gap:15px; margin-bottom:2rem; border-bottom:1px solid #222; padding-bottom:1rem;">
-                <div style="background:var(--accent); color:black; padding:10px; border-radius:12px;"><i
-                        data-lucide="package"></i></div>
-                <h3 style="margin:0;">إضافة منتج احترافي جديد</h3>
+                style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; border-bottom:1px solid #222; padding-bottom:1rem;">
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="background:var(--accent); color:black; padding:10px; border-radius:12px;"><i
+                            data-lucide="package"></i></div>
+                    <h3 style="margin:0;">إضافة منتج احترافي جديد</h3>
+                </div>
+                <button onclick="closeModal('modal-product')"
+                    style="background:none; border:none; color:var(--text-dim); cursor:pointer;"><i
+                        data-lucide="x"></i></button>
             </header>
 
             <div class="form-section" style="margin-bottom:2rem;">
@@ -109,18 +113,22 @@
                         <option value="">اختر القسم...</option>
                     </select>
                 </div>
-                <!-- New Main Sizes Input -->
-                <div class="input-group" style="margin-top:15px;">
-                    <label>المقاسات المتاحة لهذا المنتج (اكتبها مفصولة بفاصلة):</label>
-                    <input type="text" id="prod-main-sizes" placeholder="مثال: S, M, L, XL أو 37, 38, 39">
-                </div>
             </div>
 
             <div class="form-section" style="margin-bottom:2rem;">
                 <h4
                     style="color:var(--accent); border-right:4px solid var(--accent); padding-right:10px; margin-bottom:1.5rem;">
-                    2. الصور</h4>
+                    2. نوع المقاسات والصور</h4>
                 <div class="input-group">
+                    <label>نظام المقاسات للمنتج:</label>
+                    <select id="size-type-selector" onchange="window.updateSizeSystem()"
+                        style="background:#111; border-color:var(--accent);">
+                        <option value="clothes">ملابس (S, M, L...)</option>
+                        <option value="pants">بنطلونات (28, 30, 32...)</option>
+                        <option value="shoes">أحذية (37, 38, 39...)</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin-top:15px;">
                     <label>الصورة الأساسية (تظهر في الواجهة):</label>
                     <input type="file" id="prod-main-img" accept="image/*"
                         style="border:1px dashed #444; padding:20px;">
