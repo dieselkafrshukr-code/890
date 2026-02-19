@@ -123,18 +123,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadShippingPrices() {
+        // Pre-initialize with 0 to avoid undefined
+        EGYPT_GOVERNORATES.forEach(g => {
+            shippingPrices[g.trim()] = 0;
+        });
+
         try {
+            console.log('📡 Fetching shipping prices...');
             const snap = await db.collection('settings').doc('governoratesPricing').get();
             if (snap.exists) {
                 const rawPrices = snap.data().prices || {};
-                // Normalize keys to remove any whitespace issues
-                shippingPrices = {};
                 Object.keys(rawPrices).forEach(k => {
-                    shippingPrices[k.trim()] = rawPrices[k];
+                    const price = parseFloat(rawPrices[k]);
+                    if (!isNaN(price)) {
+                        shippingPrices[k.trim()] = price;
+                    }
                 });
-                console.log('✅ Shipping prices loaded:', shippingPrices);
+                console.log('✅ Shipping prices loaded into memory:', shippingPrices);
+            } else {
+                console.warn('⚠️ No shipping pricing document found in Firestore.');
             }
-        } catch (e) { console.warn('Could not load shipping prices:', e); }
+        } catch (e) {
+            console.error('❌ Error loading shipping prices:', e);
+        }
     }
 
     async function syncData() {
@@ -575,19 +586,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = document.getElementById('of-name').value.trim();
         const phone = document.getElementById('of-phone').value.trim();
         const address = document.getElementById('of-address').value.trim();
-        const gov = document.getElementById('of-gov').value;
+        const govRaw = document.getElementById('of-gov').value || '';
+        const govNormalized = govRaw.trim();
 
-        if (!name) return alert("❌ يرجى إدخال الاسم!");
+        if (!name) return alert("❌ يرجى إدخل الاسم!");
         if (!phone) return alert("❌ يرجى إدخال رقم الهاتف!");
         if (!address) return alert("❌ يرجى إدخال العنوان!");
-        if (!gov) return alert("❌ يرجى اختيار المحافظة!");
+        if (!govNormalized) return alert("❌ يرجى اختيار المحافظة!");
 
         const subtotal = cart.reduce((s, i) => s + i.price, 0);
         const discount = couponDiscount > 0
             ? (couponType === 'percent' ? Math.round(subtotal * couponDiscount / 100) : couponDiscount)
             : 0;
         const discountedSubtotal = Math.max(0, subtotal - discount);
-        const shipping = shippingPrices[gov] || 0;
+
+        const shipping = (govNormalized && shippingPrices[govNormalized] !== undefined) ? shippingPrices[govNormalized] : 0;
         const total = discountedSubtotal + shipping;
 
         const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
@@ -598,13 +611,13 @@ document.addEventListener('DOMContentLoaded', () => {
             `👤 الاسم: ${name}\n` +
             `📱 التليفون: ${phone}\n` +
             `📍 العنوان: ${address}\n` +
-            `🗺️ المحافظة: ${gov}\n` +
+            `🗺️ المحافظة: ${govNormalized}\n` +
             `━━━━━━━━━━━━━━━\n` +
             `🛒 المنتجات:\n${itemsList}\n` +
             `━━━━━━━━━━━━━━━\n` +
             `💰 المنتجات: ${subtotal} ج.م\n` +
             (discount > 0 ? `🏷️ خصم (${couponCode}): -${discount} ج.م\n` : '') +
-            `🚚 الشحن (${gov}): ${shipping} ج.م\n` +
+            `🚚 الشحن (${govNormalized}): ${shipping} ج.م\n` +
             `✅ الإجمالي: ${total} ج.م`
         );
 
