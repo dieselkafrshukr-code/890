@@ -768,5 +768,108 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CHART ---
     function buildSalesChart(ordersSnap) { /* Logic for chart */ }
 
+    // --- PRODUCT MANAGEMENT HELPERS ---
+    function generateSKU() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        return 'ELT-' + code;
+    }
+
+    window.openProductModal = () => {
+        document.getElementById('modal-title').innerText = 'إضافة منتج جديد';
+        document.getElementById('editing-prod-id').value = '';
+        document.getElementById('prod-name').value = '';
+        document.getElementById('prod-name-en').value = '';
+        document.getElementById('prod-price').value = '';
+        document.getElementById('prod-sku').value = generateSKU();
+        document.getElementById('prod-main-img').value = '';
+        document.getElementById('prod-main-sizes').value = '';
+        document.getElementById('img-preview').src = '';
+        document.getElementById('img-preview').classList.add('hidden');
+        
+        // Populate Categories
+        const select = document.getElementById('prod-category');
+        select.innerHTML = '<option value="">-- اختر القسم --</option>';
+        const flatten = (nodes, prefix = '') => {
+            nodes.forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n.id;
+                opt.innerText = prefix + n.name;
+                select.appendChild(opt);
+                if (n.options) flatten(n.options, prefix + '-- ');
+            });
+        };
+        flatten(storeTreeData);
+        
+        document.getElementById('product-modal').classList.remove('hidden');
+    };
+
+    window.closeProductModal = () => document.getElementById('product-modal').classList.add('hidden');
+
+    window.saveProduct = async () => {
+        const id = document.getElementById('editing-prod-id').value;
+        const name = document.getElementById('prod-name').value;
+        const price = document.getElementById('prod-price').value;
+        const catId = document.getElementById('prod-category').value;
+        const sku = document.getElementById('prod-sku').value || generateSKU();
+        
+        if (!name || !price || !catId) { alert('⚠️ يرجى ملء البيانات الأساسية (الاسم، السعر، القسم)'); return; }
+        
+        const data = {
+            name,
+            nameEn: document.getElementById('prod-name-en').value,
+            price: parseFloat(price),
+            categoryId: catId,
+            sku: sku,
+            mainImage: document.getElementById('prod-main-img').value,
+            sizes: document.getElementById('prod-main-sizes').value.split(',').map(s=>s.trim()).filter(s=>s),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        try {
+            if (id) {
+                await db.collection('products').doc(id).update(data);
+                alert('✅ تم تحديث المنتج بنجاح');
+            } else {
+                await db.collection('products').add(data);
+                alert('✅ تم إضافة المنتج بنجاح');
+            }
+            document.getElementById('product-modal').classList.add('hidden');
+            renderProducts();
+        } catch (error) {
+            console.error(error);
+            alert('❌ حدث خطأ أثناء الحفظ');
+        }
+    };
+
+    window.editProduct = async (id) => {
+        const doc = await db.collection('products').doc(id).get();
+        if(!doc.exists) return;
+        const p = doc.data();
+        
+        window.openProductModal();
+        document.getElementById('modal-title').innerText = 'تعديل المنتج';
+        document.getElementById('editing-prod-id').value = id;
+        document.getElementById('prod-name').value = p.name;
+        document.getElementById('prod-name-en').value = p.nameEn || '';
+        document.getElementById('prod-price').value = p.price;
+        document.getElementById('prod-sku').value = p.sku || generateSKU();
+        document.getElementById('prod-category').value = p.categoryId;
+        document.getElementById('prod-main-img').value = p.mainImage || '';
+        document.getElementById('prod-main-sizes').value = (p.sizes || []).join(', ');
+        
+        if(p.mainImage) {
+            document.getElementById('img-preview').src = p.mainImage;
+            document.getElementById('img-preview').classList.remove('hidden');
+        }
+    };
+
+    window.deleteProduct = async (id) => {
+        if(confirm('⚠️ هل أنت متأكد تماماً من حذف هذا المنتج؟')) {
+            await db.collection('products').doc(id).delete();
+            renderProducts();
+        }
+    };
+
 });
-// Updated
