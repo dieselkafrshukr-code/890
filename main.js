@@ -83,8 +83,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
-    // WhatsApp Number
-    const WA_NUMBER = "201020451206";
+    // WhatsApp Numbers
+    const WA_NUMBER = "201020451206";   // الرقم الأول
+    const WA_NUMBER_2 = "201020451206"; // الرقم الثاني - غيّره حسب رغبتك
 
     // Egypt Governorates
     const EGYPT_GOVERNORATES = [
@@ -765,7 +766,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) { console.warn("Could not save to Firestore:", e.message); }
 
+        // إرسال للرقم الأول
         window.open(`https://wa.me/${WA_NUMBER}?text=${waText}`, '_blank');
+        // إرسال للرقم الثاني (بعد ثانية عشان المتصفح مايبلوكوش)
+        if (WA_NUMBER_2 && WA_NUMBER_2 !== WA_NUMBER) {
+            setTimeout(() => {
+                window.open(`https://wa.me/${WA_NUMBER_2}?text=${waText}`, '_blank');
+            }, 1000);
+        }
 
         cart = [];
         updateCartUI();

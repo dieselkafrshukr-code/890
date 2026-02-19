@@ -854,6 +854,8 @@ body.light-mode .close-detail {
 .product-card-info {
     padding: 20px;
     border-top: 1px solid var(--border);
+    overflow: hidden;
+    min-width: 0;
 }
 
 .product-card-name {
@@ -861,6 +863,9 @@ body.light-mode .close-detail {
     font-weight: 800;
     margin-bottom: 8px;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .product-card-price {
