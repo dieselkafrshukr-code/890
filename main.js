@@ -821,7 +821,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 couponCode = '';
             }
         } catch (e) {
-            msg.textContent = '❌ خطأ في الاتصال';
+            console.error("Coupon Error Details:", e);
+            msg.textContent = '❌ خطأ: ' + (e.message.includes('permission') ? 'صلاحيات الوصول (Rules)' : 'خطأ في الاتصال');
             msg.className = 'coupon-msg error';
         }
 
