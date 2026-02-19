@@ -604,6 +604,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (discountRow) discountRow.style.display = (discount > 0) ? 'flex' : 'none';
         if (discountAmountEl) discountAmountEl.innerText = `-${discount} ج.م`;
+
+        const discLabel = document.querySelector('#of-discount-row span:first-child');
+        if (discLabel && couponCode) discLabel.innerText = `خصم كوبون (${couponCode}):`;
     };
 
     window.submitOrder = async () => {
