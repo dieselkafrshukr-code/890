@@ -630,3 +630,4 @@ document.addEventListener('DOMContentLoaded', () => {
     function buildSalesChart(ordersSnap) { /* Logic for chart */ }
 
 });
+// Updated
