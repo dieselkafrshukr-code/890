@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Object.keys(rawPrices).forEach(k => {
                     shippingPrices[k.trim()] = rawPrices[k];
                 });
+                console.log('✅ Shipping prices loaded:', shippingPrices);
             }
         } catch (e) { console.warn('Could not load shipping prices:', e); }
     }
@@ -501,7 +502,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div id="of-price-box" style="background:#111; border:1px solid #222; border-radius:16px; padding:1.2rem; margin-bottom:1.5rem;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                         <span style="color:#aaa;">المنتجات:</span>
-                        <span style="font-weight:700;">${subtotal} ج.م</span>
+                        <span id="of-subtotal" style="font-weight:700;">${subtotal} ج.م</span>
+                    </div>
+                    <div id="of-discount-row" style="display:none; justify-content:space-between; margin-bottom:8px; color:#4caf50;">
+                        <span>خصم كوبون:</span>
+                        <span id="of-discount-amount" style="font-weight:700;">0 ج.م</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                         <span style="color:#aaa;">الشحن:</span>
@@ -529,6 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         document.body.appendChild(modal);
+        window.updateOrderTotal(); // Initial calculation
     }
 
     // Store shipping prices for use in form
@@ -538,23 +544,31 @@ document.addEventListener('DOMContentLoaded', () => {
             ? (couponType === 'percent' ? Math.round(subtotal * couponDiscount / 100) : couponDiscount)
             : 0;
         const discountedSubtotal = Math.max(0, subtotal - discount);
-        const gov = (document.getElementById('of-gov').value || '').trim();
-        const shipping = gov ? (shippingPrices[gov] !== undefined ? shippingPrices[gov] : 0) : 0;
+
+        const govSelect = document.getElementById('of-gov');
+        const gov = (govSelect ? govSelect.value : '').trim();
+        const shipping = (gov && shippingPrices[gov] !== undefined) ? shippingPrices[gov] : 0;
         const total = discountedSubtotal + shipping;
 
+        const subtotalEl = document.getElementById('of-subtotal');
         const shippingEl = document.getElementById('of-shipping-cost');
         const totalEl = document.getElementById('of-total');
         const discountRow = document.getElementById('of-discount-row');
         const discountAmountEl = document.getElementById('of-discount-amount');
 
+        if (subtotalEl) subtotalEl.innerText = `${subtotal} ج.م`;
         if (shippingEl) {
             shippingEl.innerText = `${shipping} ج.م`;
             shippingEl.style.color = shipping > 0 ? '#ff9800' : '#4caf50';
         }
         if (totalEl) totalEl.innerText = `${total} ج.م`;
-        if (discountRow) discountRow.style.display = discount > 0 ? '' : 'none';
-        const discountEl = document.getElementById('of-discount-amount');
-        if (discountEl) discountEl.innerText = `-${discount} ج.م`;
+
+        if (discountRow) {
+            discountRow.style.display = discount > 0 ? 'flex' : 'none';
+        }
+        if (discountAmountEl) {
+            discountAmountEl.innerText = `-${discount} ج.م`;
+        }
     };
 
     window.submitOrder = async () => {
@@ -637,17 +651,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.toggleWishlist = () => {
-        if (!detailedProd || !currentProductId) return;
+        if (!detailedProd || !currentProductId) {
+            console.error("Wishlist toggle failed: Missing data", { detailedProd, currentProductId });
+            return;
+        }
         const idx = wishlist.findIndex(w => w.id === currentProductId);
         if (idx > -1) {
             wishlist.splice(idx, 1);
+            alert("❌ تم الإزالة من المفضلة");
         } else {
             wishlist.push({
                 id: currentProductId,
                 name: detailedProd.name,
                 price: detailedProd.price,
-                image: detailedProd.mainImage
+                image: detailedProd.mainImage || ''
             });
+            alert("❤️ تم الإضافة للمفضلة");
         }
         saveWishlist();
         updateWishlistBtnState();
