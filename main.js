@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLevel = storeTree;
     let cart = [];
     let shippingPrices = {};
+    window.CURRENT_SHIPPING_PRICES = shippingPrices; // External access for debug
     let wishlist = JSON.parse(localStorage.getItem('eltoufan_wishlist') || '[]');
     let couponDiscount = 0;
     let couponCode = '';
@@ -130,29 +131,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadShippingPrices() {
-        // Pre-initialize with 0 to avoid undefined
-        EGYPT_GOVERNORATES.forEach(g => {
-            shippingPrices[g.trim()] = 0;
-        });
+        console.log("🚛 Starting to load shipping prices...");
+        // 1. Load from the local config file first
+        if (window.LOCAL_SHIPPING_PRICES) {
+            Object.keys(window.LOCAL_SHIPPING_PRICES).forEach(g => {
+                const cleanKey = g.trim();
+                shippingPrices[cleanKey] = parseFloat(window.LOCAL_SHIPPING_PRICES[g]) || 0;
+            });
+            console.log('📜 Initialized from LOCAL file:', shippingPrices);
+        }
 
+        // 2. Override with Firestore if available
         try {
-            console.log('📡 Fetching shipping prices...');
             const snap = await db.collection('settings').doc('governoratesPricing').get();
             if (snap.exists) {
-                const rawPrices = snap.data().prices || {};
-                Object.keys(rawPrices).forEach(k => {
-                    const price = parseFloat(rawPrices[k]);
-                    if (!isNaN(price)) {
-                        shippingPrices[k.trim()] = price;
-                    }
+                const firebasePrices = snap.data().prices || {};
+                Object.keys(firebasePrices).forEach(k => {
+                    const val = parseFloat(firebasePrices[k]);
+                    if (!isNaN(val)) shippingPrices[k.trim()] = val;
                 });
-                console.log('✅ Shipping prices loaded into memory:', shippingPrices);
-            } else {
-                console.warn('⚠️ No shipping pricing document found in Firestore.');
+                console.log('🔄 Synced from Firestore:', shippingPrices);
             }
-        } catch (e) {
-            console.error('❌ Error loading shipping prices:', e);
-        }
+        } catch (e) { console.log('ℹ️ Using local prices only.'); }
+
+        window.CURRENT_SHIPPING_PRICES = shippingPrices;
     }
 
     async function syncData() {
@@ -565,7 +567,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const govSelect = document.getElementById('of-gov');
         const gov = (govSelect ? govSelect.value : '').trim();
-        const shipping = (gov && shippingPrices[gov] !== undefined) ? shippingPrices[gov] : 0;
+
+        let shipping = 0;
+        if (gov) {
+            // Priority 1: Exact Match
+            if (shippingPrices[gov] !== undefined) {
+                shipping = shippingPrices[gov];
+            } else {
+                // Priority 2: Trimmed match
+                const match = Object.keys(shippingPrices).find(k => k.trim() === gov);
+                if (match) shipping = shippingPrices[match];
+            }
+            console.log(`[SHIPPING] Gov: "${gov}" | Price: ${shipping} | Source:`, shippingPrices);
+        }
+
         const total = discountedSubtotal + shipping;
 
         const subtotalEl = document.getElementById('of-subtotal');
