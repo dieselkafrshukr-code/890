@@ -655,8 +655,8 @@ body.light-mode .close-detail {
     }
 
     .options-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
         width: 100%;
         gap: 12px;
         padding: 5px;
@@ -669,7 +669,7 @@ body.light-mode .close-detail {
     }
 
     .product-card-img {
-        height: 250px;
+        height: 200px;
     }
 
     .product-card-info {
@@ -696,6 +696,7 @@ body.light-mode .close-detail {
         min-width: unset;
         font-size: 1.1rem;
         padding: 16px;
+        grid-column: span 2;
     }
 
     /* Order Form Fix for Mobile */
