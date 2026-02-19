@@ -284,7 +284,7 @@ body.light-mode .theme-toggle-btn:hover {
 }
 
 .opt-btn {
-    padding: 16px 36px;
+    padding: 18px 45px;
     background: var(--btn-bg);
     border: 1px solid var(--border);
     color: var(--text);
@@ -293,6 +293,10 @@ body.light-mode .theme-toggle-btn:hover {
     border-radius: 20px;
     cursor: pointer;
     transition: var(--transition);
+    min-width: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .opt-btn:hover {
@@ -750,8 +754,9 @@ body.light-mode .close-detail {
 
 /* Professional Product Card System */
 .options-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 30px;
     width: 100%;
     margin-top: 2rem;
@@ -768,6 +773,8 @@ body.light-mode .close-detail {
     flex-direction: column;
     text-align: right;
     animation: fadeIn 0.5s ease-out;
+    width: 300px;
+    flex-grow: 0;
 }
 
 @keyframes fadeIn {
