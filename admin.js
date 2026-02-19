@@ -324,13 +324,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
 
-    // --- 3. PRODUCTS ---
-    async function renderProducts() {
-        // Calculate Sales Stats
-        let todaySales = 0;
-        let weekSales = 0;
-        let monthSales = 0;
+// --- 3. PRODUCTS ---
+async function renderProducts() {
+    // Show loading state initially
+    tabContent.innerHTML = `<div style="text-align:center; padding:5rem; color:var(--accent);">
+            <i data-lucide="loader" class="spin" style="width:40px; height:40px; margin-bottom:1rem;"></i>
+            <div style="font-weight:700;">جاري تحميل لوحة التحكم...</div>
+        </div>`;
+    lucide.createIcons();
 
+    let prodsSnap = { size: 0, forEach: () => { } };
+    let ordersSnap = { size: 0, forEach: () => { } };
+    let settingsSnap = { exists: false, data: () => ({}) };
+    let couponsSnap = { size: 0 };
+
+    // Fetch data individually
+    try { prodsSnap = await db.collection('products').orderBy('timestamp', 'desc').get(); } catch (e) { console.error("Error fetching products:", e); }
+    try { ordersSnap = await db.collection('orders').orderBy('timestamp', 'desc').get(); } catch (e) { console.error("Error fetching orders:", e); }
+    try { settingsSnap = await db.collection('settings').doc('storeTree').get(); } catch (e) { console.warn("Store tree not found:", e); }
+    try { couponsSnap = await db.collection('coupons').get(); } catch (e) { console.warn("Coupons not found:", e); }
+
+    // Calculate Sales Stats safely
+    let todaySales = 0, weekSales = 0, monthSales = 0;
+    try {
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
@@ -344,65 +360,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (date >= startOfWeek) weekSales += total;
             if (date >= startOfMonth) monthSales += total;
         });
+    } catch (e) { console.error("Error calculating stats:", e); }
 
-        tabContent.innerHTML = `
-            <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:1.5rem;">
-                <div class="stat-card" style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); text-align:center;">
-                    <div style="font-size:2rem; font-weight:900; color:var(--accent);" id="stat-prods">-</div>
-                    <div style="color:var(--text-dim); font-size:0.9rem;">عدد المنتجات</div>
-                </div>
-                <div class="stat-card" style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); text-align:center;">
-                    <div style="font-size:2rem; font-weight:900; color:#fff;" id="stat-cats">-</div>
-                    <div style="color:var(--text-dim); font-size:0.9rem;">عدد الأقسام</div>
-                </div>
-                <div class="stat-card" style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); text-align:center;">
-    // --- 3. PRODUCTS ---
-    async function renderProducts() {
-        // Show loading state initially
-        tabContent.innerHTML = `<div style="text-align:center; padding:5rem; color:var(--accent);">
-            <i data-lucide="loader" class="spin" style="width:40px; height:40px; margin-bottom:1rem;"></i>
-            <div style="font-weight:700;">جاري تحميل لوحة التحكم...</div>
-        </div>`;
-        lucide.createIcons();
+    const countNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + (n.options ? countNodes(n.options) : 0), 0);
+    let catsCount = 0;
+    if (settingsSnap.exists && settingsSnap.data().options) {
+        catsCount = countNodes(settingsSnap.data().options);
+    } else {
+        catsCount = storeTreeData.length || 0;
+    }
 
-        let prodsSnap = { size: 0, forEach: () => {} };
-        let ordersSnap = { size: 0, forEach: () => {} };
-        let settingsSnap = { exists: false, data: () => ({}) };
-        let couponsSnap = { size: 0 };
-
-        // Fetch data individually to prevent total failure
-        try { prodsSnap = await db.collection('products').orderBy('timestamp', 'desc').get(); } catch (e) { console.error("Error fetching products:", e); }
-        try { ordersSnap = await db.collection('orders').orderBy('timestamp', 'desc').get(); } catch (e) { console.error("Error fetching orders:", e); }
-        try { settingsSnap = await db.collection('settings').doc('storeTree').get(); } catch (e) { console.warn("Store tree not found:", e); }
-        try { couponsSnap = await db.collection('coupons').get(); } catch (e) { console.warn("Coupons not found:", e); }
-
-        // Calculate Sales Stats safely
-        let todaySales = 0, weekSales = 0, monthSales = 0;
-        try {
-            const now = new Date();
-            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-            ordersSnap.forEach(doc => {
-                const o = doc.data();
-                const date = o.timestamp ? o.timestamp.toDate() : new Date();
-                const total = parseFloat(o.total) || 0;
-                if (date >= startOfDay) todaySales += total;
-                if (date >= startOfWeek) weekSales += total;
-                if (date >= startOfMonth) monthSales += total;
-            });
-        } catch (e) { console.error("Error calculating stats:", e); }
-
-        const countNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + (n.options ? countNodes(n.options) : 0), 0);
-        let catsCount = 0;
-        if (settingsSnap.exists && settingsSnap.data().options) {
-            catsCount = countNodes(settingsSnap.data().options);
-        } else {
-            catsCount = storeTreeData.length || 0;
-        }
-
-        tabContent.innerHTML = `
+    tabContent.innerHTML = `
             <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:15px; margin-bottom:1.5rem;">
                 <div class="stat-card" style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); text-align:center;">
                     <div style="font-size:1.8rem; font-weight:900; color:var(--accent);">${prodsSnap.size}</div>
@@ -447,17 +415,17 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div id="products-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>`;
 
-        const allProds = [];
-        prodsSnap.forEach(doc => allProds.push({ id: doc.id, ...doc.data() }));
+    const allProds = [];
+    prodsSnap.forEach(doc => allProds.push({ id: doc.id, ...doc.data() }));
 
-        function renderProdsGrid(prods) {
-            const grid = document.getElementById('products-grid');
-            grid.innerHTML = '';
-            if (!prods.length) { grid.innerHTML = '<div style="color:var(--text-dim); text-align:center; padding:3rem; grid-column:1/-1;">لا توجد منتجات حالياً. أضف منتجك الأول!</div>'; return; }
-            prods.forEach(p => {
-                const div = document.createElement('div');
-                div.className = 'product-item-card';
-                div.innerHTML = `
+    function renderProdsGrid(prods) {
+        const grid = document.getElementById('products-grid');
+        grid.innerHTML = '';
+        if (!prods.length) { grid.innerHTML = '<div style="color:var(--text-dim); text-align:center; padding:3rem; grid-column:1/-1;">لا توجد منتجات حالياً. أضف منتجك الأول!</div>'; return; }
+        prods.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'product-item-card';
+            div.innerHTML = `
                     <div style="display:flex; gap:12px; align-items:center;">
                         <img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;">
                         <div style="flex-grow:1; min-width:0;">
@@ -470,59 +438,74 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button onclick="window.editProduct('${p.id}')" class="action-link add"><i data-lucide="edit"></i></button>
                         <button onclick="window.deleteProduct('${p.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
                     </div>`;
-                grid.appendChild(div);
-            });
-            lucide.createIcons();
-        }
-
-        renderProdsGrid(allProds);
-
-        // Search products by name or SKU
-        const searchInput = document.getElementById('prods-search');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const q = e.target.value.trim().toLowerCase();
-                if (!q) { renderProdsGrid(allProds); return; }
-                renderProdsGrid(allProds.filter(p =>
-                    (p.name || '').toLowerCase().includes(q) ||
-                    (p.nameEn || '').toLowerCase().includes(q) ||
-                    (p.sku || '').toLowerCase().includes(q)
-                ));
-            });
-        }
+            grid.appendChild(div);
+        });
         lucide.createIcons();
     }
 
-    // Generate unique SKU like ELT-A2B3C
-    function generateSKU() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code = 'ELT-';
-        for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
-        return code;
+    renderProdsGrid(allProds);
+
+    // Search products
+    const searchInput = document.getElementById('prods-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const q = e.target.value.trim().toLowerCase();
+            if (!q) { renderProdsGrid(allProds); return; }
+            renderProdsGrid(allProds.filter(p =>
+                (p.name || '').toLowerCase().includes(q) ||
+                (p.nameEn || '').toLowerCase().includes(q) ||
+                (p.sku || '').toLowerCase().includes(q)
+            ));
+        });
     }
+    lucide.createIcons();
+}
 
-    window.openProductModal = () => {
-        document.getElementById('editing-prod-id').value = '';
-        document.getElementById('prod-name').value = '';
-        document.getElementById('prod-name-en').value = '';
-        document.getElementById('prod-price').value = '';
-        document.getElementById('prod-sku').value = generateSKU(); // Auto-generate SKU
-        document.getElementById('prod-main-sizes').value = '';
-        document.getElementById('prod-main-color').value = '';
-        document.getElementById('prod-main-color-en').value = '';
-        document.getElementById('color-variants-container').innerHTML = '';
-        const select = document.getElementById('prod-category'); select.innerHTML = '<option value="">-- اختر القسم --</option>';
-        const flatten = (nodes, path = "") => { nodes.forEach(n => { const fullPath = path ? `${path} > ${n.name}` : n.name; const opt = document.createElement('option'); opt.value = n.id; opt.dataset.name = fullPath; opt.innerText = fullPath; select.appendChild(opt); if (n.options) flatten(n.options, fullPath); }); };
-        flatten(storeTreeData);
-        document.getElementById('modal-product').classList.remove('hidden');
+// --- PRODUCT MANAGEMENT HELPERS ---
+function generateSKU() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'ELT-';
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+}
+
+window.openProductModal = () => {
+    document.getElementById('editing-prod-id').value = '';
+    document.getElementById('prod-name').value = '';
+    document.getElementById('prod-name-en').value = '';
+    document.getElementById('prod-price').value = '';
+    document.getElementById('prod-sku').value = generateSKU();
+    document.getElementById('prod-main-sizes').value = '';
+    document.getElementById('prod-main-color').value = '';
+    document.getElementById('prod-main-color-en').value = '';
+    document.getElementById('prod-main-img').value = '';
+    document.getElementById('color-variants-container').innerHTML = '';
+
+    const select = document.getElementById('prod-category');
+    select.innerHTML = '<option value="">-- اختر القسم --</option>';
+    const flatten = (nodes, path = "") => {
+        nodes.forEach(n => {
+            const fullPath = path ? `${path} > ${n.name}` : n.name;
+            const opt = document.createElement('option');
+            opt.value = n.id;
+            opt.dataset.name = fullPath;
+            opt.innerText = fullPath;
+            select.appendChild(opt);
+            if (n.options) flatten(n.options, fullPath);
+        });
     };
+    flatten(storeTreeData);
+    document.getElementById('modal-product').classList.remove('hidden');
+};
 
-    window.addColorVariant = () => {
-        const id = 'v_' + Date.now();
-        const div = document.createElement('div');
-        div.className = 'variant-card';
-        div.id = id;
-        div.innerHTML = `
+window.closeProductModal = () => document.getElementById('modal-product').classList.add('hidden');
+
+window.addColorVariant = () => {
+    const id = 'v_' + Date.now();
+    const div = document.createElement('div');
+    div.className = 'variant-card';
+    div.id = id;
+    div.innerHTML = `
             <div class="variant-top" style="grid-template-columns: 1fr 1fr 1fr 2fr auto; gap:10px;">
                 <input type="text" placeholder="اسم اللون (عربي)" class="v-name">
                 <input type="text" placeholder="Color (EN)" class="v-name-en">
@@ -530,120 +513,169 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input type="text" placeholder="المقاسات (Sizes)" class="v-sizes-text">
                 <button type="button" onclick="document.getElementById('${id}').remove()" class="action-link del"><i data-lucide="trash-2"></i></button>
             </div>`;
-        document.getElementById('color-variants-container').appendChild(div);
-        lucide.createIcons();
-    };
+    document.getElementById('color-variants-container').appendChild(div);
+    lucide.createIcons();
+};
 
-    const fileToBase64 = (file) => new Promise((resolve) => {
-        const reader = new FileReader(); reader.readAsDataURL(file);
-        reader.onload = (e) => {
-            const img = new Image(); img.src = e.target.result;
-            img.onload = () => {
-                const canvas = document.createElement('canvas'); const MAX = 800; let w = img.width, h = img.height;
-                if (w > MAX) { h *= MAX / w; w = MAX; } canvas.width = w; canvas.height = h;
-                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/jpeg', 0.7));
-            };
+const fileToBase64 = (file) => new Promise((resolve) => {
+    const reader = new FileReader(); reader.readAsDataURL(file);
+    reader.onload = (e) => {
+        const img = new Image(); img.src = e.target.result;
+        img.onload = () => {
+            const canvas = document.createElement('canvas'); const MAX = 800; let w = img.width, h = img.height;
+            if (w > MAX) { h *= MAX / w; w = MAX; } canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
-    });
-
-    document.getElementById('save-product').onclick = async () => {
-        const editingId = document.getElementById('editing-prod-id').value;
-        const name = document.getElementById('prod-name').value.trim();
-        const nameEn = document.getElementById('prod-name-en').value.trim();
-        const price = document.getElementById('prod-price').value;
-        const catSelect = document.getElementById('prod-category');
-        const mainImg = document.getElementById('prod-main-img').files[0];
-        if (!name || !price || !catSelect.value) return alert("❌ بيانات ناقصة");
-        const btn = document.getElementById('save-product'); btn.disabled = true; btn.innerText = "⏳ جاري الحفظ...";
-        try {
-            const productData = {
-                name,
-                nameEn: nameEn || name,
-                price: parseFloat(price),
-                sku: (document.getElementById('prod-sku').value || '').trim().toUpperCase() || generateSKU(),
-                categoryId: catSelect.value,
-                categoryName: catSelect.options[catSelect.selectedIndex].dataset.name,
-                mainColor: document.getElementById('prod-main-color').value,
-                mainColorEn: document.getElementById('prod-main-color-en').value || document.getElementById('prod-main-color').value,
-                mainSizes: document.getElementById('prod-main-sizes').value.split(',').map(s => s.trim()).filter(s => s),
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            if (mainImg) productData.mainImage = await fileToBase64(mainImg);
-
-            const variants = [];
-            for (let row of document.querySelectorAll('.variant-card')) {
-                const vName = row.querySelector('.v-name').value;
-                const vNameEn = row.querySelector('.v-name-en').value || vName;
-                const vFile = row.querySelector('.v-img').files[0];
-                if (vName && (vFile || row.dataset.existingImg)) {
-                    variants.push({
-                        name: vName,
-                        nameEn: vNameEn,
-                        image: vFile ? await fileToBase64(vFile) : row.dataset.existingImg,
-                        sizes: row.querySelector('.v-sizes-text').value.split(',').map(s => s.trim()).filter(s => s)
-                    });
-                }
-            }
-            productData.colors = variants;
-            if (editingId) await db.collection('products').doc(editingId).update(productData); else await db.collection('products').add(productData);
-            window.closeModal('modal-product'); renderProducts();
-        } catch (e) { alert("❌ خطأ: " + e.message); } finally { btn.disabled = false; btn.innerText = "حفظ ونشر"; }
     };
+});
 
-    window.editProduct = async (id) => {
-        const p = (await db.collection('products').doc(id).get()).data();
+document.getElementById('save-product').onclick = async () => {
+    const editingId = document.getElementById('editing-prod-id').value;
+    const name = document.getElementById('prod-name').value.trim();
+    const nameEn = document.getElementById('prod-name-en').value.trim();
+    const price = document.getElementById('prod-price').value;
+    const catSelect = document.getElementById('prod-category');
+    const mainImg = document.getElementById('prod-main-img').files[0];
+
+    if (!name || !price || !catSelect.value) return alert("❌ بيانات ناقصة");
+
+    const btn = document.getElementById('save-product');
+    btn.disabled = true;
+    btn.innerText = "⏳ جاري الحفظ...";
+
+    try {
+        const productData = {
+            name,
+            nameEn: nameEn || name,
+            price: parseFloat(price),
+            sku: (document.getElementById('prod-sku').value || '').trim().toUpperCase() || generateSKU(),
+            categoryId: catSelect.value,
+            categoryName: catSelect.options[catSelect.selectedIndex].dataset.name,
+            mainColor: document.getElementById('prod-main-color').value,
+            mainColorEn: document.getElementById('prod-main-color-en').value || document.getElementById('prod-main-color').value,
+            mainSizes: document.getElementById('prod-main-sizes').value.split(',').map(s => s.trim()).filter(s => s),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (mainImg) productData.mainImage = await fileToBase64(mainImg);
+
+        const variants = [];
+        for (let row of document.querySelectorAll('.variant-card')) {
+            const vName = row.querySelector('.v-name').value;
+            const vNameEn = row.querySelector('.v-name-en').value || vName;
+            const vFile = row.querySelector('.v-img').files[0];
+
+            if (vName) {
+                let imgData = row.dataset.existingImg;
+                if (vFile) {
+                    try { imgData = await fileToBase64(vFile); } catch (e) { console.warn("Failed to process image:", vName); }
+                }
+
+                variants.push({
+                    name: vName,
+                    nameEn: vNameEn,
+                    image: imgData,
+                    sizes: row.querySelector('.v-sizes-text').value.split(',').map(s => s.trim()).filter(s => s)
+                });
+            }
+        }
+        productData.colors = variants;
+
+        if (editingId) {
+            await db.collection('products').doc(editingId).update(productData);
+            alert('✅ تم تحديث المنتج بنجاح');
+        } else {
+            await db.collection('products').add(productData);
+            alert('✅ تم إضافة المنتج بنجاح');
+        }
+        window.closeProductModal();
+        renderProducts();
+    } catch (e) {
+        console.error(e);
+        alert("❌ خطأ: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "حفظ ونشر";
+    }
+};
+
+window.editProduct = async (id) => {
+    try {
+        const doc = await db.collection('products').doc(id).get();
+        if (!doc.exists) return;
+        const p = doc.data();
+
         window.openProductModal();
+        document.getElementById('modal-title').innerText = 'تعديل المنتج';
         document.getElementById('editing-prod-id').value = id;
         document.getElementById('prod-name').value = p.name;
         document.getElementById('prod-name-en').value = p.nameEn || '';
         document.getElementById('prod-price').value = p.price;
         document.getElementById('prod-category').value = p.categoryId;
-        document.getElementById('prod-main-color').value = p.mainColor;
+        document.getElementById('prod-main-color').value = p.mainColor || '';
         document.getElementById('prod-main-color-en').value = p.mainColorEn || '';
         document.getElementById('prod-sku').value = p.sku || '';
         document.getElementById('prod-main-sizes').value = (p.mainSizes || []).join(', ');
+
         const container = document.getElementById('color-variants-container');
-        (p.colors || []).forEach(v => {
-            const rid = 'v_' + Math.random();
-            const div = document.createElement('div');
-            div.className = 'variant-card';
-            div.id = rid;
-            div.dataset.existingImg = v.image;
+        container.innerHTML = '';
 
-            div.innerHTML = `
-                <div class="variant-top" style="grid-template-columns: 1fr 1fr 1fr 2fr auto; gap:10px;">
-                    <input type="text" class="v-name" value="${v.name}" placeholder="اسم اللون (عربي)">
-                    <input type="text" class="v-name-en" value="${v.nameEn || ''}" placeholder="Color (EN)">
-                    <div style="font-size:0.6rem; display:flex; align-items:center;">صورة موجودة</div>
-                    <input type="file" class="v-img">
-                    <input type="text" class="v-sizes-text" value="${v.sizes.join(', ')}">
-                    <button type="button" onclick="document.getElementById('${rid}').remove()" class="action-link del"><i data-lucide="trash-2"></i></button>
-                </div>`;
-            container.appendChild(div);
-        });
+        if (p.colors && Array.isArray(p.colors)) {
+            p.colors.forEach(v => {
+                const rid = 'v_' + Math.random().toString(36).substr(2, 9);
+                const div = document.createElement('div');
+                div.className = 'variant-card';
+                div.id = rid;
+                div.dataset.existingImg = v.image || '';
+
+                div.innerHTML = `
+                        <div class="variant-top" style="grid-template-columns: 1fr 1fr 1fr 2fr auto; gap:10px;">
+                            <input type="text" class="v-name" value="${v.name || ''}" placeholder="اسم اللون (عربي)">
+                            <input type="text" class="v-name-en" value="${v.nameEn || ''}" placeholder="Color (EN)">
+                            <div style="font-size:0.6rem; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                                ${v.image ? `<img src="${v.image}" style="width:30px; height:30px; object-fit:cover; border-radius:4px; margin-bottom:4px;">` : 'No Img'}
+                                <span style="color:#aaa;">صورة</span>
+                            </div>
+                            <input type="file" class="v-img" style="font-size:0.7rem;">
+                            <input type="text" class="v-sizes-text" value="${(v.sizes || []).join(', ')}">
+                            <button type="button" onclick="document.getElementById('${rid}').remove()" class="action-link del"><i data-lucide="trash-2"></i></button>
+                        </div>`;
+                container.appendChild(div);
+            });
+        }
         lucide.createIcons();
-    };
-
-    window.deleteProduct = async (id) => { if (confirm("حذف؟")) { await db.collection('products').doc(id).delete(); renderProducts(); } };
-
-    // --- 4. GOVERNORATES ---
-    async function renderGovernorates() {
-        tabContent.innerHTML = `<div class="actions-header"><h3>🗺️ أسعار الشحن للمحافظات</h3></div><div id="gov-container"></div><button id="save-gov-prices" class="add-btn" style="width:100%; justify-content:center; margin-top:2rem; height:60px;"><i data-lucide="save"></i> حفظ أسعار الشحن</button>`;
-        const snap = await db.collection('settings').doc('governoratesPricing').get();
-        const govData = snap.exists ? snap.data().prices : {};
-        const govs = ["القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر", "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية", "المنيا", "القليوبية", "الوادي الجديد", "السويس", "أسوان", "أسيوط", "بني سويف", "بورسعيد", "دمياط", "الشرقية", "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا", "شمال سيناء", "سوهاج"];
-        let html = '<table style="width:100%;"><thead><tr><th>المحافظة</th><th>السعر</th></tr></thead><tbody>';
-        govs.forEach(g => { html += `<tr><td>${g}</td><td><input type="number" id="gov_${g.replace(/\s/g, '_')}" value="${govData[g] || 0}"></td></tr>`; });
-        document.getElementById('gov-container').innerHTML = html + '</tbody></table>';
-        document.getElementById('save-gov-prices').onclick = async () => {
-            const prices = {}; govs.forEach(g => { prices[g] = parseFloat(document.getElementById(`gov_${g.replace(/\s/g, '_')}`).value) || 0; });
-            await db.collection('settings').doc('governoratesPricing').set({ prices }); alert("✅ تم الحفظ");
-        };
+    } catch (e) {
+        console.error("Error editing product:", e);
     }
+};
 
-    // --- 5. COUPONS ---
-    async function renderCoupons() {
-        tabContent.innerHTML = `
+window.deleteProduct = async (id) => {
+    if (confirm('⚠️ هل أنت متأكد تماماً من حذف هذا المنتج؟')) {
+        try {
+            await db.collection('products').doc(id).delete();
+            renderProducts();
+        } catch (e) { console.error(e); }
+    }
+};
+
+// --- 4. GOVERNORATES ---
+async function renderGovernorates() {
+    tabContent.innerHTML = `<div class="actions-header"><h3>🗺️ أسعار الشحن للمحافظات</h3></div><div id="gov-container"></div><button id="save-gov-prices" class="add-btn" style="width:100%; justify-content:center; margin-top:2rem; height:60px;"><i data-lucide="save"></i> حفظ أسعار الشحن</button>`;
+    const snap = await db.collection('settings').doc('governoratesPricing').get();
+    const govData = snap.exists ? snap.data().prices : {};
+    const govs = ["القاهرة", "الجيزة", "الإسكندرية", "الدقهلية", "البحر الأحمر", "البحيرة", "الفيوم", "الغربية", "الإسماعيلية", "المنوفية", "المنيا", "القليوبية", "الوادي الجديد", "السويس", "أسوان", "أسيوط", "بني سويف", "بورسعيد", "دمياط", "الشرقية", "جنوب سيناء", "كفر الشيخ", "مطروح", "الأقصر", "قنا", "شمال سيناء", "سوهاج"];
+    let html = '<table style="width:100%;"><thead><tr><th>المحافظة</th><th>السعر</th></tr></thead><tbody>';
+    govs.forEach(g => { html += `<tr><td>${g}</td><td><input type="number" id="gov_${g.replace(/\s/g, '_')}" value="${govData[g] || 0}"></td></tr>`; });
+    document.getElementById('gov-container').innerHTML = html + '</tbody></table>';
+    document.getElementById('save-gov-prices').onclick = async () => {
+        const prices = {}; govs.forEach(g => { prices[g] = parseFloat(document.getElementById(`gov_${g.replace(/\s/g, '_')}`).value) || 0; });
+        await db.collection('settings').doc('governoratesPricing').set({ prices }); alert("✅ تم الحفظ");
+    };
+}
+
+// --- 5. COUPONS ---
+async function renderCoupons() {
+    tabContent.innerHTML = `
             <div class="actions-header">
                 <h3>🎫 إدارة الكوبونات</h3>
                 <button onclick="window.openCouponModal()" class="add-btn"><i data-lucide="plus"></i> إضافة كوبون</button>
@@ -681,26 +713,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>`;
 
-        const snap = await db.collection('coupons').get();
-        const list = document.getElementById('coupons-list');
+    const snap = await db.collection('coupons').get();
+    const list = document.getElementById('coupons-list');
 
-        if (snap.empty) {
-            list.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-dim);">لا توجد كوبونات بعد.</div>';
-            lucide.createIcons();
-            return;
-        }
+    if (snap.empty) {
+        list.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-dim);">لا توجد كوبونات بعد.</div>';
+        lucide.createIcons();
+        return;
+    }
 
-        snap.forEach(doc => {
-            const c = doc.data();
-            const usage = c.usageCount || 0;
-            const limit = c.limit || 0;
-            const limitText = limit > 0 ? `${usage} / ${limit}` : `${usage} / ∞`;
-            const isExhausted = limit > 0 && usage >= limit;
-            const typeLabel = c.type === 'percent' ? `${c.value}%` : `${c.value} ج.م`;
+    snap.forEach(doc => {
+        const c = doc.data();
+        const usage = c.usageCount || 0;
+        const limit = c.limit || 0;
+        const limitText = limit > 0 ? `${usage} / ${limit}` : `${usage} / ∞`;
+        const isExhausted = limit > 0 && usage >= limit;
+        const typeLabel = c.type === 'percent' ? `${c.value}%` : `${c.value} ج.م`;
 
-            const d = document.createElement('div');
-            d.style.cssText = `background:var(--card, #111); border:1px solid ${isExhausted ? '#ff4444' : 'var(--border)'}; border-radius:16px; padding:18px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;`;
-            d.innerHTML = `
+        const d = document.createElement('div');
+        d.style.cssText = `background:var(--card, #111); border:1px solid ${isExhausted ? '#ff4444' : 'var(--border)'}; border-radius:16px; padding:18px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;`;
+        d.innerHTML = `
                 <div style="flex:1; min-width:150px;">
                     <div style="font-size:1.3rem; font-weight:900; font-family:monospace; color:var(--accent); letter-spacing:3px;">${doc.id}</div>
                     <div style="color:var(--text-dim); font-size:0.85rem; margin-top:4px;">خصم: <span style="color:#4caf50; font-weight:700;">${typeLabel}</span></div>
@@ -718,158 +750,51 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i data-lucide="trash-2" style="width:18px;"></i>
                     </button>
                 </div>`;
-            list.appendChild(d);
+        list.appendChild(d);
+    });
+
+    lucide.createIcons();
+}
+
+window.openCouponModal = () => document.getElementById('coupon-modal').classList.remove('hidden');
+window.closeCouponModal = () => document.getElementById('coupon-modal').classList.add('hidden');
+
+window.saveCoupon = async () => {
+    const code = (document.getElementById('cp-code').value || '').trim().toUpperCase();
+    const type = document.getElementById('cp-type').value;
+    const value = parseFloat(document.getElementById('cp-value').value);
+    const limit = parseInt(document.getElementById('cp-limit').value) || 0;
+
+    if (!code) return alert('❌ يرجى إدخال الكود!');
+    if (isNaN(value) || value <= 0) return alert('❌ يرجى إدخال قيمة صحيحة للخصم!');
+
+    try {
+        await db.collection('coupons').doc(code).set({
+            type: type,
+            value: value,
+            limit: limit,
+            usageCount: 0,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-
-        lucide.createIcons();
-    }
-
-    window.openCouponModal = () => document.getElementById('coupon-modal').classList.remove('hidden');
-    window.closeCouponModal = () => document.getElementById('coupon-modal').classList.add('hidden');
-
-    window.saveCoupon = async () => {
-        const code = (document.getElementById('cp-code').value || '').trim().toUpperCase();
-        const type = document.getElementById('cp-type').value;
-        const value = parseFloat(document.getElementById('cp-value').value);
-        const limit = parseInt(document.getElementById('cp-limit').value) || 0;
-
-        if (!code) return alert('❌ يرجى إدخال الكود!');
-        if (isNaN(value) || value <= 0) return alert('❌ يرجى إدخال قيمة صحيحة للخصم!');
-
-        try {
-            await db.collection('coupons').doc(code).set({
-                type: type,
-                value: value,
-                limit: limit,
-                usageCount: 0,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            alert(`✅ تم حفظ الكوبون: ${code}`);
-            window.closeCouponModal();
-            renderCoupons();
-        } catch (e) {
-            alert('❌ خطأ في الحفظ: ' + e.message);
-        }
-    };
-
-    window.resetCouponUsage = async (id) => {
-        if (!confirm(`إعادة تعيين عداد الكوبون "${id}" إلى صفر؟`)) return;
-        await db.collection('coupons').doc(id).update({ usageCount: 0 });
-        alert('✅ تم إعادة التعيين');
+        alert(`✅ تم حفظ الكوبون: ${code}`);
+        window.closeCouponModal();
         renderCoupons();
-    };
-
-    window.deleteCoupon = async (id) => {
-        if (!confirm(`حذف الكوبون "${id}"؟`)) return;
-        await db.collection('coupons').doc(id).delete();
-        renderCoupons();
-    };
-
-    // --- CHART ---
-    function buildSalesChart(ordersSnap) { /* Logic for chart */ }
-
-    // --- PRODUCT MANAGEMENT HELPERS ---
-    function generateSKU() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code = '';
-        for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
-        return 'ELT-' + code;
+    } catch (e) {
+        alert('❌ خطأ في الحفظ: ' + e.message);
     }
+};
 
-    window.openProductModal = () => {
-        document.getElementById('modal-title').innerText = 'إضافة منتج جديد';
-        document.getElementById('editing-prod-id').value = '';
-        document.getElementById('prod-name').value = '';
-        document.getElementById('prod-name-en').value = '';
-        document.getElementById('prod-price').value = '';
-        document.getElementById('prod-sku').value = generateSKU();
-        document.getElementById('prod-main-img').value = '';
-        document.getElementById('prod-main-sizes').value = '';
-        document.getElementById('img-preview').src = '';
-        document.getElementById('img-preview').classList.add('hidden');
-        
-        // Populate Categories
-        const select = document.getElementById('prod-category');
-        select.innerHTML = '<option value="">-- اختر القسم --</option>';
-        const flatten = (nodes, prefix = '') => {
-            nodes.forEach(n => {
-                const opt = document.createElement('option');
-                opt.value = n.id;
-                opt.innerText = prefix + n.name;
-                select.appendChild(opt);
-                if (n.options) flatten(n.options, prefix + '-- ');
-            });
-        };
-        flatten(storeTreeData);
-        
-        document.getElementById('product-modal').classList.remove('hidden');
-    };
+window.resetCouponUsage = async (id) => {
+    if (!confirm(`إعادة تعيين عداد الكوبون "${id}" إلى صفر؟`)) return;
+    await db.collection('coupons').doc(id).update({ usageCount: 0 });
+    alert('✅ تم إعادة التعيين');
+    renderCoupons();
+};
 
-    window.closeProductModal = () => document.getElementById('product-modal').classList.add('hidden');
-
-    window.saveProduct = async () => {
-        const id = document.getElementById('editing-prod-id').value;
-        const name = document.getElementById('prod-name').value;
-        const price = document.getElementById('prod-price').value;
-        const catId = document.getElementById('prod-category').value;
-        const sku = document.getElementById('prod-sku').value || generateSKU();
-        
-        if (!name || !price || !catId) { alert('⚠️ يرجى ملء البيانات الأساسية (الاسم، السعر، القسم)'); return; }
-        
-        const data = {
-            name,
-            nameEn: document.getElementById('prod-name-en').value,
-            price: parseFloat(price),
-            categoryId: catId,
-            sku: sku,
-            mainImage: document.getElementById('prod-main-img').value,
-            sizes: document.getElementById('prod-main-sizes').value.split(',').map(s=>s.trim()).filter(s=>s),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        try {
-            if (id) {
-                await db.collection('products').doc(id).update(data);
-                alert('✅ تم تحديث المنتج بنجاح');
-            } else {
-                await db.collection('products').add(data);
-                alert('✅ تم إضافة المنتج بنجاح');
-            }
-            document.getElementById('product-modal').classList.add('hidden');
-            renderProducts();
-        } catch (error) {
-            console.error(error);
-            alert('❌ حدث خطأ أثناء الحفظ');
-        }
-    };
-
-    window.editProduct = async (id) => {
-        const doc = await db.collection('products').doc(id).get();
-        if(!doc.exists) return;
-        const p = doc.data();
-        
-        window.openProductModal();
-        document.getElementById('modal-title').innerText = 'تعديل المنتج';
-        document.getElementById('editing-prod-id').value = id;
-        document.getElementById('prod-name').value = p.name;
-        document.getElementById('prod-name-en').value = p.nameEn || '';
-        document.getElementById('prod-price').value = p.price;
-        document.getElementById('prod-sku').value = p.sku || generateSKU();
-        document.getElementById('prod-category').value = p.categoryId;
-        document.getElementById('prod-main-img').value = p.mainImage || '';
-        document.getElementById('prod-main-sizes').value = (p.sizes || []).join(', ');
-        
-        if(p.mainImage) {
-            document.getElementById('img-preview').src = p.mainImage;
-            document.getElementById('img-preview').classList.remove('hidden');
-        }
-    };
-
-    window.deleteProduct = async (id) => {
-        if(confirm('⚠️ هل أنت متأكد تماماً من حذف هذا المنتج؟')) {
-            await db.collection('products').doc(id).delete();
-            renderProducts();
-        }
-    };
+window.deleteCoupon = async (id) => {
+    if (!confirm(`حذف الكوبون "${id}"؟`)) return;
+    await db.collection('coupons').doc(id).delete();
+    renderCoupons();
+};
 
 });
