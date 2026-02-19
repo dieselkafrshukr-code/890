@@ -516,7 +516,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const colorLabel = selColor ? `(لون: ${selColor})` : '';
         const sizeLabel = selSize ? `(مقاس: ${selSize})` : '';
         const fullTitle = `${detailedProd.name} ${colorLabel} ${sizeLabel}`.trim();
-        window.addToCart(fullTitle, detailedProd.price);
+
+        // Get the image for selected color
+        let itemImage = detailedProd.mainImage;
+        if (selColor && selColor !== detailedProd.mainColor) {
+            const variant = (detailedProd.colors || []).find(c => c.name === selColor);
+            if (variant && variant.image) itemImage = variant.image;
+        }
+
+        window.addToCart(fullTitle, detailedProd.price, itemImage, detailedProd.sku);
         window.closeProductModal();
     };
 
@@ -524,8 +532,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cartTrigger) cartTrigger.onclick = () => window.toggleCart();
     window.toggleCart = () => cartDrawer.classList.toggle('hidden');
 
-    window.addToCart = (name, price) => {
-        cart.push({ name, price: parseFloat(price) });
+    window.addToCart = (name, price, image = '', sku = '') => {
+        cart.push({ name, price: parseFloat(price), image, sku });
         updateCartUI();
         if (cartDrawer.classList.contains('hidden')) window.toggleCart();
     };
@@ -744,12 +752,19 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         try {
+            // Collect product images for display in admin
+            const orderImages = cart.map(i => i.image).filter(img => img && img.length > 10).slice(0, 5);
+
             await db.collection('orders').add({
                 customer: name,
                 phone: phone,
                 address: address,
                 governorate: govSelection,
-                item: cart.map(i => i.name).join(' | '),
+                item: cart.map(i => {
+                    const skuTag = i.sku ? ` [‪${i.sku}‬]` : '';
+                    return `${i.name}${skuTag}`;
+                }).join(' | '),
+                images: orderImages,
                 total: finalTotal,
                 shipping: shipping,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),

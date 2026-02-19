@@ -141,21 +141,83 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 1. ORDERS ---
     async function renderOrders() {
         const snap = await db.collection('orders').orderBy('timestamp', 'desc').get();
-        tabContent.innerHTML = `<div class="actions-header"><h3>الطلبات الواردة</h3><button id="delete-all-orders" class="action-link del" style="background:rgba(255,68,68,0.1); padding:10px 20px; border-radius:12px;"><i data-lucide="trash-2"></i> مسح سجل الطلبات بالكامل</button></div><div id="orders-list-container"></div>`;
-        const container = document.getElementById('orders-list-container');
-        if (snap.empty) { container.innerHTML = '<div style="text-align:center; padding:5rem; color:var(--text-dim);">🕳️ لا توجد طلبات في الوقت الحالي.</div>'; return; }
-        let html = `<div class="orders-table-wrapper"><table class="orders-table"><thead><tr><th>العميل</th><th>التليفون</th><th>العنوان</th><th>المحافظة</th><th>المنتجات</th><th>الإجمالي</th><th>الوقت</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>`;
-        snap.forEach(doc => {
-            const o = doc.data();
-            const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
-            html += `<tr id="order-${doc.id}"><td><div style="font-weight:900;">${o.customer || '-'}</div></td><td><div style="font-size:0.85rem; direction:ltr;">${o.phone || '-'}</div></td><td style="font-size:0.8rem; color:var(--text-dim);">${o.address || '-'}</td><td><div style="font-weight:700; color:var(--accent);">${o.governorate || '-'}</div></td><td>${o.item}</td><td style="font-weight:900; color:#4caf50;">${o.total || '-'} ج.م</td><td style="font-size:0.8rem;">${date}</td><td><span class="status-badge">${o.status || 'جديد'}</span></td><td><button onclick="window.deleteOrder('${doc.id}')" class="action-link del" style="padding:8px; border-radius:8px;"><i data-lucide="trash-2" style="width:18px;"></i></button></td></tr>`;
+        tabContent.innerHTML = `
+            <div class="actions-header">
+                <h3>الطلبات الواردة <span style="color:var(--accent);" id="orders-count">(${snap.size})</span></h3>
+                <button id="delete-all-orders" class="action-link del" style="background:rgba(255,68,68,0.1); padding:10px 20px; border-radius:12px;">
+                    <i data-lucide="trash-2"></i> مسح الكل
+                </button>
+            </div>
+            <div style="margin-bottom:1rem;">
+                <div style="position:relative;">
+                    <i data-lucide="search" style="position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--text-dim); width:18px;"></i>
+                    <input id="orders-search" type="text" placeholder="🔍 بحث برقم التليفون أو اسم العميل..." 
+                        style="width:100%; padding:12px 44px 12px 16px; background:var(--card); border:1px solid var(--border); border-radius:12px; color:var(--text); font-family:inherit; font-size:0.95rem;">
+                </div>
+            </div>
+            <div id="orders-list-container"></div>`;
+
+        const allOrders = [];
+        snap.forEach(doc => allOrders.push({ id: doc.id, ...doc.data() }));
+
+        function renderOrdersTable(orders) {
+            const container = document.getElementById('orders-list-container');
+            if (!orders.length) {
+                container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-dim);">لا توجد نتائج</div>';
+                return;
+            }
+            let html = `<div class="orders-table-wrapper"><table class="orders-table">
+                <thead><tr>
+                    <th>العميل</th><th>التليفون</th><th>العنوان</th><th>المحافظة</th>
+                    <th>المنتجات</th><th>الإجمالي</th><th>الوقت</th><th>الحالة</th><th>إجراءات</th>
+                </tr></thead><tbody>`;
+            orders.forEach(o => {
+                const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
+                // Build product thumbnails
+                const imgs = (o.images || []).map(img =>
+                    `<img src="${img}" style="width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid var(--border);">`
+                ).join('');
+                const itemText = `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    ${imgs}
+                    <span style="font-size:0.78rem; color:var(--text-dim);">${o.item || ''}</span>
+                </div>`;
+                html += `<tr id="order-${o.id}">
+                    <td><div style="font-weight:900;">${o.customer || '-'}</div></td>
+                    <td><div style="font-size:0.85rem; direction:ltr; font-family:monospace;">${o.phone || '-'}</div></td>
+                    <td style="font-size:0.8rem; color:var(--text-dim);">${o.address || '-'}</td>
+                    <td><div style="font-weight:700; color:var(--accent);">${o.governorate || '-'}</div></td>
+                    <td>${itemText}</td>
+                    <td style="font-weight:900; color:#4caf50;">${o.total || '-'} ج.م</td>
+                    <td style="font-size:0.8rem;">${date}</td>
+                    <td><span class="status-badge">${o.status || 'جديد'}</span></td>
+                    <td><button onclick="window.deleteOrder('${o.id}')" class="action-link del" style="padding:8px; border-radius:8px;">
+                        <i data-lucide="trash-2" style="width:18px;"></i></button></td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        renderOrdersTable(allOrders);
+
+        // Search by phone or name
+        document.getElementById('orders-search').addEventListener('input', (e) => {
+            const q = e.target.value.trim().toLowerCase();
+            if (!q) { renderOrdersTable(allOrders); return; }
+            renderOrdersTable(allOrders.filter(o =>
+                (o.phone || '').includes(q) ||
+                (o.customer || '').toLowerCase().includes(q)
+            ));
         });
-        html += '</tbody></table></div>';
-        container.innerHTML = html;
+
         document.getElementById('delete-all-orders').onclick = async () => {
-            if (!confirm("⚠️ هل أنت متأكد تماماً من حذف جميع الطلبات؟")) return;
-            const batch = db.batch(); snap.docs.forEach(doc => batch.delete(doc.ref));
-            await batch.commit(); alert("✅ تم مسح جميع الطلبات بنجاح"); renderOrders();
+            if (!confirm('⚠️ هل أنت متأكد تماماً من حذف جميع الطلبات؟')) return;
+            const batch = db.batch();
+            snap.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            alert('✅ تم مسح جميع الطلبات بنجاح');
+            renderOrders();
         };
         lucide.createIcons();
     }
@@ -218,7 +280,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 3. PRODUCTS ---
     async function renderProducts() {
-        tabContent.innerHTML = `<div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:2rem;"><div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center;"><div style="font-size:2.5rem; font-weight:900; color:var(--accent);" id="stat-prods">-</div><div style="color:var(--text-dim); font-weight:700;">عدد المنتجات</div></div><div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center;"><div style="font-size:2.5rem; font-weight:900; color:#fff;" id="stat-cats">-</div><div style="color:var(--text-dim); font-weight:700;">عدد الأقسام</div></div><div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center;"><div style="font-size:2.5rem; font-weight:900; color:#4caf50;" id="stat-orders">-</div><div style="color:var(--text-dim); font-weight:700;">إجمالي الطلبات</div></div></div><div class="actions-header"><h3>إدارة المنتجات</h3><button onclick="window.openProductModal()" class="add-btn"><i data-lucide="plus-circle"></i> إضافة منتج جديد</button></div><div id="products-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>`;
+        tabContent.innerHTML = `<div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:2rem;">
+            <div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center;"><div style="font-size:2.5rem; font-weight:900; color:var(--accent);" id="stat-prods">-</div><div style="color:var(--text-dim); font-weight:700;">عدد المنتجات</div></div>
+            <div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center;"><div style="font-size:2.5rem; font-weight:900; color:#fff;" id="stat-cats">-</div><div style="color:var(--text-dim); font-weight:700;">عدد الأقسام</div></div>
+            <div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center;"><div style="font-size:2.5rem; font-weight:900; color:#4caf50;" id="stat-orders">-</div><div style="color:var(--text-dim); font-weight:700;">إجمالي الطلبات</div></div>
+        </div>
+        <div class="actions-header">
+            <h3>إدارة المنتجات</h3>
+            <button onclick="window.openProductModal()" class="add-btn"><i data-lucide="plus-circle"></i> إضافة منتج جديد</button>
+        </div>
+        <div style="margin-bottom:1rem;">
+            <div style="position:relative;">
+                <i data-lucide="search" style="position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--text-dim); width:18px;"></i>
+                <input id="prods-search" type="text" placeholder="🔍 بحث باسم المنتج أو الكود SKU..."
+                    style="width:100%; padding:12px 44px 12px 16px; background:var(--card); border:1px solid var(--border); border-radius:12px; color:var(--text); font-family:inherit; font-size:0.95rem;">
+            </div>
+        </div>
+        <div id="products-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>`;
+
         const [prodsSnap, ordersSnap, settingsSnap, couponsSnap] = await Promise.all([
             db.collection('products').orderBy('timestamp', 'desc').get(),
             db.collection('orders').get(),
@@ -227,22 +306,60 @@ document.addEventListener('DOMContentLoaded', () => {
         ]);
         document.getElementById('stat-prods').innerText = prodsSnap.size;
         document.getElementById('stat-orders').innerText = ordersSnap.size;
-        // Count total categories from tree
         if (settingsSnap.exists) {
             const countNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + (n.options ? countNodes(n.options) : 0), 0);
-            const total = countNodes(settingsSnap.data().options || []);
-            document.getElementById('stat-cats').innerText = total;
+            document.getElementById('stat-cats').innerText = countNodes(settingsSnap.data().options || []);
         } else {
             document.getElementById('stat-cats').innerText = storeTreeData.length || 0;
         }
-        const grid = document.getElementById('products-grid');
-        prodsSnap.forEach(doc => {
-            const p = doc.data();
-            const div = document.createElement('div'); div.className = 'product-item-card';
-            div.innerHTML = `<img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;"><div style="flex-grow:1;"><div style="font-weight:900;">${p.name} <span style="color:var(--text-dim); font-size:0.8rem;">(${p.nameEn || ''})</span></div><div style="color:var(--accent); font-weight:800;">${p.price} ج.م</div></div><div class="item-actions"><button onclick="window.editProduct('${doc.id}')" class="action-link add"><i data-lucide="edit"></i></button><button onclick="window.deleteProduct('${doc.id}')" class="action-link del"><i data-lucide="trash-2"></i></button></div>`;
-            grid.appendChild(div);
+
+        const allProds = [];
+        prodsSnap.forEach(doc => allProds.push({ id: doc.id, ...doc.data() }));
+
+        function renderProdsGrid(prods) {
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = '';
+            if (!prods.length) { grid.innerHTML = '<div style="color:var(--text-dim); text-align:center; padding:3rem;">لا توجد نتائج</div>'; return; }
+            prods.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'product-item-card';
+                div.innerHTML = `
+                    <img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;">
+                    <div style="flex-grow:1; min-width:0;">
+                        <div style="font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="color:var(--text-dim); font-size:0.8rem;">(${p.nameEn || ''})</span></div>
+                        <div style="color:var(--accent); font-weight:800;">${p.price} ج.م</div>
+                        ${p.sku ? `<div style="font-family:monospace; font-size:0.75rem; color:var(--text-dim); background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:6px; display:inline-block; margin-top:4px; letter-spacing:1px;">🏷️ ${p.sku}</div>` : ''}
+                    </div>
+                    <div class="item-actions">
+                        <button onclick="window.editProduct('${p.id}')" class="action-link add"><i data-lucide="edit"></i></button>
+                        <button onclick="window.deleteProduct('${p.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
+                    </div>`;
+                grid.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        renderProdsGrid(allProds);
+
+        // Search products by name or SKU
+        document.getElementById('prods-search').addEventListener('input', (e) => {
+            const q = e.target.value.trim().toLowerCase();
+            if (!q) { renderProdsGrid(allProds); return; }
+            renderProdsGrid(allProds.filter(p =>
+                (p.name || '').toLowerCase().includes(q) ||
+                (p.nameEn || '').toLowerCase().includes(q) ||
+                (p.sku || '').toLowerCase().includes(q)
+            ));
         });
         lucide.createIcons();
+    }
+
+    // Generate unique SKU like ELT-A2B3C
+    function generateSKU() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = 'ELT-';
+        for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        return code;
     }
 
     window.openProductModal = () => {
@@ -250,6 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('prod-name').value = '';
         document.getElementById('prod-name-en').value = '';
         document.getElementById('prod-price').value = '';
+        document.getElementById('prod-sku').value = generateSKU(); // Auto-generate SKU
         document.getElementById('prod-main-sizes').value = '';
         document.getElementById('prod-main-color').value = '';
         document.getElementById('prod-main-color-en').value = '';
@@ -303,6 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 name,
                 nameEn: nameEn || name,
                 price: parseFloat(price),
+                sku: (document.getElementById('prod-sku').value || '').trim().toUpperCase() || generateSKU(),
                 categoryId: catSelect.value,
                 categoryName: catSelect.options[catSelect.selectedIndex].dataset.name,
                 mainColor: document.getElementById('prod-main-color').value,
@@ -342,6 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('prod-category').value = p.categoryId;
         document.getElementById('prod-main-color').value = p.mainColor;
         document.getElementById('prod-main-color-en').value = p.mainColorEn || '';
+        document.getElementById('prod-sku').value = p.sku || '';
         document.getElementById('prod-main-sizes').value = (p.mainSizes || []).join(', ');
         const container = document.getElementById('color-variants-container');
         (p.colors || []).forEach(v => {
