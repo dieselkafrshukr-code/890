@@ -131,20 +131,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadShippingPrices() {
-        console.log("🚛 Loading shipping prices EXCLUSIVELY from local file...");
+        console.log("🚛 Initializing shipping prices...");
 
-        // Always reset to ensure no leftovers
-        shippingPrices = {};
-
-        // Load strictly from the local config file
+        // 1. Load from the local config file first (The Backup)
         if (window.LOCAL_SHIPPING_PRICES) {
             Object.keys(window.LOCAL_SHIPPING_PRICES).forEach(g => {
-                const cleanKey = g.trim();
-                shippingPrices[cleanKey] = parseFloat(window.LOCAL_SHIPPING_PRICES[g]) || 0;
+                shippingPrices[g.trim()] = parseFloat(window.LOCAL_SHIPPING_PRICES[g]) || 0;
             });
-            console.log('✅ Prices loaded from shipping-config.js:', shippingPrices);
-        } else {
-            console.error('❌ ERROR: shipping-config.js missing or LOCAL_SHIPPING_PRICES not defined!');
+            console.log('📜 Loaded from Local File (Baseline):', shippingPrices);
+        }
+
+        // 2. Override with Firestore - THIS IS THE MASTER SOURCE
+        try {
+            console.log('📡 Syncing with Firebase Firestore...');
+            const snap = await db.collection('settings').doc('governoratesPricing').get();
+            if (snap.exists) {
+                const firebasePrices = snap.data().prices || {};
+                Object.keys(firebasePrices).forEach(k => {
+                    const priceVal = parseFloat(firebasePrices[k]);
+                    if (!isNaN(priceVal)) {
+                        shippingPrices[k.trim()] = priceVal;
+                    }
+                });
+                console.log('✅ Final Shipping Prices (Synced from Firebase):', shippingPrices);
+            } else {
+                console.warn('⚠️ No pricing found in Firestore, using local file only.');
+            }
+        } catch (e) {
+            console.warn('ℹ️ Firestore sync failed, staying with local file prices.', e);
         }
 
         window.CURRENT_SHIPPING_PRICES = shippingPrices;
