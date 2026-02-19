@@ -356,24 +356,81 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="color:var(--text-dim); font-size:0.9rem;">عدد الأقسام</div>
                 </div>
                 <div class="stat-card" style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); text-align:center;">
-                    <div style="font-size:2rem; font-weight:900; color:#4caf50;" id="stat-orders">-</div>
-                    <div style="color:var(--text-dim); font-size:0.9rem;">إجمالي الطلبات</div>
+    // --- 3. PRODUCTS ---
+    async function renderProducts() {
+        // Show loading state initially
+        tabContent.innerHTML = `<div style="text-align:center; padding:5rem; color:var(--accent);">
+            <i data-lucide="loader" class="spin" style="width:40px; height:40px; margin-bottom:1rem;"></i>
+            <div style="font-weight:700;">جاري تحميل لوحة التحكم...</div>
+        </div>`;
+        lucide.createIcons();
+
+        let prodsSnap = { size: 0, forEach: () => {} };
+        let ordersSnap = { size: 0, forEach: () => {} };
+        let settingsSnap = { exists: false, data: () => ({}) };
+        let couponsSnap = { size: 0 };
+
+        // Fetch data individually to prevent total failure
+        try { prodsSnap = await db.collection('products').orderBy('timestamp', 'desc').get(); } catch (e) { console.error("Error fetching products:", e); }
+        try { ordersSnap = await db.collection('orders').orderBy('timestamp', 'desc').get(); } catch (e) { console.error("Error fetching orders:", e); }
+        try { settingsSnap = await db.collection('settings').doc('storeTree').get(); } catch (e) { console.warn("Store tree not found:", e); }
+        try { couponsSnap = await db.collection('coupons').get(); } catch (e) { console.warn("Coupons not found:", e); }
+
+        // Calculate Sales Stats safely
+        let todaySales = 0, weekSales = 0, monthSales = 0;
+        try {
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+            ordersSnap.forEach(doc => {
+                const o = doc.data();
+                const date = o.timestamp ? o.timestamp.toDate() : new Date();
+                const total = parseFloat(o.total) || 0;
+                if (date >= startOfDay) todaySales += total;
+                if (date >= startOfWeek) weekSales += total;
+                if (date >= startOfMonth) monthSales += total;
+            });
+        } catch (e) { console.error("Error calculating stats:", e); }
+
+        const countNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + (n.options ? countNodes(n.options) : 0), 0);
+        let catsCount = 0;
+        if (settingsSnap.exists && settingsSnap.data().options) {
+            catsCount = countNodes(settingsSnap.data().options);
+        } else {
+            catsCount = storeTreeData.length || 0;
+        }
+
+        tabContent.innerHTML = `
+            <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:15px; margin-bottom:1.5rem;">
+                <div class="stat-card" style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); text-align:center;">
+                    <div style="font-size:1.8rem; font-weight:900; color:var(--accent);">${prodsSnap.size}</div>
+                    <div style="color:var(--text-dim); font-size:0.8rem;">منتج</div>
+                </div>
+                <div class="stat-card" style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); text-align:center;">
+                    <div style="font-size:1.8rem; font-weight:900; color:#fff;">${catsCount}</div>
+                    <div style="color:var(--text-dim); font-size:0.8rem;">قسم</div>
+                </div>
+                <div class="stat-card" style="background:var(--card); padding:20px; border-radius:16px; border:1px solid var(--border); text-align:center;">
+                    <div style="font-size:1.8rem; font-weight:900; color:#4caf50;">${ordersSnap.size}</div>
+                    <div style="color:var(--text-dim); font-size:0.8rem;">طلب</div>
                 </div>
             </div>
 
             <!-- Financial Stats -->
-            <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:2rem;">
+            <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:15px; margin-bottom:2rem;">
                 <div class="stat-card" style="background:rgba(76,175,80,0.1); padding:15px; border-radius:12px; border:1px solid rgba(76,175,80,0.3); text-align:center;">
-                    <div style="font-size:1.5rem; font-weight:800; color:#4caf50;">${todaySales.toLocaleString()} ج.م</div>
-                    <div style="color:var(--text-dim); font-size:0.8rem;">مبيعات اليوم</div>
+                    <div style="font-size:1.2rem; font-weight:800; color:#4caf50;">${todaySales.toLocaleString()}</div>
+                    <div style="color:var(--text-dim); font-size:0.75rem;">مبيعات اليوم</div>
                 </div>
                 <div class="stat-card" style="background:rgba(33,150,243,0.1); padding:15px; border-radius:12px; border:1px solid rgba(33,150,243,0.3); text-align:center;">
-                    <div style="font-size:1.5rem; font-weight:800; color:#2196f3;">${weekSales.toLocaleString()} ج.م</div>
-                    <div style="color:var(--text-dim); font-size:0.8rem;">مبيعات الأسبوع</div>
+                    <div style="font-size:1.2rem; font-weight:800; color:#2196f3;">${weekSales.toLocaleString()}</div>
+                    <div style="color:var(--text-dim); font-size:0.75rem;">الأسبوع</div>
                 </div>
                 <div class="stat-card" style="background:rgba(255,152,0,0.1); padding:15px; border-radius:12px; border:1px solid rgba(255,152,0,0.3); text-align:center;">
-                    <div style="font-size:1.5rem; font-weight:800; color:#ff9800;">${monthSales.toLocaleString()} ج.م</div>
-                    <div style="color:var(--text-dim); font-size:0.8rem;">مبيعات الشهر</div>
+                    <div style="font-size:1.2rem; font-weight:800; color:#ff9800;">${monthSales.toLocaleString()}</div>
+                    <div style="color:var(--text-dim); font-size:0.75rem;">الشهر</div>
                 </div>
             </div>
 
@@ -390,33 +447,26 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div id="products-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>`;
 
-        document.getElementById('stat-prods').innerText = prodsSnap.size;
-        document.getElementById('stat-orders').innerText = ordersSnap.size;
-        if (settingsSnap.exists) {
-            const countNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + (n.options ? countNodes(n.options) : 0), 0);
-            document.getElementById('stat-cats').innerText = countNodes(settingsSnap.data().options || []);
-        } else {
-            document.getElementById('stat-cats').innerText = storeTreeData.length || 0;
-        }
-
         const allProds = [];
         prodsSnap.forEach(doc => allProds.push({ id: doc.id, ...doc.data() }));
 
         function renderProdsGrid(prods) {
             const grid = document.getElementById('products-grid');
             grid.innerHTML = '';
-            if (!prods.length) { grid.innerHTML = '<div style="color:var(--text-dim); text-align:center; padding:3rem;">لا توجد نتائج</div>'; return; }
+            if (!prods.length) { grid.innerHTML = '<div style="color:var(--text-dim); text-align:center; padding:3rem; grid-column:1/-1;">لا توجد منتجات حالياً. أضف منتجك الأول!</div>'; return; }
             prods.forEach(p => {
                 const div = document.createElement('div');
                 div.className = 'product-item-card';
                 div.innerHTML = `
-                    <img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;">
-                    <div style="flex-grow:1; min-width:0;">
-                        <div style="font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="color:var(--text-dim); font-size:0.8rem;">(${p.nameEn || ''})</span></div>
-                        <div style="color:var(--accent); font-weight:800;">${p.price} ج.م</div>
-                        ${p.sku ? `<div style="font-family:monospace; font-size:0.75rem; color:var(--text-dim); background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:6px; display:inline-block; margin-top:4px; letter-spacing:1px;">🏷️ ${p.sku}</div>` : ''}
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;">
+                        <div style="flex-grow:1; min-width:0;">
+                            <div style="font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="color:var(--text-dim); font-size:0.8rem;">(${p.nameEn || ''})</span></div>
+                            <div style="color:var(--accent); font-weight:800;">${p.price} ج.م</div>
+                            ${p.sku ? `<div style="font-family:monospace; font-size:0.75rem; color:var(--text-dim); background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:6px; display:inline-block; margin-top:4px; letter-spacing:1px;">🏷️ ${p.sku}</div>` : ''}
+                        </div>
                     </div>
-                    <div class="item-actions">
+                    <div class="item-actions" style="margin-top:10px;">
                         <button onclick="window.editProduct('${p.id}')" class="action-link add"><i data-lucide="edit"></i></button>
                         <button onclick="window.deleteProduct('${p.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
                     </div>`;
@@ -428,15 +478,18 @@ document.addEventListener('DOMContentLoaded', () => {
         renderProdsGrid(allProds);
 
         // Search products by name or SKU
-        document.getElementById('prods-search').addEventListener('input', (e) => {
-            const q = e.target.value.trim().toLowerCase();
-            if (!q) { renderProdsGrid(allProds); return; }
-            renderProdsGrid(allProds.filter(p =>
-                (p.name || '').toLowerCase().includes(q) ||
-                (p.nameEn || '').toLowerCase().includes(q) ||
-                (p.sku || '').toLowerCase().includes(q)
-            ));
-        });
+        const searchInput = document.getElementById('prods-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const q = e.target.value.trim().toLowerCase();
+                if (!q) { renderProdsGrid(allProds); return; }
+                renderProdsGrid(allProds.filter(p =>
+                    (p.name || '').toLowerCase().includes(q) ||
+                    (p.nameEn || '').toLowerCase().includes(q) ||
+                    (p.sku || '').toLowerCase().includes(q)
+                ));
+            });
+        }
         lucide.createIcons();
     }
 
