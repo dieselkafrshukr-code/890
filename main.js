@@ -131,34 +131,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadShippingPrices() {
-        console.log("🚛 Initializing shipping prices...");
+        console.log("🚛 Step 1: Loading baseline from shipping-config.js...");
 
-        // 1. Load from the local config file first (The Backup)
+        // Load file prices as baseline
         if (window.LOCAL_SHIPPING_PRICES) {
             Object.keys(window.LOCAL_SHIPPING_PRICES).forEach(g => {
                 shippingPrices[g.trim()] = parseFloat(window.LOCAL_SHIPPING_PRICES[g]) || 0;
             });
-            console.log('📜 Loaded from Local File (Baseline):', shippingPrices);
         }
 
-        // 2. Override with Firestore - THIS IS THE MASTER SOURCE
+        // 2. Sync with Firestore (The MASTER source)
         try {
-            console.log('📡 Syncing with Firebase Firestore...');
             const snap = await db.collection('settings').doc('governoratesPricing').get();
             if (snap.exists) {
                 const firebasePrices = snap.data().prices || {};
-                Object.keys(firebasePrices).forEach(k => {
-                    const priceVal = parseFloat(firebasePrices[k]);
-                    if (!isNaN(priceVal)) {
-                        shippingPrices[k.trim()] = priceVal;
-                    }
-                });
-                console.log('✅ Final Shipping Prices (Synced from Firebase):', shippingPrices);
-            } else {
-                console.warn('⚠️ No pricing found in Firestore, using local file only.');
+                const keys = Object.keys(firebasePrices);
+
+                if (keys.length > 0) {
+                    keys.forEach(k => {
+                        const val = parseFloat(firebasePrices[k]);
+                        if (!isNaN(val)) shippingPrices[k.trim()] = val;
+                    });
+                    console.log('✅ Final Shipping Data (Synced from Cloud):');
+                    console.table(shippingPrices);
+                }
             }
         } catch (e) {
-            console.warn('ℹ️ Firestore sync failed, staying with local file prices.', e);
+            console.warn('ℹ️ Remote sync failed, using local fallback.', e);
         }
 
         window.CURRENT_SHIPPING_PRICES = shippingPrices;
