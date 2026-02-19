@@ -219,9 +219,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 3. PRODUCTS ---
     async function renderProducts() {
         tabContent.innerHTML = `<div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:2rem;"><div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center;"><div style="font-size:2.5rem; font-weight:900; color:var(--accent);" id="stat-prods">-</div><div style="color:var(--text-dim); font-weight:700;">عدد المنتجات</div></div><div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center;"><div style="font-size:2.5rem; font-weight:900; color:#fff;" id="stat-cats">-</div><div style="color:var(--text-dim); font-weight:700;">عدد الأقسام</div></div><div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center;"><div style="font-size:2.5rem; font-weight:900; color:#4caf50;" id="stat-orders">-</div><div style="color:var(--text-dim); font-weight:700;">إجمالي الطلبات</div></div></div><div class="actions-header"><h3>إدارة المنتجات</h3><button onclick="window.openProductModal()" class="add-btn"><i data-lucide="plus-circle"></i> إضافة منتج جديد</button></div><div id="products-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px;"></div>`;
-        const [prodsSnap, ordersSnap] = await Promise.all([db.collection('products').orderBy('timestamp', 'desc').get(), db.collection('orders').get()]);
+        const [prodsSnap, ordersSnap, settingsSnap, couponsSnap] = await Promise.all([
+            db.collection('products').orderBy('timestamp', 'desc').get(),
+            db.collection('orders').get(),
+            db.collection('settings').doc('storeTree').get(),
+            db.collection('coupons').get()
+        ]);
         document.getElementById('stat-prods').innerText = prodsSnap.size;
         document.getElementById('stat-orders').innerText = ordersSnap.size;
+        // Count total categories from tree
+        if (settingsSnap.exists) {
+            const countNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + (n.options ? countNodes(n.options) : 0), 0);
+            const total = countNodes(settingsSnap.data().options || []);
+            document.getElementById('stat-cats').innerText = total;
+        } else {
+            document.getElementById('stat-cats').innerText = storeTreeData.length || 0;
+        }
         const grid = document.getElementById('products-grid');
         prodsSnap.forEach(doc => {
             const p = doc.data();
@@ -239,6 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('prod-price').value = '';
         document.getElementById('prod-main-sizes').value = '';
         document.getElementById('prod-main-color').value = '';
+        document.getElementById('prod-main-color-en').value = '';
         document.getElementById('color-variants-container').innerHTML = '';
         const select = document.getElementById('prod-category'); select.innerHTML = '<option value="">-- اختر القسم --</option>';
         const flatten = (nodes, path = "") => { nodes.forEach(n => { const fullPath = path ? `${path} > ${n.name}` : n.name; const opt = document.createElement('option'); opt.value = n.id; opt.dataset.name = fullPath; opt.innerText = fullPath; select.appendChild(opt); if (n.options) flatten(n.options, fullPath); }); };
@@ -248,9 +262,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addColorVariant = () => {
         const id = 'v_' + Date.now();
-        const div = document.createElement('div'); div.className = 'variant-card'; div.id = id;
-        div.innerHTML = `<div class="variant-top" style="grid-template-columns: 1fr 1fr 2fr auto;"><input type="text" placeholder="اسم اللون" class="v-name"><input type="file" accept="image/*" class="v-img"><input type="text" placeholder="المقاسات" class="v-sizes-text"><button type="button" onclick="document.getElementById('${id}').remove()" class="action-link del"><i data-lucide="trash-2"></i></button></div>`;
-        document.getElementById('color-variants-container').appendChild(div); lucide.createIcons();
+        const div = document.createElement('div');
+        div.className = 'variant-card';
+        div.id = id;
+        div.innerHTML = `
+            <div class="variant-top" style="grid-template-columns: 1fr 1fr 1fr 2fr auto; gap:10px;">
+                <input type="text" placeholder="اسم اللون (عربي)" class="v-name">
+                <input type="text" placeholder="Color (EN)" class="v-name-en">
+                <input type="file" accept="image/*" class="v-img">
+                <input type="text" placeholder="المقاسات (Sizes)" class="v-sizes-text">
+                <button type="button" onclick="document.getElementById('${id}').remove()" class="action-link del"><i data-lucide="trash-2"></i></button>
+            </div>`;
+        document.getElementById('color-variants-container').appendChild(div);
+        lucide.createIcons();
     };
 
     const fileToBase64 = (file) => new Promise((resolve) => {
@@ -275,12 +299,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!name || !price || !catSelect.value) return alert("❌ بيانات ناقصة");
         const btn = document.getElementById('save-product'); btn.disabled = true; btn.innerText = "⏳ جاري الحفظ...";
         try {
-            const productData = { name, nameEn: nameEn || name, price: parseFloat(price), categoryId: catSelect.value, categoryName: catSelect.options[catSelect.selectedIndex].dataset.name, mainColor: document.getElementById('prod-main-color').value, mainSizes: document.getElementById('prod-main-sizes').value.split(',').map(s => s.trim()).filter(s => s), timestamp: firebase.firestore.FieldValue.serverTimestamp() };
+            const productData = {
+                name,
+                nameEn: nameEn || name,
+                price: parseFloat(price),
+                categoryId: catSelect.value,
+                categoryName: catSelect.options[catSelect.selectedIndex].dataset.name,
+                mainColor: document.getElementById('prod-main-color').value,
+                mainColorEn: document.getElementById('prod-main-color-en').value || document.getElementById('prod-main-color').value,
+                mainSizes: document.getElementById('prod-main-sizes').value.split(',').map(s => s.trim()).filter(s => s),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
             if (mainImg) productData.mainImage = await fileToBase64(mainImg);
+
             const variants = [];
             for (let row of document.querySelectorAll('.variant-card')) {
-                const vName = row.querySelector('.v-name').value; const vFile = row.querySelector('.v-img').files[0];
-                if (vName && (vFile || row.dataset.existingImg)) { variants.push({ name: vName, image: vFile ? await fileToBase64(vFile) : row.dataset.existingImg, sizes: row.querySelector('.v-sizes-text').value.split(',').map(s => s.trim()).filter(s => s) }); }
+                const vName = row.querySelector('.v-name').value;
+                const vNameEn = row.querySelector('.v-name-en').value || vName;
+                const vFile = row.querySelector('.v-img').files[0];
+                if (vName && (vFile || row.dataset.existingImg)) {
+                    variants.push({
+                        name: vName,
+                        nameEn: vNameEn,
+                        image: vFile ? await fileToBase64(vFile) : row.dataset.existingImg,
+                        sizes: row.querySelector('.v-sizes-text').value.split(',').map(s => s.trim()).filter(s => s)
+                    });
+                }
             }
             productData.colors = variants;
             if (editingId) await db.collection('products').doc(editingId).update(productData); else await db.collection('products').add(productData);
@@ -297,11 +341,25 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('prod-price').value = p.price;
         document.getElementById('prod-category').value = p.categoryId;
         document.getElementById('prod-main-color').value = p.mainColor;
+        document.getElementById('prod-main-color-en').value = p.mainColorEn || '';
         document.getElementById('prod-main-sizes').value = (p.mainSizes || []).join(', ');
         const container = document.getElementById('color-variants-container');
         (p.colors || []).forEach(v => {
-            const rid = 'v_' + Math.random(); const div = document.createElement('div'); div.className = 'variant-card'; div.id = rid; div.dataset.existingImg = v.image;
-            div.innerHTML = `<div class="variant-top" style="grid-template-columns: 1fr 1fr 2fr auto;"><input type="text" class="v-name" value="${v.name}"><div style="font-size:0.6rem;">صورة موجودة</div><input type="file" class="v-img"><input type="text" class="v-sizes-text" value="${v.sizes.join(', ')}"><button type="button" onclick="document.getElementById('${rid}').remove()" class="action-link del"><i data-lucide="trash-2"></i></button></div>`;
+            const rid = 'v_' + Math.random();
+            const div = document.createElement('div');
+            div.className = 'variant-card';
+            div.id = rid;
+            div.dataset.existingImg = v.image;
+
+            div.innerHTML = `
+                <div class="variant-top" style="grid-template-columns: 1fr 1fr 1fr 2fr auto; gap:10px;">
+                    <input type="text" class="v-name" value="${v.name}" placeholder="اسم اللون (عربي)">
+                    <input type="text" class="v-name-en" value="${v.nameEn || ''}" placeholder="Color (EN)">
+                    <div style="font-size:0.6rem; display:flex; align-items:center;">صورة موجودة</div>
+                    <input type="file" class="v-img">
+                    <input type="text" class="v-sizes-text" value="${v.sizes.join(', ')}">
+                    <button type="button" onclick="document.getElementById('${rid}').remove()" class="action-link del"><i data-lucide="trash-2"></i></button>
+                </div>`;
             container.appendChild(div);
         });
         lucide.createIcons();
@@ -326,15 +384,127 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 5. COUPONS ---
     async function renderCoupons() {
-        tabContent.innerHTML = `<div class="actions-header"><h3>إدارة الكوبونات</h3><button onclick="window.openCouponModal()" class="add-btn">إضافة</button></div><div id="coupons-list"></div><div id="coupon-modal" class="admin-modal hidden"><div class="login-card"><h3>🎫 كوبون جديد</h3><input id="cp-code" placeholder="الكود"><select id="cp-type"><option value="percent">%</option><option value="fixed">ج.م</option></select><input id="cp-value" type="number" placeholder="القيمة"><input id="cp-limit" type="number" value="0"><button onclick="window.saveCoupon()" class="add-btn">حفظ</button><button onclick="window.closeCouponModal()">إلغاء</button></div></div>`;
+        tabContent.innerHTML = `
+            <div class="actions-header">
+                <h3>🎫 إدارة الكوبونات</h3>
+                <button onclick="window.openCouponModal()" class="add-btn"><i data-lucide="plus"></i> إضافة كوبون</button>
+            </div>
+            <div id="coupons-list" style="display:grid; gap:15px; margin-top:1rem;"></div>
+            <div id="coupon-modal" class="admin-modal hidden">
+                <div class="modal-card" style="max-width:420px; width:100%;">
+                    <div class="modal-header">
+                        <h3>🎫 كوبون جديد</h3>
+                        <button onclick="window.closeCouponModal()" class="close-modal"><i data-lucide="x"></i></button>
+                    </div>
+                    <div class="input-group">
+                        <label>الكود (بالأحرف الكبيرة):</label>
+                        <input id="cp-code" placeholder="مثال: SAVE20" style="text-transform:uppercase; letter-spacing:2px;">
+                    </div>
+                    <div class="input-group">
+                        <label>نوع الخصم:</label>
+                        <select id="cp-type">
+                            <option value="percent">نسبة مئوية (%)</option>
+                            <option value="fixed">مبلغ ثابت (ج.م)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>قيمة الخصم:</label>
+                        <input id="cp-value" type="number" placeholder="مثال: 20" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label>الحد الأقصى للاستخدام (0 = بلا حد):</label>
+                        <input id="cp-limit" type="number" value="0" min="0">
+                    </div>
+                    <div class="modal-btns">
+                        <button onclick="window.saveCoupon()" class="save-btn">حفظ الكوبون</button>
+                        <button onclick="window.closeCouponModal()" class="cancel-btn">إلغاء</button>
+                    </div>
+                </div>
+            </div>`;
+
         const snap = await db.collection('coupons').get();
         const list = document.getElementById('coupons-list');
-        snap.forEach(doc => { const c = doc.data(); const d = document.createElement('div'); d.innerHTML = `${doc.id} - ${c.value} ${c.type} <button onclick="window.deleteCoupon('${doc.id}')">حذف</button>`; list.appendChild(d); });
+
+        if (snap.empty) {
+            list.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--text-dim);">لا توجد كوبونات بعد.</div>';
+            lucide.createIcons();
+            return;
+        }
+
+        snap.forEach(doc => {
+            const c = doc.data();
+            const usage = c.usageCount || 0;
+            const limit = c.limit || 0;
+            const limitText = limit > 0 ? `${usage} / ${limit}` : `${usage} / ∞`;
+            const isExhausted = limit > 0 && usage >= limit;
+            const typeLabel = c.type === 'percent' ? `${c.value}%` : `${c.value} ج.م`;
+
+            const d = document.createElement('div');
+            d.style.cssText = `background:var(--card, #111); border:1px solid ${isExhausted ? '#ff4444' : 'var(--border)'}; border-radius:16px; padding:18px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;`;
+            d.innerHTML = `
+                <div style="flex:1; min-width:150px;">
+                    <div style="font-size:1.3rem; font-weight:900; font-family:monospace; color:var(--accent); letter-spacing:3px;">${doc.id}</div>
+                    <div style="color:var(--text-dim); font-size:0.85rem; margin-top:4px;">خصم: <span style="color:#4caf50; font-weight:700;">${typeLabel}</span></div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:1.2rem; font-weight:900; color:${isExhausted ? '#ff4444' : '#fff'};">${limitText}</div>
+                    <div style="color:var(--text-dim); font-size:0.8rem;">مرات الاستخدام</div>
+                    ${isExhausted ? '<div style="color:#ff4444; font-size:0.75rem; font-weight:700;">⛔ منتهي</div>' : ''}
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="window.resetCouponUsage('${doc.id}')" class="action-link add" title="إعادة تعيين العداد" style="padding:8px; border-radius:8px;">
+                        <i data-lucide="refresh-cw" style="width:18px;"></i>
+                    </button>
+                    <button onclick="window.deleteCoupon('${doc.id}')" class="action-link del" style="padding:8px; border-radius:8px;">
+                        <i data-lucide="trash-2" style="width:18px;"></i>
+                    </button>
+                </div>`;
+            list.appendChild(d);
+        });
+
+        lucide.createIcons();
     }
+
     window.openCouponModal = () => document.getElementById('coupon-modal').classList.remove('hidden');
     window.closeCouponModal = () => document.getElementById('coupon-modal').classList.add('hidden');
-    window.saveCoupon = async () => { /* Logic to save coupon */ };
-    window.deleteCoupon = async (id) => { await db.collection('coupons').doc(id).delete(); renderCoupons(); };
+
+    window.saveCoupon = async () => {
+        const code = (document.getElementById('cp-code').value || '').trim().toUpperCase();
+        const type = document.getElementById('cp-type').value;
+        const value = parseFloat(document.getElementById('cp-value').value);
+        const limit = parseInt(document.getElementById('cp-limit').value) || 0;
+
+        if (!code) return alert('❌ يرجى إدخال الكود!');
+        if (isNaN(value) || value <= 0) return alert('❌ يرجى إدخال قيمة صحيحة للخصم!');
+
+        try {
+            await db.collection('coupons').doc(code).set({
+                type: type,
+                value: value,
+                limit: limit,
+                usageCount: 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert(`✅ تم حفظ الكوبون: ${code}`);
+            window.closeCouponModal();
+            renderCoupons();
+        } catch (e) {
+            alert('❌ خطأ في الحفظ: ' + e.message);
+        }
+    };
+
+    window.resetCouponUsage = async (id) => {
+        if (!confirm(`إعادة تعيين عداد الكوبون "${id}" إلى صفر؟`)) return;
+        await db.collection('coupons').doc(id).update({ usageCount: 0 });
+        alert('✅ تم إعادة التعيين');
+        renderCoupons();
+    };
+
+    window.deleteCoupon = async (id) => {
+        if (!confirm(`حذف الكوبون "${id}"؟`)) return;
+        await db.collection('coupons').doc(id).delete();
+        renderCoupons();
+    };
 
     // --- CHART ---
     function buildSalesChart(ordersSnap) { /* Logic for chart */ }

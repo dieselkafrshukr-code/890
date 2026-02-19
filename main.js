@@ -118,6 +118,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedTheme === 'light') {
         document.body.classList.add('light-mode');
         if (themeToggle) themeToggle.innerHTML = '<i data-lucide="moon"></i>';
+    } else {
+        if (themeToggle) themeToggle.innerHTML = '<i data-lucide="sun"></i>';
+    }
+
+    if (themeToggle) {
+        themeToggle.onclick = () => {
+            const isLight = document.body.classList.toggle('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            themeToggle.innerHTML = isLight ? '<i data-lucide="moon"></i>' : '<i data-lucide="sun"></i>';
+            lucide.createIcons();
+        };
     }
 
     const langToggle = document.getElementById('lang-toggle');
@@ -221,16 +232,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadShippingPrices() {
-        console.log("🚛 Step 1: Loading baseline from shipping-config.js...");
+        console.log("🚛 جاري تحميل أسعار الشحن من لوحة التحكم...");
 
-        // Load file prices as baseline
-        if (window.LOCAL_SHIPPING_PRICES) {
-            Object.keys(window.LOCAL_SHIPPING_PRICES).forEach(g => {
-                shippingPrices[g.trim()] = parseFloat(window.LOCAL_SHIPPING_PRICES[g]) || 0;
-            });
-        }
-
-        // 2. Sync with Firestore (The MASTER source)
+        // الأسعار بتيجي من Firebase فقط (لوحة التحكم)
         try {
             const snap = await db.collection('settings').doc('governoratesPricing').get();
             if (snap.exists) {
@@ -238,19 +242,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 const keys = Object.keys(firebasePrices);
 
                 if (keys.length > 0) {
+                    // مسح القديم وتحميل الجديد
+                    Object.keys(shippingPrices).forEach(k => delete shippingPrices[k]);
                     keys.forEach(k => {
                         const val = parseFloat(firebasePrices[k]);
                         if (!isNaN(val)) shippingPrices[k.trim()] = val;
                     });
-                    console.log('✅ Final Shipping Data (Synced from Cloud):');
-                    console.table(shippingPrices);
+                    console.log('✅ تم تحميل أسعار الشحن من Firebase:', Object.keys(shippingPrices).length, 'محافظة');
+                } else {
+                    console.warn('⚠️ Firebase موجود لكن لا توجد أسعار - يرجى حفظ الأسعار من لوحة التحكم');
                 }
+            } else {
+                console.warn('⚠️ لم يتم العثور على أسعار الشحن في Firebase - يرجى حفظ الأسعار من لوحة التحكم أولاً');
             }
         } catch (e) {
-            console.warn('ℹ️ Remote sync failed, using local fallback.', e);
+            console.error('❌ فشل تحميل أسعار الشحن من Firebase:', e.message);
         }
 
         window.CURRENT_SHIPPING_PRICES = shippingPrices;
+        console.log('📦 أسعار الشحن النهائية:', shippingPrices);
+    }
+
+    // Centralized shipping price lookup (handles Arabic text normalization)
+    function getShippingPrice(governorate) {
+        if (!governorate) return 0;
+        const gov = governorate.trim();
+
+        // Exact match first
+        if (shippingPrices[gov] !== undefined) return shippingPrices[gov];
+
+        // Trimmed key match
+        const match = Object.keys(shippingPrices).find(k => k.trim() === gov);
+        if (match !== undefined) return shippingPrices[match];
+
+        console.warn(`⚠️ No shipping price found for: "${gov}"`);
+        return 0;
     }
 
     async function syncData() {
@@ -305,8 +331,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         card.className = 'product-card';
                         const pName = p[nameKey] || p.name;
                         const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
-                        const colorBadge = p.mainColor
-                            ? `<div class="product-color-badge">🎨 ${p.mainColor}</div>`
+                        const mainColorName = (currentLang === 'en' && p.mainColorEn) ? p.mainColorEn : p.mainColor;
+                        const colorBadge = mainColorName
+                            ? `<div class="product-color-badge">🎨 ${mainColorName}</div>`
                             : '';
                         card.innerHTML = `
                             <div class="product-card-img">
@@ -400,16 +427,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const colorGroup = document.getElementById('detail-colors');
         let allColors = [];
         if (detailedProd.mainColor) {
-            allColors.push({ name: detailedProd.mainColor, image: detailedProd.mainImage, sizes: detailedProd.mainSizes || [], isMain: true });
+            allColors.push({
+                name: detailedProd.mainColor,
+                nameEn: detailedProd.mainColorEn || detailedProd.mainColor,
+                image: detailedProd.mainImage,
+                sizes: detailedProd.mainSizes || [],
+                isMain: true
+            });
         }
         if (detailedProd.colors) {
             detailedProd.colors.forEach(c => allColors.push({ ...c, isMain: false }));
         }
 
         if (allColors.length > 0) {
-            colorGroup.innerHTML = allColors.map((c, i) =>
-                `<button class="detail-chip ${i === 0 ? 'active' : ''}" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${c.name}${c.isMain ? ' ✦' : ''}</button>`
-            ).join('');
+            colorGroup.innerHTML = allColors.map((c, i) => {
+                const displayName = currentLang === 'en' ? (c.nameEn || c.name) : c.name;
+                return `<button class="detail-chip ${i === 0 ? 'active' : ''}" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${displayName}${c.isMain ? ' ✦' : ''}</button>`;
+            }).join('');
             if (allColors[0]) selColor = allColors[0].name;
         } else {
             colorGroup.innerHTML = `<p style="font-size:0.8rem; color:var(--text-dim);">${t.no_colors}</p>`;
@@ -640,15 +674,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let shipping = 0;
         if (gov) {
-            // Priority 1: Exact Match
-            if (shippingPrices[gov] !== undefined) {
-                shipping = shippingPrices[gov];
-            } else {
-                // Priority 2: Trimmed match
-                const match = Object.keys(shippingPrices).find(k => k.trim() === gov);
-                if (match) shipping = shippingPrices[match];
-            }
-            console.log(`[SHIPPING] Gov: "${gov}" | Price: ${shipping} | Source:`, shippingPrices);
+            shipping = getShippingPrice(gov);
+            console.log(`[SHIPPING] Gov: "${gov}" | Price: ${shipping}`);
         }
 
         const total = discountedSubtotal + shipping;
@@ -692,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : 0;
         const discountedTotal = Math.max(0, subtotal - discount);
 
-        const shipping = (govSelection && shippingPrices[govSelection] !== undefined) ? shippingPrices[govSelection] : 0;
+        const shipping = getShippingPrice(govSelection);
         const finalTotal = discountedTotal + shipping;
 
         const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');

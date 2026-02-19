@@ -654,6 +654,7 @@ body.light-mode .close-detail {
         line-height: 1.3;
     }
 
+    /* Grid: category buttons get 2-column-span, product cards get 1 column each */
     .options-grid {
         display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
@@ -662,27 +663,30 @@ body.light-mode .close-detail {
         padding: 5px;
     }
 
+    /* Product cards: 1 per column = 2 per row */
     .product-card {
         width: 100%;
         max-width: none;
         margin: 0;
+        grid-column: span 1 !important;
     }
 
     .product-card-img {
-        height: 200px;
+        height: 180px;
     }
 
     .product-card-info {
-        padding: 12px;
+        padding: 10px;
     }
 
     .product-card-name {
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         margin-bottom: 4px;
+        line-height: 1.3;
     }
 
     .product-card-price {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 
     .product-color-badge {
@@ -690,7 +694,7 @@ body.light-mode .close-detail {
         padding: 2px 6px;
     }
 
-    /* Keep category buttons big and full width */
+    /* Category buttons span both columns (full width) */
     .opt-btn {
         width: 100%;
         min-width: unset;
