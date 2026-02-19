@@ -131,28 +131,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadShippingPrices() {
-        console.log("🚛 Starting to load shipping prices...");
-        // 1. Load from the local config file first
+        console.log("🚛 Loading shipping prices EXCLUSIVELY from local file...");
+
+        // Always reset to ensure no leftovers
+        shippingPrices = {};
+
+        // Load strictly from the local config file
         if (window.LOCAL_SHIPPING_PRICES) {
             Object.keys(window.LOCAL_SHIPPING_PRICES).forEach(g => {
                 const cleanKey = g.trim();
                 shippingPrices[cleanKey] = parseFloat(window.LOCAL_SHIPPING_PRICES[g]) || 0;
             });
-            console.log('📜 Initialized from LOCAL file:', shippingPrices);
+            console.log('✅ Prices loaded from shipping-config.js:', shippingPrices);
+        } else {
+            console.error('❌ ERROR: shipping-config.js missing or LOCAL_SHIPPING_PRICES not defined!');
         }
-
-        // 2. Override with Firestore if available
-        try {
-            const snap = await db.collection('settings').doc('governoratesPricing').get();
-            if (snap.exists) {
-                const firebasePrices = snap.data().prices || {};
-                Object.keys(firebasePrices).forEach(k => {
-                    const val = parseFloat(firebasePrices[k]);
-                    if (!isNaN(val)) shippingPrices[k.trim()] = val;
-                });
-                console.log('🔄 Synced from Firestore:', shippingPrices);
-            }
-        } catch (e) { console.log('ℹ️ Using local prices only.'); }
 
         window.CURRENT_SHIPPING_PRICES = shippingPrices;
     }
