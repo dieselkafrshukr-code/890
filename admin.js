@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminPanel = document.getElementById('admin-panel');
     const loginBtn = document.getElementById('login-btn');
     const logoutBtn = document.getElementById('logout-btn');
-    const tabItems = document.querySelectorAll('.nav-item');
+    const tabItems = document.querySelectorAll('.nav-item:not(.logout)'); // Fix: Exclude logout button from tabs
     const tabContent = document.getElementById('tab-content');
     const tabTitle = document.getElementById('tab-title');
 
@@ -14,7 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentModalTarget = null;
 
     // --- AUTH ---
-    auth.signOut();
+    // 1. Force logout initially on every page load
+    // auth.signOut(); // Removed auto-logout to keep session active if desired, or keep it if strict security needed. Keeping it based on previous code.
+    // Actually, user wants persistence. Let's remove initial signOut to allow persistence.
 
     auth.onAuthStateChanged(user => {
         if (user) {
@@ -32,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const pass = document.getElementById('password').value;
         loginBtn.innerText = "⏳ جاري التحقق...";
 
-        auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL) // Changed to LOCAL for better UX
             .then(() => auth.signInWithEmailAndPassword(email, pass))
             .catch(err => {
                 alert("❌ خطأ: " + err.message);
@@ -40,22 +42,30 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     };
 
-    logoutBtn.onclick = () => auth.signOut();
+    if (logoutBtn) {
+        logoutBtn.onclick = () => {
+            if (confirm("هل تريد تسجيل الخروج؟")) {
+                auth.signOut();
+                window.location.reload();
+            }
+        };
+    }
 
     // --- NAVIGATION ---
     tabItems.forEach(item => {
         item.onclick = () => {
-            if (item.classList.contains('logout')) return;
             tabItems.forEach(i => i.classList.remove('active'));
             item.classList.add('active');
             const tab = item.dataset.tab;
-            tabTitle.innerText = item.querySelector('span').innerText;
+            if (tabTitle) tabTitle.innerText = item.querySelector('span').innerText;
             loadTab(tab);
         };
     });
 
     function loadTab(tab) {
+        if (!tabContent) return;
         tabContent.innerHTML = '<div style="text-align:center; padding:100px; color:var(--accent);">⭐ جاري تحميل البيانات...</div>';
+
         if (tab === 'orders') renderOrders();
         if (tab === 'categories') renderCategories();
         if (tab === 'products') renderProducts();
@@ -65,8 +75,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 1. ORDERS ---
     async function renderOrders() {
         const snap = await db.collection('orders').orderBy('timestamp', 'desc').get();
+
+        tabContent.innerHTML = `
+            <div class="actions-header">
+                <h3>الطلبات الواردة</h3>
+                <button id="delete-all-orders" class="action-link del" style="background:rgba(255,68,68,0.1); padding:10px 20px; border-radius:12px;">
+                    <i data-lucide="trash-2"></i> مسح سجل الطلبات بالكامل
+                </button>
+            </div>
+            <div id="orders-list-container"></div>
+        `;
+
+        const container = document.getElementById('orders-list-container');
+
         if (snap.empty) {
-            tabContent.innerHTML = '<div style="text-align:center; padding:5rem; color:var(--text-dim);">🕳️ لا توجد طلبات في الوقت الحالي.</div>';
+            container.innerHTML = '<div style="text-align:center; padding:5rem; color:var(--text-dim);">🕳️ لا توجد طلبات في الوقت الحالي.</div>';
             return;
         }
 
@@ -83,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <th>الإجمالي</th>
                         <th>الوقت</th>
                         <th>الحالة</th>
+                        <th>إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -91,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const o = doc.data();
             const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
             html += `
-                <tr>
+                <tr id="order-${doc.id}">
                     <td><div style="font-weight:900;">${o.customer || '-'}</div></td>
                     <td><div style="font-size:0.85rem; direction:ltr;">${o.phone || '-'}</div></td>
                     <td style="font-size:0.8rem; color:var(--text-dim);">${o.address || '-'}</td>
@@ -100,14 +124,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="font-weight:900; color:#4caf50;">${o.total || '-'} ج.م</td>
                     <td style="font-size:0.8rem;">${date}</td>
                     <td><span class="status-badge">${o.status || 'جديد'}</span></td>
+                    <td>
+                        <button onclick="window.deleteOrder('${doc.id}')" class="action-link del" style="padding:8px; border-radius:8px;">
+                            <i data-lucide="trash-2" style="width:18px;"></i>
+                        </button>
+                    </td>
                 </tr>
             `;
         });
         html += '</tbody></table></div>';
+        container.innerHTML = html;
 
-        tabContent.innerHTML = html;
+        // Bulk delete logic
+        document.getElementById('delete-all-orders').onclick = async () => {
+            if (!confirm("⚠️ هل أنت متأكد تماماً من حذف جميع الطلبات؟ لا يمكن التراجع عن هذا الإجراء!")) return;
+
+            const btn = document.getElementById('delete-all-orders');
+            btn.innerHTML = "⏳ جاري المسح...";
+            btn.disabled = true;
+
+            const batch = db.batch();
+            snap.docs.forEach(doc => batch.delete(doc.ref));
+
+            await batch.commit();
+            alert("✅ تم مسح جميع الطلبات بنجاح");
+            renderOrders();
+        };
+
         lucide.createIcons();
     }
+
+    window.deleteOrder = async (id) => {
+        if (!confirm("هل تريد حذف هذا الطلب؟")) return;
+        try {
+            await db.collection('orders').doc(id).delete();
+            const row = document.getElementById(`order-${id}`);
+            if (row) row.remove();
+            // Refresh if empty
+            const remaining = document.querySelectorAll('.orders-table tbody tr');
+            if (remaining.length === 0) renderOrders();
+        } catch (e) {
+            alert("❌ خطأ أثناء الحذف: " + e.message);
+        }
+    };
 
     // --- 2. CATEGORIES ---
     async function renderCategories() {
