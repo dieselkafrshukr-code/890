@@ -327,7 +327,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('product-detail-modal').classList.remove('hidden');
         updateWishlistBtnState();
-        await loadProductRating(doc.id);
         lucide.createIcons();
     };
 
@@ -848,48 +847,5 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCartUI();
     };
 
-    // ============================================
-    // STAR RATING
-    // ============================================
-    async function loadProductRating(productId) {
-        try {
-            const snap = await db.collection('ratings').doc(productId).get();
-            const starsDisplay = document.getElementById('stars-display');
-            const ratingCount = document.getElementById('rating-count');
-            if (snap.exists) {
-                const data = snap.data();
-                const avg = data.total / data.count;
-                const rounded = Math.round(avg);
-                if (starsDisplay) starsDisplay.innerText = '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
-                if (ratingCount) ratingCount.innerText = `${data.count} تقييم (متوسط ${avg.toFixed(1)})`;
-            } else {
-                if (starsDisplay) starsDisplay.innerText = '☆☆☆☆☆';
-                if (ratingCount) ratingCount.innerText = 'لا توجد تقييمات بعد';
-            }
-        } catch (e) { console.warn('Rating load error:', e); }
-    }
-
-    window.rateProduct = async (stars) => {
-        if (!currentProductId) return;
-        // Highlight selected stars
-        document.querySelectorAll('.star-btn').forEach((btn, i) => {
-            btn.classList.toggle('active', i < stars);
-        });
-        try {
-            const ref = db.collection('ratings').doc(currentProductId);
-            await db.runTransaction(async tx => {
-                const snap = await tx.get(ref);
-                if (snap.exists) {
-                    tx.update(ref, {
-                        total: firebase.firestore.FieldValue.increment(stars),
-                        count: firebase.firestore.FieldValue.increment(1)
-                    });
-                } else {
-                    tx.set(ref, { total: stars, count: 1 });
-                }
-            });
-            setTimeout(() => loadProductRating(currentProductId), 500);
-        } catch (e) { console.warn('Rating error:', e); }
-    };
 
 });
