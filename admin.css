@@ -640,6 +640,7 @@ input[type="file"] {
         padding: 0;
         background: rgba(8, 8, 8, 0.97);
         backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         border-left: none;
         border-top: 1px solid var(--border);
         z-index: 999;
@@ -660,8 +661,11 @@ input[type="file"] {
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
         justify-content: flex-start;
-        padding: 8px 12px 12px;
-        gap: 6px;
+        padding: 6px 8px 10px;
+        gap: 4px;
+        /* Ensure it fills width so scroll works */
+        width: 100%;
+        display: flex;
     }
 
     .side-nav::-webkit-scrollbar {
@@ -671,21 +675,24 @@ input[type="file"] {
     /* Nav pill buttons */
     .nav-item {
         flex-direction: column;
-        padding: 10px 14px;
-        gap: 5px;
-        border-radius: 14px;
+        padding: 8px 12px;
+        gap: 4px;
+        border-radius: 12px;
         white-space: nowrap;
-        font-size: 0.72rem;
-        min-width: 64px;
+        font-size: 0.7rem;
+        min-width: 60px;
         align-items: center;
         justify-content: center;
         text-align: center;
         flex-shrink: 0;
+        /* CRITICAL: prevents buttons from shrinking */
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
     }
 
     .nav-item i {
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
     }
 
     .nav-item.logout {

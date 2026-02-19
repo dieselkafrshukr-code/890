@@ -11,6 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@400;700;900&display=swap"
         rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -59,6 +60,10 @@
                 <button class="nav-item" data-tab="governorates">
                     <i data-lucide="map-pin"></i>
                     <span>المحافظات والشحن</span>
+                </button>
+                <button class="nav-item" data-tab="coupons">
+                    <i data-lucide="ticket"></i>
+                    <span>كوبونات الخصم</span>
                 </button>
                 <button id="logout-btn" class="nav-item logout">
                     <i data-lucide="log-out"></i>
@@ -169,7 +174,7 @@
 
     <!-- Scripts -->
     <script src="firebase-config.js"></script>
-    <script src="admin.js?v=4"></script>
+    <script src="admin.js?v=5"></script>
 </body>
 
 </html>

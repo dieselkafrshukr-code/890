@@ -11,6 +11,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLevel = storeTree;
     let cart = [];
     let shippingPrices = {};
+    let wishlist = JSON.parse(localStorage.getItem('eltoufan_wishlist') || '[]');
+    let couponDiscount = 0;
+    let couponCode = '';
+    let couponType = 'percent'; // Default
+    let allProductCards = []; // For search
+    let currentProductId = null; // For rating
+
 
     // WhatsApp Number
     const WA_NUMBER = "201020451206";
@@ -118,8 +125,15 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadShippingPrices() {
         try {
             const snap = await db.collection('settings').doc('governoratesPricing').get();
-            if (snap.exists) shippingPrices = snap.data().prices || {};
-        } catch (e) { }
+            if (snap.exists) {
+                const rawPrices = snap.data().prices || {};
+                // Normalize keys to remove any whitespace issues
+                shippingPrices = {};
+                Object.keys(rawPrices).forEach(k => {
+                    shippingPrices[k.trim()] = rawPrices[k];
+                });
+            }
+        } catch (e) { console.warn('Could not load shipping prices:', e); }
     }
 
     async function syncData() {
@@ -191,6 +205,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         backBtn.classList.toggle('hidden', navigationStack.length <= 1);
         resetBtn.classList.toggle('hidden', navigationStack.length <= 1);
+
+        // Show/hide search bar when on product level
+        const searchWrapper = document.getElementById('search-bar-wrapper');
+        const hasProducts = currentLevel.id && !currentLevel.options?.length;
+        if (searchWrapper) {
+            if (hasProducts) {
+                searchWrapper.classList.remove('hidden');
+            } else {
+                searchWrapper.classList.add('hidden');
+            }
+        }
+
+        // Store all product cards for search filtering
+        allProductCards = Array.from(optionsGrid.querySelectorAll('.product-card'));
+
         lucide.createIcons();
     }
 
@@ -226,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const doc = await db.collection('products').doc(id).get();
         if (!doc.exists) return;
         detailedProd = doc.data();
+        currentProductId = doc.id;
         selSize = ""; selColor = "";
 
         document.getElementById('detail-name').innerText = detailedProd.name;
@@ -269,6 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         document.getElementById('product-detail-modal').classList.remove('hidden');
+        updateWishlistBtnState();
+        await loadProductRating(doc.id);
         lucide.createIcons();
     };
 
@@ -365,8 +397,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         badge.innerText = cart.length;
 
-        // Update total display (will be updated with shipping when gov is selected)
-        cartTotalDisplay.innerText = `${subtotal} ج.م`;
+        // Coupon section
+        const couponSection = document.querySelector('.coupon-section');
+        if (!couponSection) {
+            const cs = document.createElement('div');
+            cs.className = 'coupon-section';
+            cs.innerHTML = `
+                <div class="coupon-row">
+                    <input type="text" class="coupon-input" id="coupon-input" placeholder="كود الخصم" />
+                    <button class="coupon-apply-btn" onclick="window.applyCoupon()">تطبيق</button>
+                </div>
+                <div class="coupon-msg" id="coupon-msg"></div>
+            `;
+            cartItemsContainer.parentNode.insertBefore(cs, cartItemsContainer.nextSibling);
+        }
+
+        // Restore coupon input value
+        const inp = document.getElementById('coupon-input');
+        if (inp && couponCode) inp.value = couponCode;
+
+        // Calculate total with discount
+        const discount = couponDiscount > 0
+            ? (couponType === 'percent'
+                ? Math.round(subtotal * couponDiscount / 100)
+                : couponDiscount)
+            : 0;
+        const finalTotal = Math.max(0, subtotal - discount);
+        cartTotalDisplay.innerText = `${finalTotal} ج.م${discount > 0 ? ` (وُفِّر ${discount} ج.م)` : ''}`;
+        if (discount > 0) cartTotalDisplay.style.color = '#4caf50';
+        else cartTotalDisplay.style.color = '';
+
         lucide.createIcons();
     }
 
@@ -473,16 +533,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Store shipping prices for use in form
     window.updateOrderTotal = () => {
-        const gov = document.getElementById('of-gov').value;
         const subtotal = cart.reduce((s, i) => s + i.price, 0);
-        const shipping = gov ? (shippingPrices[gov] || 0) : 0;
-        const total = subtotal + shipping;
+        const discount = couponDiscount > 0
+            ? (couponType === 'percent' ? Math.round(subtotal * couponDiscount / 100) : couponDiscount)
+            : 0;
+        const discountedSubtotal = Math.max(0, subtotal - discount);
+        const gov = (document.getElementById('of-gov').value || '').trim();
+        const shipping = gov ? (shippingPrices[gov] !== undefined ? shippingPrices[gov] : 0) : 0;
+        const total = discountedSubtotal + shipping;
 
         const shippingEl = document.getElementById('of-shipping-cost');
         const totalEl = document.getElementById('of-total');
+        const discountRow = document.getElementById('of-discount-row');
+        const discountAmountEl = document.getElementById('of-discount-amount');
 
-        if (shippingEl) shippingEl.innerText = `${shipping} ج.م`;
+        if (shippingEl) {
+            shippingEl.innerText = `${shipping} ج.م`;
+            shippingEl.style.color = shipping > 0 ? '#ff9800' : '#4caf50';
+        }
         if (totalEl) totalEl.innerText = `${total} ج.م`;
+        if (discountRow) discountRow.style.display = discount > 0 ? '' : 'none';
+        const discountEl = document.getElementById('of-discount-amount');
+        if (discountEl) discountEl.innerText = `-${discount} ج.م`;
     };
 
     window.submitOrder = async () => {
@@ -497,13 +569,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!gov) return alert("❌ يرجى اختيار المحافظة!");
 
         const subtotal = cart.reduce((s, i) => s + i.price, 0);
+        const discount = couponDiscount > 0
+            ? (couponType === 'percent' ? Math.round(subtotal * couponDiscount / 100) : couponDiscount)
+            : 0;
+        const discountedSubtotal = Math.max(0, subtotal - discount);
         const shipping = shippingPrices[gov] || 0;
-        const total = subtotal + shipping;
+        const total = discountedSubtotal + shipping;
 
         const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
 
         const waText = encodeURIComponent(
-            `🛍️ طلب جديد - EL TOUFAN\n` +
+            `🛖 طلب جديد - EL TOUFAN\n` +
             `━━━━━━━━━━━━━━━\n` +
             `👤 الاسم: ${name}\n` +
             `📱 التليفون: ${phone}\n` +
@@ -513,6 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `🛒 المنتجات:\n${itemsList}\n` +
             `━━━━━━━━━━━━━━━\n` +
             `💰 المنتجات: ${subtotal} ج.م\n` +
+            (discount > 0 ? `🏷️ خصم (${couponCode}): -${discount} ج.م\n` : '') +
             `🚚 الشحن (${gov}): ${shipping} ج.م\n` +
             `✅ الإجمالي: ${total} ج.م`
         );
@@ -542,4 +619,199 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     startIntro();
+
+    // ============================================
+    // WISHLIST
+    // ============================================
+    function saveWishlist() {
+        localStorage.setItem('eltoufan_wishlist', JSON.stringify(wishlist));
+        const wc = document.getElementById('wishlist-count');
+        if (wc) wc.innerText = wishlist.length;
+    }
+
+    function updateWishlistBtnState() {
+        const btn = document.getElementById('wishlist-toggle-btn');
+        if (!btn || !detailedProd || !currentProductId) return;
+        const inList = wishlist.some(w => w.id === currentProductId);
+        btn.classList.toggle('active', inList);
+    }
+
+    window.toggleWishlist = () => {
+        if (!detailedProd || !currentProductId) return;
+        const idx = wishlist.findIndex(w => w.id === currentProductId);
+        if (idx > -1) {
+            wishlist.splice(idx, 1);
+        } else {
+            wishlist.push({
+                id: currentProductId,
+                name: detailedProd.name,
+                price: detailedProd.price,
+                image: detailedProd.mainImage
+            });
+        }
+        saveWishlist();
+        updateWishlistBtnState();
+    };
+
+    window.toggleWishlistModal = () => {
+        const modal = document.getElementById('wishlist-modal');
+        if (!modal) return;
+        modal.classList.toggle('hidden');
+        renderWishlistModal();
+        lucide.createIcons();
+    };
+
+    function renderWishlistModal() {
+        const container = document.getElementById('wishlist-items');
+        if (!container) return;
+        if (wishlist.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#666; padding:3rem;">قائمة المفضلة فارغة 🥲</p>';
+            return;
+        }
+        container.innerHTML = wishlist.map((item, i) => `
+            <div class="wishlist-item">
+                <img src="${item.image || ''}" alt="${item.name}">
+                <div class="wishlist-item-info">
+                    <div class="wishlist-item-name">${item.name}</div>
+                    <div class="wishlist-item-price">${item.price} ج.م</div>
+                </div>
+                <button class="wishlist-add-to-cart-btn" onclick="window.addToCart('${item.name.replace(/'/g, '\\&apos;')}', ${item.price}); window.toggleWishlistModal();">🛒 سلة</button>
+                <button class="wishlist-remove-btn" onclick="window.removeFromWishlist(${i})"><i data-lucide="x" style="width:16px;"></i></button>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+
+    window.removeFromWishlist = (idx) => {
+        wishlist.splice(idx, 1);
+        saveWishlist();
+        renderWishlistModal();
+    };
+
+    // Init wishlist count
+    saveWishlist();
+
+    // ============================================
+    // PRODUCT SEARCH
+    // ============================================
+    window.filterProducts = (query) => {
+        const q = query.trim().toLowerCase();
+        const cards = optionsGrid.querySelectorAll('.product-card');
+        let found = 0;
+        cards.forEach(card => {
+            const name = card.querySelector('.product-card-name')?.innerText?.toLowerCase() || '';
+            const match = !q || name.includes(q);
+            card.style.display = match ? '' : 'none';
+            if (match) found++;
+        });
+        // Show no-results message
+        let noResult = document.getElementById('search-no-result');
+        if (!q || found > 0) {
+            if (noResult) noResult.remove();
+        } else {
+            if (!noResult) {
+                noResult = document.createElement('p');
+                noResult.id = 'search-no-result';
+                noResult.style.cssText = 'text-align:center; color:#666; padding:2rem; grid-column:1/-1;';
+                optionsGrid.appendChild(noResult);
+            }
+            noResult.innerText = `🔍 لا توجد منتجات باسم "${query}"`;
+        }
+    };
+
+    window.clearSearch = () => {
+        const inp = document.getElementById('product-search');
+        if (inp) { inp.value = ''; window.filterProducts(''); }
+    };
+
+    // ============================================
+    // COUPON
+    // ============================================
+    window.applyCoupon = async () => {
+        const btn = document.querySelector('.coupon-apply-btn');
+        const inp = document.getElementById('coupon-input');
+        const msg = document.getElementById('coupon-msg');
+        if (!inp || !msg) return;
+
+        const code = inp.value.trim().toUpperCase();
+        if (!code) {
+            msg.textContent = '';
+            couponDiscount = 0;
+            couponCode = '';
+            updateCartUI();
+            return;
+        }
+
+        if (btn) btn.innerText = "⏳...";
+
+        try {
+            const snap = await db.collection('coupons').doc(code).get();
+            if (snap.exists) {
+                const cp = snap.data();
+                couponDiscount = cp.value;
+                couponCode = code;
+                couponType = cp.type;
+
+                const label = cp.type === 'percent' ? `${cp.value}%` : `${cp.value} ج.م`;
+                msg.textContent = `✅ تم تطبيق الخصم (${label})`;
+                msg.className = 'coupon-msg success';
+            } else {
+                msg.textContent = '❌ كود خصم غير صحيح أو منتهي';
+                msg.className = 'coupon-msg error';
+                couponDiscount = 0;
+                couponCode = '';
+            }
+        } catch (e) {
+            msg.textContent = '❌ خطأ في الاتصال';
+            msg.className = 'coupon-msg error';
+        }
+
+        if (btn) btn.innerText = "تطبيق";
+        updateCartUI();
+    };
+
+    // ============================================
+    // STAR RATING
+    // ============================================
+    async function loadProductRating(productId) {
+        try {
+            const snap = await db.collection('ratings').doc(productId).get();
+            const starsDisplay = document.getElementById('stars-display');
+            const ratingCount = document.getElementById('rating-count');
+            if (snap.exists) {
+                const data = snap.data();
+                const avg = data.total / data.count;
+                const rounded = Math.round(avg);
+                if (starsDisplay) starsDisplay.innerText = '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
+                if (ratingCount) ratingCount.innerText = `${data.count} تقييم (متوسط ${avg.toFixed(1)})`;
+            } else {
+                if (starsDisplay) starsDisplay.innerText = '☆☆☆☆☆';
+                if (ratingCount) ratingCount.innerText = 'لا توجد تقييمات بعد';
+            }
+        } catch (e) { console.warn('Rating load error:', e); }
+    }
+
+    window.rateProduct = async (stars) => {
+        if (!currentProductId) return;
+        // Highlight selected stars
+        document.querySelectorAll('.star-btn').forEach((btn, i) => {
+            btn.classList.toggle('active', i < stars);
+        });
+        try {
+            const ref = db.collection('ratings').doc(currentProductId);
+            await db.runTransaction(async tx => {
+                const snap = await tx.get(ref);
+                if (snap.exists) {
+                    tx.update(ref, {
+                        total: firebase.firestore.FieldValue.increment(stars),
+                        count: firebase.firestore.FieldValue.increment(1)
+                    });
+                } else {
+                    tx.set(ref, { total: stars, count: 1 });
+                }
+            });
+            setTimeout(() => loadProductRating(currentProductId), 500);
+        } catch (e) { console.warn('Rating error:', e); }
+    };
+
 });

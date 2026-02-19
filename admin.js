@@ -13,10 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let storeTreeData = [];
     let currentModalTarget = null;
 
-    // --- AUTH ---
-    // 1. Force logout initially on every page load
-    // auth.signOut(); // Removed auto-logout to keep session active if desired, or keep it if strict security needed. Keeping it based on previous code.
-    // Actually, user wants persistence. Let's remove initial signOut to allow persistence.
+    // --- AUTH (SECURE MODE) ---
+    // Force logout on every page load for maximum security
+    auth.signOut().then(() => {
+        loginScreen.classList.remove('hidden');
+        adminPanel.classList.add('hidden');
+    });
 
     auth.onAuthStateChanged(user => {
         if (user) {
@@ -32,9 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
     loginBtn.onclick = () => {
         const email = document.getElementById('email').value;
         const pass = document.getElementById('password').value;
+        if (!email || !pass) return alert("❌ يرجى إدخال الإيميل وكلمة المرور!");
         loginBtn.innerText = "⏳ جاري التحقق...";
 
-        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL) // Changed to LOCAL for better UX
+        auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
             .then(() => auth.signInWithEmailAndPassword(email, pass))
             .catch(err => {
                 alert("❌ خطأ: " + err.message);
@@ -70,7 +73,75 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tab === 'categories') renderCategories();
         if (tab === 'products') renderProducts();
         if (tab === 'governorates') renderGovernorates();
+        if (tab === 'coupons') renderCoupons();
     }
+
+    // ============================================
+    // SOUND NOTIFICATION FOR NEW ORDERS
+    // ============================================
+    let lastOrderCount = null;
+    let soundEnabled = true;
+
+    function playNotifSound() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            // Play a pleasant 2-note chime
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.4, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.6);
+        } catch (e) { }
+    }
+
+    function showNewOrderToast() {
+        let toast = document.getElementById('order-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'order-toast';
+            toast.style.cssText = `
+                position:fixed; top:20px; left:50%; transform:translateX(-50%);
+                background:linear-gradient(135deg,#d4af37,#b8942e); color:#000;
+                padding:14px 28px; border-radius:16px; font-weight:900; font-size:1rem;
+                font-family:'Cairo',sans-serif; z-index:99999;
+                box-shadow:0 10px 40px rgba(212,175,55,0.5);
+                animation: toastIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            `;
+            document.head.insertAdjacentHTML('beforeend', `
+                <style>
+                    @keyframes toastIn { from{transform:translateX(-50%) translateY(-40px);opacity:0} to{transform:translateX(-50%) translateY(0);opacity:1} }
+                    @keyframes toastOut { from{opacity:1} to{opacity:0;transform:translateX(-50%) translateY(-20px)} }
+                </style>
+            `);
+            document.body.appendChild(toast);
+        }
+        toast.innerText = '🛖 طلب جديد وصل!';
+        toast.style.animation = 'toastIn 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+            toast.style.animation = 'toastOut 0.4s ease forwards';
+        }, 3000);
+    }
+
+    // Real-time listener for new orders
+    db.collection('orders').onSnapshot(snap => {
+        if (lastOrderCount === null) {
+            lastOrderCount = snap.size;
+            return;
+        }
+        if (snap.size > lastOrderCount) {
+            playNotifSound();
+            showNewOrderToast();
+        }
+        lastOrderCount = snap.size;
+    });
 
     // --- 1. ORDERS ---
     async function renderOrders() {
@@ -263,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 3. PRODUCTS & STATS ---
     async function renderProducts() {
         tabContent.innerHTML = `
-            <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:3rem;">
+            <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:2rem;">
                 <div class="stat-card" style="background:var(--card); padding:25px; border-radius:20px; border:1px solid var(--border); text-align:center; position:relative; overflow:hidden;">
                     <i data-lucide="package" style="position:absolute; top:-10px; left:-10px; width:80px; height:80px; color:rgba(255,255,255,0.03);"></i>
                     <div style="font-size:2.5rem; font-weight:900; color:var(--accent);" id="stat-prods">-</div>
@@ -278,6 +349,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i data-lucide="shopping-bag" style="position:absolute; top:-10px; left:-10px; width:80px; height:80px; color:rgba(255,255,255,0.03);"></i>
                     <div style="font-size:2.5rem; font-weight:900; color:#4caf50;" id="stat-orders">-</div>
                     <div style="color:var(--text-dim); font-weight:700;">إجمالي الطلبات</div>
+                </div>
+            </div>
+
+            <!-- Sales Chart -->
+            <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; padding:1.5rem; margin-bottom:2rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:10px;">
+                    <h3 style="font-weight:900; font-size:1.1rem;">📊 مبيعات آخر 7 أيام</h3>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="window.showChart('week')" id="chart-week-btn" style="padding:6px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:#000; font-weight:800; font-size:0.8rem; cursor:pointer; font-family:'Cairo',sans-serif;">أسبوعي</button>
+                        <button onclick="window.showChart('month')" id="chart-month-btn" style="padding:6px 14px; border-radius:8px; border:1px solid #333; background:transparent; color:#fff; font-weight:800; font-size:0.8rem; cursor:pointer; font-family:'Cairo',sans-serif;">شهري</button>
+                    </div>
+                </div>
+                <div style="position:relative; height:220px;">
+                    <canvas id="sales-chart"></canvas>
                 </div>
             </div>
 
@@ -313,6 +398,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('stat-prods').innerText = prodCount;
             document.getElementById('stat-orders').innerText = orderCount;
             document.getElementById('stat-cats').innerText = catCount;
+
+            // Build sales chart from orders data
+            buildSalesChart(ordersSnap);
 
             const grid = document.getElementById('products-grid');
             if (prodsSnap.empty) {
@@ -537,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const prices = {};
             EGYPT_GOVERNORATES.forEach(gov => {
                 const input = document.getElementById(`gov_${gov.replace(/\s/g, '_')}`);
-                prices[gov] = parseFloat(input.value) || 0;
+                prices[gov.trim()] = parseFloat(input.value) || 0;
             });
             await db.collection('settings').doc('governoratesPricing').set({ prices });
             btn.innerHTML = '<i data-lucide="save"></i> حفظ أسعار الشحن';
@@ -550,4 +638,241 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Expose for global access
     window.EGYPT_GOVERNORATES = EGYPT_GOVERNORATES;
+
+    // ============================================
+    // COUPONS MANAGEMENT
+    // ============================================
+    async function renderCoupons() {
+        const snap = await db.collection('coupons').get();
+
+        tabContent.innerHTML = `
+            <div class="actions-header">
+                <h3>إدارة كوبونات الخصم</h3>
+                <button onclick="window.openCouponModal()" class="add-btn"><i data-lucide="plus-circle"></i> إضافة كوبون جديد</button>
+            </div>
+            <div class="orders-table-wrapper" style="margin-top:20px;">
+                <table style="width:100%; border-collapse:collapse; text-align:right;">
+                    <thead>
+                        <tr style="background:rgba(255,255,255,0.05); border-bottom:1px solid #333;">
+                            <th style="padding:15px;">الكود</th>
+                            <th style="padding:15px;">النوع</th>
+                            <th style="padding:15px;">القيمة</th>
+                            <th style="padding:15px;">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="coupons-list"></tbody>
+                </table>
+            </div>
+
+            <!-- Add/Edit Coupon Modal Shell -->
+            <div id="coupon-modal" class="admin-modal hidden">
+                <div class="login-card" style="max-width:400px; padding:2rem;">
+                    <h3 style="margin-bottom:1.5rem; text-align:center; color:var(--accent);">🎫 كوبون جديد</h3>
+                    <div class="input-group">
+                        <label>كود الخصم (مثال: SAVE10)</label>
+                        <input type="text" id="cp-code" placeholder="أدخل الكود هنا..." style="text-transform:uppercase;">
+                    </div>
+                    <div class="input-group" style="margin-top:1rem;">
+                        <label>نوع الخصم</label>
+                        <select id="cp-type" style="width:100%; padding:12px; background:#111; border:1px solid #333; color:#fff; border-radius:10px;">
+                            <option value="percent">نسبة مئوية (%)</option>
+                            <option value="fixed">مبلغ ثابت (ج.م)</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="margin-top:1rem;">
+                        <label>قيمة الخصم</label>
+                        <input type="number" id="cp-value" placeholder="القيمة...">
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:2rem;">
+                        <button onclick="window.saveCoupon()" class="add-btn" style="flex:1; justify-content:center;">حفظ الكوبون</button>
+                        <button onclick="window.closeCouponModal()" class="action-link del" style="flex:1; text-align:center; border:1px solid #ff4444; border-radius:12px; color:#ff4444;">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const list = document.getElementById('coupons-list');
+        if (snap.empty) {
+            list.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:3rem; color:#666;">لا توجد كوبونات حالياً.</td></tr>';
+        } else {
+            snap.forEach(doc => {
+                const cp = doc.data();
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #222';
+                tr.innerHTML = `
+                    <td style="padding:15px; font-weight:800; color:var(--accent);">${doc.id}</td>
+                    <td style="padding:15px;">${cp.type === 'percent' ? 'نسبة مئوية' : 'مبلغ ثابت'}</td>
+                    <td style="padding:15px;">${cp.value} ${cp.type === 'percent' ? '%' : 'ج.م'}</td>
+                    <td style="padding:15px;">
+                        <button onclick="window.deleteCoupon('${doc.id}')" style="background:none; border:none; color:#ff4444; cursor:pointer;" title="حذف">
+                            <i data-lucide="trash-2" style="width:18px;"></i>
+                        </button>
+                    </td>
+                `;
+                list.appendChild(tr);
+            });
+        }
+        lucide.createIcons();
+    }
+
+    window.openCouponModal = () => document.getElementById('coupon-modal').classList.remove('hidden');
+    window.closeCouponModal = () => {
+        document.getElementById('coupon-modal').classList.add('hidden');
+        document.getElementById('cp-code').value = '';
+        document.getElementById('cp-value').value = '';
+    };
+
+    window.saveCoupon = async () => {
+        const code = document.getElementById('cp-code').value.trim().toUpperCase();
+        const type = document.getElementById('cp-type').value;
+        const value = parseFloat(document.getElementById('cp-value').value);
+
+        if (!code || isNaN(value)) return alert("❌ يرجى ملء جميع البيانات!");
+
+        try {
+            await db.collection('coupons').doc(code).set({
+                type,
+                value,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert("✅ تم حفظ الكوبون بنجاح!");
+            window.closeCouponModal();
+            renderCoupons();
+        } catch (e) {
+            alert("❌ خطأ أثناء الحفظ: " + e.message);
+        }
+    };
+
+    window.deleteCoupon = async (id) => {
+        if (!confirm(`هل أنت متأكد من حذف الكوبون ${id}؟`)) return;
+        try {
+            await db.collection('coupons').doc(id).delete();
+            renderCoupons();
+        } catch (e) {
+            alert("❌ خطأ أثناء الحذف: " + e.message);
+        }
+    };
+
+    // ============================================
+    // SALES CHART
+    // ============================================
+    let salesChartInstance = null;
+    let salesOrdersData = null;
+
+    function buildSalesChart(ordersSnap) {
+        salesOrdersData = ordersSnap;
+        window.showChart('week');
+    }
+
+    window.showChart = (mode) => {
+        if (!salesOrdersData) return;
+
+        // Update button styles
+        const weekBtn = document.getElementById('chart-week-btn');
+        const monthBtn = document.getElementById('chart-month-btn');
+        if (weekBtn && monthBtn) {
+            if (mode === 'week') {
+                weekBtn.style.background = 'var(--accent)'; weekBtn.style.color = '#000'; weekBtn.style.borderColor = 'var(--accent)';
+                monthBtn.style.background = 'transparent'; monthBtn.style.color = '#fff'; monthBtn.style.borderColor = '#333';
+            } else {
+                monthBtn.style.background = 'var(--accent)'; monthBtn.style.color = '#000'; monthBtn.style.borderColor = 'var(--accent)';
+                weekBtn.style.background = 'transparent'; weekBtn.style.color = '#fff'; weekBtn.style.borderColor = '#333';
+            }
+        }
+
+        const days = mode === 'week' ? 7 : 30;
+        const labels = [];
+        const counts = [];
+        const totals = [];
+
+        // Build day-by-day buckets
+        const now = new Date();
+        for (let i = days - 1; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            const label = `${d.getDate()}/${d.getMonth() + 1}`;
+            labels.push(label);
+            counts.push(0);
+            totals.push(0);
+        }
+
+        salesOrdersData.forEach(doc => {
+            const o = doc.data();
+            if (!o.timestamp) return;
+            const date = o.timestamp.toDate();
+            const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+            if (diffDays < days) {
+                const idx = days - 1 - diffDays;
+                if (idx >= 0 && idx < days) {
+                    counts[idx]++;
+                    totals[idx] += o.total || 0;
+                }
+            }
+        });
+
+        const canvas = document.getElementById('sales-chart');
+        if (!canvas) return;
+
+        if (salesChartInstance) salesChartInstance.destroy();
+
+        salesChartInstance = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'عدد الطلبات',
+                        data: counts,
+                        backgroundColor: 'rgba(212,175,55,0.7)',
+                        borderColor: '#d4af37',
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        yAxisID: 'y',
+                    },
+                    {
+                        label: 'إجمالي المبيعات (ج.م)',
+                        data: totals,
+                        type: 'line',
+                        borderColor: '#4caf50',
+                        backgroundColor: 'rgba(76,175,80,0.1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#4caf50',
+                        pointRadius: 4,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'y1',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#aaa', font: { family: 'Cairo', size: 11 } }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#666', font: { family: 'Cairo', size: 10 } },
+                        grid: { color: 'rgba(255,255,255,0.04)' }
+                    },
+                    y: {
+                        type: 'linear',
+                        position: 'right',
+                        ticks: { color: '#d4af37', font: { size: 10 }, stepSize: 1 },
+                        grid: { color: 'rgba(255,255,255,0.04)' },
+                        title: { display: true, text: 'طلبات', color: '#d4af37', font: { size: 10 } }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'left',
+                        ticks: { color: '#4caf50', font: { size: 10 } },
+                        grid: { display: false },
+                        title: { display: true, text: 'ج.م', color: '#4caf50', font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    };
 });

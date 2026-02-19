@@ -943,3 +943,442 @@ body.light-mode .theme-toggle-btn:hover {
 .badge.pulse {
     animation: cartPulse 0.4s ease;
 }
+
+/* ============================================
+   WHATSAPP FLOATING BUTTON
+   ============================================ */
+.wa-float {
+    position: fixed;
+    bottom: 28px;
+    left: 28px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 30px rgba(37, 211, 102, 0.5);
+    z-index: 9998;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+    animation: waPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 1.5s both;
+}
+
+@keyframes waPop {
+    from {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.wa-float:hover {
+    transform: scale(1.15) rotate(-5deg);
+    box-shadow: 0 12px 40px rgba(37, 211, 102, 0.7);
+}
+
+/* Pulse ring */
+.wa-float::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid rgba(37, 211, 102, 0.5);
+    animation: waRing 2s infinite;
+}
+
+@keyframes waRing {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+/* ============================================
+   WISHLIST BUTTON (Header)
+   ============================================ */
+.wishlist-header-btn {
+    background: var(--btn-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s;
+}
+
+.wishlist-header-btn:hover {
+    border-color: #e91e63;
+    color: #e91e63;
+    transform: scale(1.05);
+}
+
+/* Wishlist toggle button inside product modal */
+.wishlist-toggle-btn {
+    background: rgba(233, 30, 99, 0.1);
+    border: 1px solid rgba(233, 30, 99, 0.3);
+    color: #e91e63;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s;
+    flex-shrink: 0;
+}
+
+.wishlist-toggle-btn.active,
+.wishlist-toggle-btn:hover {
+    background: #e91e63;
+    color: white;
+    border-color: #e91e63;
+    transform: scale(1.1);
+}
+
+/* Wishlist Modal */
+.wishlist-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 8000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.wishlist-modal.hidden {
+    display: none !important;
+}
+
+.wishlist-modal-card {
+    background: #0a0a0a;
+    border: 1px solid #222;
+    border-radius: 28px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.wishlist-modal-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #222;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wishlist-modal-header h3 {
+    font-weight: 900;
+    font-size: 1.2rem;
+    color: #e91e63;
+}
+
+.wishlist-items {
+    overflow-y: auto;
+    padding: 1rem;
+    flex: 1;
+}
+
+.wishlist-item {
+    background: #111;
+    border: 1px solid #1e1e1e;
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: 0.3s;
+}
+
+.wishlist-item:hover {
+    border-color: #e91e63;
+}
+
+.wishlist-item img {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+.wishlist-item-info {
+    flex: 1;
+}
+
+.wishlist-item-name {
+    font-weight: 800;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.wishlist-item-price {
+    color: #d4af37;
+    font-weight: 700;
+}
+
+.wishlist-remove-btn {
+    background: rgba(255, 68, 68, 0.1);
+    border: none;
+    color: #ff4444;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wishlist-remove-btn:hover {
+    background: #ff4444;
+    color: white;
+}
+
+.wishlist-add-to-cart-btn {
+    background: #d4af37;
+    border: none;
+    color: #000;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: 'Cairo', sans-serif;
+    white-space: nowrap;
+}
+
+.wishlist-add-to-cart-btn:hover {
+    transform: scale(1.05);
+}
+
+/* ============================================
+   SEARCH BAR
+   ============================================ */
+.search-bar-wrapper {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto 1.5rem;
+}
+
+.search-bar-inner {
+    display: flex;
+    align-items: center;
+    background: #0f0f0f;
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 0 16px;
+    gap: 10px;
+    transition: 0.3s;
+}
+
+.search-bar-inner:focus-within {
+    border-color: #d4af37;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+.search-icon {
+    color: #666;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.search-bar-inner input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    font-family: 'Cairo', sans-serif;
+    padding: 14px 0;
+    outline: none;
+    direction: rtl;
+}
+
+.search-bar-inner input::placeholder {
+    color: #555;
+}
+
+.clear-search-btn {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: 0.2s;
+}
+
+.clear-search-btn:hover {
+    color: #fff;
+}
+
+/* ============================================
+   STAR RATING
+   ============================================ */
+.rating-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+}
+
+body:not([dir="rtl"]) .rating-section {
+    flex-direction: row;
+}
+
+.stars-display {
+    font-size: 1.4rem;
+    color: #d4af37;
+    letter-spacing: 2px;
+}
+
+.rating-count {
+    color: #888;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.stars-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+    color: #888;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+}
+
+.stars-row {
+    display: flex;
+    gap: 4px;
+    flex-direction: row-reverse;
+}
+
+.star-btn {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    cursor: pointer;
+    color: #333;
+    transition: color 0.15s, transform 0.15s;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.star-btn:hover,
+.star-btn.active {
+    color: #d4af37;
+    transform: scale(1.2);
+}
+
+/* Highlight stars up to hovered */
+.stars-row:hover .star-btn {
+    color: #d4af37;
+}
+
+.stars-row .star-btn:hover~.star-btn {
+    color: #333;
+}
+
+/* ============================================
+   COUPON SECTION IN CART
+   ============================================ */
+.coupon-section {
+    padding: 0 1.5rem 1rem;
+}
+
+.coupon-row {
+    display: flex;
+    gap: 8px;
+}
+
+.coupon-input {
+    flex: 1;
+    background: #0f0f0f;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    direction: ltr;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.coupon-input:focus {
+    border-color: #d4af37;
+}
+
+.coupon-apply-btn {
+    background: #d4af37;
+    border: none;
+    color: #000;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 900;
+    cursor: pointer;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.85rem;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+
+.coupon-apply-btn:hover {
+    transform: scale(1.05);
+}
+
+.coupon-msg {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-height: 18px;
+}
+
+.coupon-msg.success {
+    color: #4caf50;
+}
+
+.coupon-msg.error {
+    color: #ff4444;
+}
+
+@media (max-width: 768px) {
+    .wa-float {
+        bottom: 20px;
+        left: 16px;
+        width: 52px;
+        height: 52px;
+    }
+}
