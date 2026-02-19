@@ -45,6 +45,20 @@ body {
     display: none !important;
 }
 
+.mobile-only {
+    display: none !important;
+}
+
+@media (max-width: 900px) {
+    .mobile-only {
+        display: flex !important;
+    }
+
+    .mobile-hide {
+        display: none !important;
+    }
+}
+
 /* ── DESKTOP Layout (≥ 900px) ────────────── */
 .admin-container {
     display: grid;
@@ -161,6 +175,31 @@ body {
 .top-bar h2 {
     font-weight: 900;
     font-size: 1.5rem;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.menu-btn {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 45px;
+    height: 45px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.menu-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent);
 }
 
 .user-info {
@@ -628,75 +667,86 @@ input[type="file"] {
     }
 
     /* ── Bottom Nav Bar ── */
+    /* ── Sliding Sidebar ── */
     .sidebar {
-        order: 10;
-        /* push to bottom */
         position: fixed;
-        bottom: 0;
-        left: 0;
+        top: 0;
+        right: -300px;
+        /* Hidden off-screen in RTL (right-to-left) */
+        width: 300px;
+        height: 100vh;
+        z-index: 2000;
+        background: var(--sidebar);
+        padding: 2rem 1.5rem;
+        transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        border-right: none;
+        border-left: 1px solid var(--border);
+        box-shadow: none;
+        pointer-events: all;
+    }
+
+    .sidebar.active {
         right: 0;
-        height: auto;
-        width: 100%;
-        padding: 0;
-        background: rgba(8, 8, 8, 0.97);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border-left: none;
-        border-top: 1px solid var(--border);
-        z-index: 999;
-        flex-shrink: 0;
-        overflow: visible;
+        box-shadow: -20px 0 50px rgba(0, 0, 0, 0.8);
     }
 
-    /* Hide the logo on mobile bottom nav */
+    /* Overlay when sidebar is open */
+    .sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(5px);
+        z-index: 1001;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    .sidebar-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Show the logo on mobile sliding nav */
     .sidebar-header {
-        display: none;
+        display: block;
+        margin-bottom: 2rem;
     }
 
-    /* Horizontal scrollable nav */
+    /* Return to vertical nav items */
     .side-nav {
-        flex-direction: row;
-        overflow-x: auto;
-        overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        justify-content: flex-start;
-        padding: 6px 8px 10px;
-        gap: 4px;
-        /* Ensure it fills width so scroll works */
+        flex-direction: column;
+        overflow-x: visible;
+        overflow-y: auto;
+        padding: 0;
+        gap: 10px;
         width: 100%;
         display: flex;
     }
 
-    .side-nav::-webkit-scrollbar {
-        display: none;
-    }
-
-    /* Nav pill buttons */
     .nav-item {
-        flex-direction: column;
-        padding: 8px 12px;
-        gap: 4px;
-        border-radius: 12px;
+        flex-direction: row;
+        padding: 16px;
+        gap: 12px;
+        border-radius: 16px;
         white-space: nowrap;
-        font-size: 0.7rem;
-        min-width: 60px;
+        font-size: 0.95rem;
+        width: 100%;
         align-items: center;
-        justify-content: center;
-        text-align: center;
+        justify-content: flex-start;
+        text-align: right;
         flex-shrink: 0;
-        /* CRITICAL: prevents buttons from shrinking */
-        -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
     }
 
     .nav-item i {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
     }
 
-    .nav-item.logout {
-        margin-top: 0;
+    .nav-item span {
+        display: inline;
     }
 
     /* ── Main Content ── */

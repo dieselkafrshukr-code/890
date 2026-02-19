@@ -55,6 +55,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- NAVIGATION ---
+    const menuToggle = document.getElementById('menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+    if (menuToggle) {
+        menuToggle.onclick = () => {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+        };
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.onclick = () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        };
+    }
+
     tabItems.forEach(item => {
         item.onclick = () => {
             tabItems.forEach(i => i.classList.remove('active'));
@@ -62,6 +80,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const tab = item.dataset.tab;
             if (tabTitle) tabTitle.innerText = item.querySelector('span').innerText;
             loadTab(tab);
+
+            // Close sidebar on mobile after clicking
+            if (window.innerWidth <= 900) {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+            }
         };
     });
 
@@ -240,9 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- 2. CATEGORIES ---
-    async function renderCategories() {
-        const snap = await db.collection('settings').doc('storeTree').get();
-        storeTreeData = snap.exists ? (snap.data().options || []) : [];
+    async function renderCategories(forceFetch = false) {
+        if (forceFetch || storeTreeData.length === 0) {
+            tabContent.innerHTML = '<div style="text-align:center; padding:100px; color:var(--accent);">⭐ جاري تحميل شجرة الأقسام...</div>';
+            const snap = await db.collection('settings').doc('storeTree').get();
+            storeTreeData = snap.exists ? (snap.data().options || []) : [];
+        }
 
         tabContent.innerHTML = `
             <div class="actions-header">
@@ -250,24 +277,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button onclick="window.openCategoryModal('root')" class="add-btn"><i data-lucide="plus"></i> إضافة قسم رئيسي</button>
             </div>
             <div id="tree-container"></div>
-            <button id="sync-tree" class="add-btn" style="width:100%; justify-content:center; margin-top:2rem; height:60px;">
-                <i data-lucide="save"></i> حفظ ونشر خريطة الموقع
+            <div style="margin-top:2rem; background:rgba(212,175,55,0.05); border:1px solid rgba(212,175,55,0.2); padding:1rem; border-radius:12px; margin-bottom:1rem;">
+                <p style="color:var(--accent); font-size:0.9rem; font-weight:700;">💡 ملاحظة: التغييرات التي تجريها هنا (إضافة أو حذف) تكون "مؤقتة" حتى تضغط على زر الحفظ بالأسفل لتعميمها على الموقع.</p>
+            </div>
+            <button id="sync-tree" class="add-btn" style="width:100%; justify-content:center; height:60px;">
+                <i data-lucide="save"></i> حفظ ونشر كوردات الموقع الآن
             </button>
         `;
 
         const container = document.getElementById('tree-container');
         if (storeTreeData.length === 0) {
-            container.innerHTML = '<p style="text-align:center; padding:3rem; color:var(--text-dim);">لم يتم إضافة أقسام بعد.</p>';
+            container.innerHTML = '<p style="text-align:center; padding:3rem; color:var(--text-dim);">لم يتم إضافة أقسام بعد. ابدأ بإضافة قسم رئيسي.</p>';
         } else {
             renderTreeView(storeTreeData, container);
         }
 
         document.getElementById('sync-tree').onclick = async () => {
             const btn = document.getElementById('sync-tree');
-            btn.innerText = "⏳ جاري النشر...";
-            await db.collection('settings').doc('storeTree').set({ options: storeTreeData });
-            alert("✅ تم نشر الأقسام بنجاح!");
-            btn.innerHTML = '<i data-lucide="save"></i> حفظ ونشر خريطة الموقع';
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerText = "⏳ جاري الحفظ والنشر...";
+            try {
+                await db.collection('settings').doc('storeTree').set({ options: storeTreeData });
+                alert("✅ تم تحديث ونشر خريطة الأقسام بنجاح!");
+            } catch (e) {
+                alert("❌ حدث خطأ أثناء الحفظ: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                lucide.createIcons();
+            }
         };
         lucide.createIcons();
     }
@@ -296,19 +335,33 @@ document.addEventListener('DOMContentLoaded', () => {
         currentModalTarget = id;
         document.getElementById('cat-name').value = '';
         document.getElementById('modal-category').classList.remove('hidden');
+
+        // Re-attach save-cat event listener every time modal opens to ensure it's fresh
+        const saveCatBtn = document.getElementById('save-cat');
+        if (saveCatBtn) {
+            saveCatBtn.onclick = () => {
+                const nameInput = document.getElementById('cat-name');
+                const name = nameInput.value.trim();
+                if (!name) return;
+
+                const newNode = { id: 'c_' + Date.now(), name: name, options: [] };
+
+                if (currentModalTarget === 'root') {
+                    storeTreeData.push(newNode);
+                } else {
+                    findAndAdd(storeTreeData, currentModalTarget, newNode);
+                }
+
+                window.closeModal('modal-category');
+                renderCategories();
+            };
+        }
     };
 
     window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
 
-    document.getElementById('save-cat').onclick = () => {
-        const name = document.getElementById('cat-name').value.trim();
-        if (!name) return;
-        const newNode = { id: 'c_' + Date.now(), name: name, options: [] };
-        if (currentModalTarget === 'root') storeTreeData.push(newNode);
-        else findAndAdd(storeTreeData, currentModalTarget, newNode);
-        window.closeModal('modal-category');
-        renderCategories();
-    };
+    // Remove the global listener for save-cat since it's now handled in openCategoryModal
+    // to avoid potential issues with element references.
 
     function findAndAdd(nodes, targetId, newNode) {
         for (let n of nodes) {
