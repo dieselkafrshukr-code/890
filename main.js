@@ -660,6 +660,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 status: 'new'
             });
+
+            // Increment coupon usage if applied
+            if (couponCode) {
+                try {
+                    await db.collection('coupons').doc(couponCode).update({
+                        usageCount: firebase.firestore.FieldValue.increment(1)
+                    });
+                } catch (e) { console.warn("Could not increment coupon count:", e.message); }
+            }
         } catch (e) { console.warn("Could not save to Firestore:", e.message); }
 
         window.open(`https://wa.me/${WA_NUMBER}?text=${waText}`, '_blank');
@@ -807,13 +816,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const snap = await db.collection('coupons').doc(code).get();
             if (snap.exists) {
                 const cp = snap.data();
-                couponDiscount = cp.value;
-                couponCode = code;
-                couponType = cp.type;
 
-                const label = cp.type === 'percent' ? `${cp.value}%` : `${cp.value} ج.م`;
-                msg.textContent = `✅ تم تطبيق الخصم (${label})`;
-                msg.className = 'coupon-msg success';
+                // Check limit
+                if (cp.limit > 0 && (cp.usageCount || 0) >= cp.limit) {
+                    msg.textContent = '❌ عذراً، هذا الكوبون استنفد عدد مرات استخدامه المسموحة.';
+                    msg.className = 'coupon-msg error';
+                    couponDiscount = 0;
+                    couponCode = '';
+                } else {
+                    couponDiscount = cp.value;
+                    couponCode = code;
+                    couponType = cp.type;
+
+                    const label = cp.type === 'percent' ? `${cp.value}%` : `${cp.value} ج.م`;
+                    msg.textContent = `✅ تم تطبيق الخصم (${label})`;
+                    msg.className = 'coupon-msg success';
+                }
             } else {
                 msg.textContent = '❌ كود خصم غير صحيح أو منتهي';
                 msg.className = 'coupon-msg error';

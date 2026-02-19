@@ -729,6 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <th style="padding:15px;">الكود</th>
                             <th style="padding:15px;">النوع</th>
                             <th style="padding:15px;">القيمة</th>
+                            <th style="padding:15px;">الاستخدام</th>
                             <th style="padding:15px;">إجراءات</th>
                         </tr>
                     </thead>
@@ -755,6 +756,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <label>قيمة الخصم</label>
                         <input type="number" id="cp-value" placeholder="القيمة...">
                     </div>
+                    <div class="input-group" style="margin-top:1rem;">
+                        <label>عدد مرات الاستخدام (0 = غير محدود)</label>
+                        <input type="number" id="cp-limit" placeholder="مثلاً: 10" value="0">
+                    </div>
                     <div style="display:flex; gap:10px; margin-top:2rem;">
                         <button onclick="window.saveCoupon()" class="add-btn" style="flex:1; justify-content:center;">حفظ الكوبون</button>
                         <button onclick="window.closeCouponModal()" class="action-link del" style="flex:1; text-align:center; border:1px solid #ff4444; border-radius:12px; color:#ff4444;">إلغاء</button>
@@ -776,6 +781,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="padding:15px;">${cp.type === 'percent' ? 'نسبة مئوية' : 'مبلغ ثابت'}</td>
                     <td style="padding:15px;">${cp.value} ${cp.type === 'percent' ? '%' : 'ج.م'}</td>
                     <td style="padding:15px;">
+                        <span style="color:${cp.limit > 0 && (cp.usageCount || 0) >= cp.limit ? '#ff4444' : '#4caf50'}">
+                            ${cp.usageCount || 0} / ${cp.limit > 0 ? cp.limit : '∞'}
+                        </span>
+                    </td>
+                    <td style="padding:15px;">
                         <button onclick="window.deleteCoupon('${doc.id}')" style="background:none; border:none; color:#ff4444; cursor:pointer;" title="حذف">
                             <i data-lucide="trash-2" style="width:18px;"></i>
                         </button>
@@ -792,12 +802,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('coupon-modal').classList.add('hidden');
         document.getElementById('cp-code').value = '';
         document.getElementById('cp-value').value = '';
+        document.getElementById('cp-limit').value = '0';
     };
 
     window.saveCoupon = async () => {
         const code = document.getElementById('cp-code').value.trim().toUpperCase();
         const type = document.getElementById('cp-type').value;
         const value = parseFloat(document.getElementById('cp-value').value);
+        const limit = parseInt(document.getElementById('cp-limit').value) || 0;
 
         if (!code || isNaN(value)) return alert("❌ يرجى ملء جميع البيانات!");
 
@@ -805,6 +817,8 @@ document.addEventListener('DOMContentLoaded', () => {
             await db.collection('coupons').doc(code).set({
                 type,
                 value,
+                limit,
+                usageCount: 0,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             alert("✅ تم حفظ الكوبون بنجاح!");
