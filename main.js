@@ -109,16 +109,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initApp() {
-        mainApp.classList.remove('hidden');
-        mainApp.style.opacity = '0';
-        mainApp.style.transform = 'translateY(20px)';
-        mainApp.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-        setTimeout(() => {
-            mainApp.style.opacity = '1';
-            mainApp.style.transform = 'translateY(0)';
-        }, 50);
+        // Show app if it takes more than 3 seconds to load data
+        const emergencyShow = setTimeout(() => {
+            if (mainApp && mainApp.classList.contains('hidden')) {
+                mainApp.classList.remove('hidden');
+                mainApp.style.opacity = '1';
+                mainApp.style.transform = 'translateY(0)';
+            }
+        }, 3000);
 
-        await Promise.all([syncData(), loadShippingPrices()]);
+        try {
+            await Promise.all([syncData(), loadShippingPrices()]);
+        } catch (e) { console.error("Init failed:", e); }
+
+        clearTimeout(emergencyShow);
+        mainApp.classList.remove('hidden');
+        mainApp.style.opacity = '1';
+        mainApp.style.transform = 'translateY(0)';
         await renderStage();
     }
 
@@ -570,16 +577,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (subtotalEl) subtotalEl.innerText = `${subtotal} ج.م`;
         if (shippingEl) {
             shippingEl.innerText = `${shipping} ج.م`;
-            shippingEl.style.color = shipping > 0 ? '#ff9800' : '#4caf50';
+            shippingEl.style.color = (shipping > 0) ? '#ff9800' : '#4caf50';
         }
         if (totalEl) totalEl.innerText = `${total} ج.م`;
 
-        if (discountRow) {
-            discountRow.style.display = discount > 0 ? 'flex' : 'none';
-        }
-        if (discountAmountEl) {
-            discountAmountEl.innerText = `-${discount} ج.م`;
-        }
+        if (discountRow) discountRow.style.display = (discount > 0) ? 'flex' : 'none';
+        if (discountAmountEl) discountAmountEl.innerText = `-${discount} ج.م`;
     };
 
     window.submitOrder = async () => {
@@ -587,21 +590,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const phone = document.getElementById('of-phone').value.trim();
         const address = document.getElementById('of-address').value.trim();
         const govRaw = document.getElementById('of-gov').value || '';
-        const govNormalized = govRaw.trim();
+        const govSelection = govRaw.trim();
 
-        if (!name) return alert("❌ يرجى إدخل الاسم!");
+        if (!name) return alert("❌ يرجى إدخال الاسم!");
         if (!phone) return alert("❌ يرجى إدخال رقم الهاتف!");
         if (!address) return alert("❌ يرجى إدخال العنوان!");
-        if (!govNormalized) return alert("❌ يرجى اختيار المحافظة!");
+        if (!govSelection) return alert("❌ يرجى اختيار المحافظة!");
 
         const subtotal = cart.reduce((s, i) => s + i.price, 0);
-        const discount = couponDiscount > 0
+        const discount = (couponDiscount > 0)
             ? (couponType === 'percent' ? Math.round(subtotal * couponDiscount / 100) : couponDiscount)
             : 0;
-        const discountedSubtotal = Math.max(0, subtotal - discount);
+        const discountedTotal = Math.max(0, subtotal - discount);
 
-        const shipping = (govNormalized && shippingPrices[govNormalized] !== undefined) ? shippingPrices[govNormalized] : 0;
-        const total = discountedSubtotal + shipping;
+        const shipping = (govSelection && shippingPrices[govSelection] !== undefined) ? shippingPrices[govSelection] : 0;
+        const finalTotal = discountedTotal + shipping;
 
         const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
 
@@ -611,14 +614,14 @@ document.addEventListener('DOMContentLoaded', () => {
             `👤 الاسم: ${name}\n` +
             `📱 التليفون: ${phone}\n` +
             `📍 العنوان: ${address}\n` +
-            `🗺️ المحافظة: ${govNormalized}\n` +
+            `🗺️ المحافظة: ${govSelection}\n` +
             `━━━━━━━━━━━━━━━\n` +
             `🛒 المنتجات:\n${itemsList}\n` +
             `━━━━━━━━━━━━━━━\n` +
             `💰 المنتجات: ${subtotal} ج.م\n` +
             (discount > 0 ? `🏷️ خصم (${couponCode}): -${discount} ج.م\n` : '') +
-            `🚚 الشحن (${govNormalized}): ${shipping} ج.م\n` +
-            `✅ الإجمالي: ${total} ج.م`
+            `🚚 الشحن (${govSelection}): ${shipping} ج.م\n` +
+            `✅ الإجمالي: ${finalTotal} ج.م`
         );
 
         try {
@@ -626,9 +629,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 customer: name,
                 phone: phone,
                 address: address,
-                governorate: gov,
+                governorate: govSelection,
                 item: cart.map(i => i.name).join(' | '),
-                total: total,
+                total: finalTotal,
                 shipping: shipping,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 status: 'new'

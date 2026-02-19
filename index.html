@@ -21,6 +21,12 @@
     <script src="firebase-config.js"></script>
 
     <link rel="stylesheet" href="style.css">
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            alert("⚠️ تنبيه برمجي: " + msg + "\nالسطر: " + line);
+            return false;
+        };
+    </script>
 </head>
 
 <body>
@@ -102,8 +108,8 @@
 
         <footer class="footer">
             <p>&copy; 2026 EL TOUFAN. Powered by Diesel.</p>
-    </div>
-    </div>
+        </footer>
+    </div> <!-- Close app-container -->
 
     <!-- Cart Drawer (Salla) -->
     <div id="cart-drawer" class="cart-drawer hidden">
