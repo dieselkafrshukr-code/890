@@ -621,16 +621,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('save-gov-prices').onclick = async () => {
             const btn = document.getElementById('save-gov-prices');
-            btn.innerText = "⏳ جاري الحفظ...";
-            const prices = {};
-            EGYPT_GOVERNORATES.forEach(gov => {
-                const input = document.getElementById(`gov_${gov.replace(/\s/g, '_')}`);
-                prices[gov.trim()] = parseFloat(input.value) || 0;
-            });
-            await db.collection('settings').doc('governoratesPricing').set({ prices });
-            btn.innerHTML = '<i data-lucide="save"></i> حفظ أسعار الشحن';
-            alert("✅ تم حفظ أسعار الشحن بنجاح!");
-            lucide.createIcons();
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerText = "⏳ جاري الحفظ في قاعدة البيانات...";
+
+            try {
+                const prices = {};
+                EGYPT_GOVERNORATES.forEach(gov => {
+                    const input = document.getElementById(`gov_${gov.replace(/\s/g, '_')}`);
+                    if (input) {
+                        prices[gov.trim()] = parseFloat(input.value) || 0;
+                    }
+                });
+
+                console.log("💾 Attempting to save prices:", prices);
+
+                await db.collection('settings').doc('governoratesPricing').set({
+                    prices: prices,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert("✅ رائع! تم حفظ الأسعار بنجاح في قاعدة البيانات.\nالموقع سيستخدم هذه الأسعار الجديدة فوراً.");
+            } catch (error) {
+                console.error("❌ Save Error:", error);
+                alert("❌ حدث خطأ أثناء الحفظ: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                lucide.createIcons();
+            }
         };
 
         lucide.createIcons();
