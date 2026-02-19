@@ -655,17 +655,15 @@ body.light-mode .close-detail {
     }
 
     .options-grid {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
         width: 100%;
         gap: 12px;
         padding: 5px;
     }
 
     .product-card {
-        width: calc(50% - 10px);
+        width: 100%;
         max-width: none;
         margin: 0;
     }

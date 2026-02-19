@@ -102,8 +102,12 @@
                 <button onclick="closeModal('modal-category')" class="close-modal"><i data-lucide="x"></i></button>
             </div>
             <div class="input-group">
-                <label>اسم القسم:</label>
-                <input type="text" id="cat-name" placeholder="مثلاً: رجالي أو أطفال">
+                <label>اسم القسم (بالعربـي):</label>
+                <input type="text" id="cat-name" placeholder="مثلاً: رجالي">
+            </div>
+            <div class="input-group">
+                <label>اسم القسم (بالإنجليزيـة):</label>
+                <input type="text" id="cat-name-en" placeholder="Example: Men">
             </div>
             <div class="modal-btns">
                 <button id="save-cat" class="save-btn">إضافة الآن</button>
@@ -121,22 +125,29 @@
             </div>
 
             <div class="form-section">
+                <input type="hidden" id="editing-prod-id" value="">
                 <div class="form-section-title">1. المعلومات الجوهرية</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:15px;">
+                    <div class="input-group">
+                        <label>اسم المنتج (عربي):</label>
+                        <input type="text" id="prod-name" placeholder="مثلاً: قميص أوكسفورد">
+                    </div>
+                    <div class="input-group">
+                        <label>اسم المنتج (EN):</label>
+                        <input type="text" id="prod-name-en" placeholder="Oxford Shirt">
+                    </div>
+                </div>
                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;">
                     <div class="input-group">
-                        <label>اسم المنتج:</label>
-                        <input type="text" id="prod-name" placeholder="مثلاً: قميص أوكسفورد ملكي">
+                        <label>القسم المخصص:</label>
+                        <select id="prod-category">
+                            <option value="">اختر القسم...</option>
+                        </select>
                     </div>
                     <div class="input-group">
                         <label>السعر (ج.م):</label>
                         <input type="number" id="prod-price" placeholder="500">
                     </div>
-                </div>
-                <div class="input-group">
-                    <label>القسم المخصص:</label>
-                    <select id="prod-category">
-                        <option value="">اختر القسم...</option>
-                    </select>
                 </div>
             </div>
 

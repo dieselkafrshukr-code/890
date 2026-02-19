@@ -654,8 +654,6 @@ input[type="file"] {
         overflow-y: auto;
         height: auto;
         min-height: 100dvh;
-        padding-bottom: 80px;
-        /* space for bottom nav */
     }
 
     /* Stack layout vertically */
@@ -666,7 +664,6 @@ input[type="file"] {
         min-height: 100dvh;
     }
 
-    /* ── Bottom Nav Bar ── */
     /* ── Sliding Sidebar ── */
     .sidebar {
         position: fixed;
@@ -900,12 +897,6 @@ input[type="file"] {
 
 /* ── Extra small ≤ 400px ──────────────────── */
 @media (max-width: 400px) {
-    .nav-item {
-        font-size: 0.65rem;
-        padding: 8px 10px;
-        min-width: 56px;
-    }
-
     .stats-grid {
         grid-template-columns: 1fr 1fr !important;
     }

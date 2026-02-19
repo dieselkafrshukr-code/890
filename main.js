@@ -11,13 +11,76 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLevel = storeTree;
     let cart = [];
     let shippingPrices = {};
-    window.CURRENT_SHIPPING_PRICES = shippingPrices; // External access for debug
+    window.CURRENT_SHIPPING_PRICES = shippingPrices;
     let wishlist = JSON.parse(localStorage.getItem('eltoufan_wishlist') || '[]');
     let couponDiscount = 0;
     let couponCode = '';
-    let couponType = 'percent'; // Default
-    let allProductCards = []; // For search
-    let currentProductId = null; // For rating
+    let couponType = 'percent';
+    let allProductCards = [];
+    let currentProductId = null;
+
+    let currentLang = localStorage.getItem('eltoufan_lang') || 'ar';
+
+    const translations = {
+        ar: {
+            welcome: "مرحباً بك في الطوفان",
+            choose_buying: "اختر طريقة الشراء أولاً",
+            search: "ابحث عن منتج...",
+            back: "رجوع",
+            start: "البداية",
+            cart_title: "سلة التسوق",
+            confirm_order: "إتمام الطلب",
+            empty_cart: "السلة فارغة!",
+            fullname: "الاسم الكامل",
+            phone: "رقم الهاتف",
+            address: "العنوان التفصيلي",
+            gov: "المحافظة",
+            choose_gov: "-- اختر المحافظة --",
+            items: "المنتجات",
+            shipping: "الشحن",
+            total: "الإجمالي",
+            whatsapp_btn: "📲 أرسل عبر واتساب",
+            cancel: "إلغاء",
+            sizes: "المقاسات",
+            colors: "الألوان",
+            no_sizes: "لا توجد مقاسات محددة",
+            no_colors: "لا توجد ألوان إضافية",
+            add_to_cart: "إضافة للسلة",
+            select_size: "يرجى اختيار المقاس أولاً!",
+            order_whatsapp_title: "🛖 طلب جديد - EL TOUFAN",
+            wishlist_empty: "قائمة المفضلة فارغة 🥲",
+            select_category: "اختر القسم أولاً"
+        },
+        en: {
+            welcome: "Welcome to El Toufan",
+            choose_buying: "Choose buying method",
+            search: "Search products...",
+            back: "Back",
+            start: "Home",
+            cart_title: "Shopping Cart",
+            confirm_order: "Checkout",
+            empty_cart: "Cart is empty!",
+            fullname: "Full Name",
+            phone: "Phone Number",
+            address: "Full Address",
+            gov: "Governorate",
+            choose_gov: "-- Select Governorate --",
+            items: "Products",
+            shipping: "Shipping",
+            total: "Total",
+            whatsapp_btn: "📲 Send via WhatsApp",
+            cancel: "Cancel",
+            sizes: "Sizes",
+            colors: "Colors",
+            no_sizes: "No specific sizes",
+            no_colors: "No additional colors",
+            add_to_cart: "Add to Cart",
+            select_size: "Please select size first!",
+            order_whatsapp_title: "🛖 New Order - EL TOUFAN",
+            wishlist_empty: "Wishlist is empty 🥲",
+            select_category: "Select category first"
+        }
+    };
 
 
     // WhatsApp Number
@@ -57,14 +120,41 @@ document.addEventListener('DOMContentLoaded', () => {
         if (themeToggle) themeToggle.innerHTML = '<i data-lucide="moon"></i>';
     }
 
-    if (themeToggle) {
-        themeToggle.onclick = () => {
-            const isLight = document.body.classList.toggle('light-mode');
-            localStorage.setItem('theme', isLight ? 'light' : 'dark');
-            themeToggle.innerHTML = isLight ? '<i data-lucide="moon"></i>' : '<i data-lucide="sun"></i>';
-            lucide.createIcons();
+    const langToggle = document.getElementById('lang-toggle');
+    if (langToggle) {
+        langToggle.innerText = currentLang === 'ar' ? 'EN' : 'AR';
+        langToggle.onclick = () => {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            localStorage.setItem('eltoufan_lang', currentLang);
+            langToggle.innerText = currentLang === 'ar' ? 'EN' : 'AR';
+            document.documentElement.lang = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            applyTranslations();
+            renderStage();
         };
     }
+
+    function applyTranslations() {
+        const t = translations[currentLang];
+        const stageDesc = document.getElementById('stage-desc');
+        if (stageDesc && navigationStack.length <= 1) stageDesc.innerText = t.choose_buying;
+
+        const searchInput = document.getElementById('product-search');
+        if (searchInput) searchInput.placeholder = t.search;
+
+        if (backBtn) backBtn.innerHTML = (currentLang === 'ar' ? '<i data-lucide="chevron-right"></i> ' : '') + t.back + (currentLang === 'en' ? ' <i data-lucide="chevron-left"></i>' : '');
+        if (resetBtn) resetBtn.innerHTML = t.start + ' <i data-lucide="home"></i>';
+
+        const cartTitle = document.querySelector('.cart-header h3');
+        if (cartTitle) cartTitle.innerText = t.cart_title;
+
+        const checkoutBtn = document.querySelector('.checkout-btn');
+        if (checkoutBtn) checkoutBtn.innerText = t.confirm_order;
+
+        lucide.createIcons();
+    }
+    document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+    applyTranslations();
 
     // --- 4. INITIALIZATION ---
     async function startIntro() {
@@ -184,7 +274,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 5. RENDER LOGIC ---
     async function renderStage() {
-        stageTitle.innerText = currentLevel.name || "EL TOUFAN";
+        const t = translations[currentLang];
+        const nameKey = currentLang === 'en' ? 'nameEn' : 'name';
+
+        stageTitle.innerText = currentLevel[nameKey] || currentLevel.name || "EL TOUFAN";
 
         const levelIdx = navigationStack.length;
         steps.forEach((s, i) => s.classList.toggle('active', i + 1 <= levelIdx));
@@ -195,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentLevel.options.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.className = 'opt-btn';
-                btn.innerText = opt.name;
+                btn.innerText = opt[nameKey] || opt.name;
                 btn.onclick = () => selectOption(opt);
                 optionsGrid.appendChild(btn);
             });
@@ -210,17 +303,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         const p = doc.data();
                         const card = document.createElement('div');
                         card.className = 'product-card';
+                        const pName = p[nameKey] || p.name;
+                        const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
                         const colorBadge = p.mainColor
                             ? `<div class="product-color-badge">🎨 ${p.mainColor}</div>`
                             : '';
                         card.innerHTML = `
                             <div class="product-card-img">
-                                <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${p.name}">
+                                <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${pName}">
                             </div>
                             <div class="product-card-info">
-                                <div class="product-card-name">${p.name}</div>
+                                <div class="product-card-name">${pName}</div>
                                 ${colorBadge}
-                                <div class="product-card-price">${p.price} ج.م</div>
+                                <div class="product-card-price">${p.price}${currency}</div>
                             </div>
                         `;
                         card.onclick = () => window.openProductDetail(doc.id);
@@ -233,20 +328,11 @@ document.addEventListener('DOMContentLoaded', () => {
         backBtn.classList.toggle('hidden', navigationStack.length <= 1);
         resetBtn.classList.toggle('hidden', navigationStack.length <= 1);
 
-        // Show/hide search bar when on product level
         const searchWrapper = document.getElementById('search-bar-wrapper');
         const hasProducts = currentLevel.id && !currentLevel.options?.length;
-        if (searchWrapper) {
-            if (hasProducts) {
-                searchWrapper.classList.remove('hidden');
-            } else {
-                searchWrapper.classList.add('hidden');
-            }
-        }
+        if (searchWrapper) searchWrapper.classList.toggle('hidden', !hasProducts);
 
-        // Store all product cards for search filtering
         allProductCards = Array.from(optionsGrid.querySelectorAll('.product-card'));
-
         lucide.createIcons();
     }
 
@@ -279,17 +365,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let selColor = "";
 
     window.openProductDetail = async (id) => {
+        const t = translations[currentLang];
+        const nameKey = currentLang === 'en' ? 'nameEn' : 'name';
         const doc = await db.collection('products').doc(id).get();
         if (!doc.exists) return;
         detailedProd = doc.data();
         currentProductId = doc.id;
         selSize = ""; selColor = "";
 
-        document.getElementById('detail-name').innerText = detailedProd.name;
+        const pName = detailedProd[nameKey] || detailedProd.name;
+        document.getElementById('detail-name').innerText = pName;
         document.getElementById('detail-price').innerText = detailedProd.price;
         document.getElementById('detail-main-img').src = detailedProd.mainImage;
 
-        // Render Main Sizes by default
+        // Update static labels in modal
+        const sizesLabel = document.querySelector('.detail-section-title:nth-of-type(1)');
+        if (sizesLabel) sizesLabel.innerText = t.sizes;
+        const colorsLabel = document.querySelector('.detail-section-title:nth-of-type(2)');
+        if (colorsLabel) colorsLabel.innerText = t.colors;
+        const addToCartBtn = document.getElementById('add-to-cart-detailed');
+        if (addToCartBtn) addToCartBtn.innerText = t.add_to_cart;
+
+        // Render Main Sizes
         const sizeGroup = document.getElementById('detail-sizes');
         const initialSizes = detailedProd.mainSizes || [];
         if (initialSizes.length > 0) {
@@ -297,19 +394,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 `<button class="detail-chip" onclick="window.selectSize(this, '${s}')">${s}</button>`
             ).join('');
         } else {
-            sizeGroup.innerHTML = '<p style="font-size:0.8rem; color:var(--text-dim);">لا توجد مقاسات محددة</p>';
+            sizeGroup.innerHTML = `<p style="font-size:0.8rem; color:var(--text-dim);">${t.no_sizes}</p>`;
         }
 
-        // Colors: show main color first + additional variants
         const colorGroup = document.getElementById('detail-colors');
         let allColors = [];
-
-        // Add main color as first chip
         if (detailedProd.mainColor) {
             allColors.push({ name: detailedProd.mainColor, image: detailedProd.mainImage, sizes: detailedProd.mainSizes || [], isMain: true });
         }
-        // Add additional color variants
-        if (detailedProd.colors && detailedProd.colors.length > 0) {
+        if (detailedProd.colors) {
             detailedProd.colors.forEach(c => allColors.push({ ...c, isMain: false }));
         }
 
@@ -317,12 +410,9 @@ document.addEventListener('DOMContentLoaded', () => {
             colorGroup.innerHTML = allColors.map((c, i) =>
                 `<button class="detail-chip ${i === 0 ? 'active' : ''}" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${c.name}${c.isMain ? ' ✦' : ''}</button>`
             ).join('');
-            // Pre-select first color
-            if (allColors[0]) {
-                selColor = allColors[0].name;
-            }
+            if (allColors[0]) selColor = allColors[0].name;
         } else {
-            colorGroup.innerHTML = '<p style="font-size:0.8rem; color:var(--text-dim);">لا توجد ألوان إضافية</p>';
+            colorGroup.innerHTML = `<p style="font-size:0.8rem; color:var(--text-dim);">${t.no_colors}</p>`;
         }
 
         document.getElementById('product-detail-modal').classList.remove('hidden');
@@ -467,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function showOrderForm() {
-        // Remove existing modal if any
+        const t = translations[currentLang];
         const existing = document.getElementById('order-form-modal');
         if (existing) existing.remove();
 
@@ -477,89 +567,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const modal = document.createElement('div');
         modal.id = 'order-form-modal';
-        modal.style.cssText = `
-            position:fixed; inset:0; background:rgba(0,0,0,0.95);
-            backdrop-filter:blur(15px); z-index:99999;
-            display:flex; align-items:center; justify-content:center;
-            padding:1rem; animation: modalPop 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
-        `;
+        modal.className = 'admin-modal'; // Use existing class for styling
+        modal.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.95); backdrop-filter:blur(15px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:1rem; animation: modalPop 0.35s;`;
 
         const subtotal = cart.reduce((s, i) => s + i.price, 0);
+        const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
 
         modal.innerHTML = `
-            <div style="
-                background:#0f0f0f; border:1px solid #333; border-radius:24px;
-                padding:2.5rem; width:100%; max-width:500px; max-height:90vh; overflow-y:auto;
-                font-family:'Cairo', sans-serif; color:#fff; direction:rtl;
-            ">
-                <h2 style="font-size:1.8rem; font-weight:900; margin-bottom:0.5rem; color:#d4af37;">📦 إتمام الطلب</h2>
-                <p style="color:#666; margin-bottom:2rem; font-size:0.9rem;">يرجى ملء البيانات لإتمام طلبك</p>
+            <div style="background:#0f0f0f; border:1px solid #333; border-radius:24px; padding:2rem; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; font-family:'Cairo', sans-serif; color:#fff; direction:${currentLang === 'ar' ? 'rtl' : 'ltr'};">
+                <h2 style="font-size:1.8rem; font-weight:900; margin-bottom:0.5rem; color:#d4af37;">📦 ${t.confirm_order}</h2>
+                <p style="color:#666; margin-bottom:2rem; font-size:0.9rem;">${currentLang === 'ar' ? 'يرجى ملء البيانات لإتمام طلبك' : 'Please fill details to complete your order'}</p>
 
                 <div style="margin-bottom:1.2rem;">
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">الاسم الكامل *</label>
-                    <input id="of-name" type="text" placeholder="اسمك الكامل"
-                        style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px 16px; border-radius:12px; font-size:1rem; font-family:'Cairo',sans-serif;">
+                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">${t.fullname} *</label>
+                    <input id="of-name" type="text" placeholder="${t.fullname}" style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px; border-radius:12px;">
                 </div>
 
                 <div style="margin-bottom:1.2rem;">
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">رقم الهاتف *</label>
-                    <input id="of-phone" type="tel" placeholder="01XXXXXXXXX" dir="ltr"
-                        style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px 16px; border-radius:12px; font-size:1rem; text-align:right; font-family:'Cairo',sans-serif;">
+                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">${t.phone} *</label>
+                    <input id="of-phone" type="tel" placeholder="01XXXXXXXXX" style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px; border-radius:12px; text-align:${currentLang === 'ar' ? 'right' : 'left'};">
                 </div>
 
                 <div style="margin-bottom:1.2rem;">
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">العنوان التفصيلي *</label>
-                    <input id="of-address" type="text" placeholder="الشارع، الحي، رقم المبنى..."
-                        style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px 16px; border-radius:12px; font-size:1rem; font-family:'Cairo',sans-serif;">
+                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">${t.address} *</label>
+                    <input id="of-address" type="text" placeholder="${t.address}" style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px; border-radius:12px;">
                 </div>
 
                 <div style="margin-bottom:1.5rem;">
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">المحافظة *</label>
-                    <select id="of-gov"
-                        style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px 16px; border-radius:12px; font-size:1rem; font-family:'Cairo',sans-serif; cursor:pointer;"
-                        onchange="window.updateOrderTotal()">
-                        <option value="">-- اختر المحافظة --</option>
+                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">${t.gov} *</label>
+                    <select id="of-gov" style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px; border-radius:12px;" onchange="window.updateOrderTotal()">
+                        <option value="">${t.choose_gov}</option>
                         ${govOptions}
                     </select>
                 </div>
 
-                <!-- Price Breakdown -->
                 <div id="of-price-box" style="background:#111; border:1px solid #222; border-radius:16px; padding:1.2rem; margin-bottom:1.5rem;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <span style="color:#aaa;">المنتجات:</span>
-                        <span id="of-subtotal" style="font-weight:700;">${subtotal} ج.م</span>
-                    </div>
-                    <div id="of-discount-row" style="display:none; justify-content:space-between; margin-bottom:8px; color:#4caf50;">
-                        <span>خصم كوبون:</span>
-                        <span id="of-discount-amount" style="font-weight:700;">0 ج.م</span>
+                        <span style="color:#aaa;">${t.items}:</span>
+                        <span id="of-subtotal" style="font-weight:700;">${subtotal}${currency}</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <span style="color:#aaa;">الشحن:</span>
-                        <span id="of-shipping-cost" style="font-weight:700; color:#4caf50;">0 ج.م</span>
+                        <span style="color:#aaa;">${t.shipping}:</span>
+                        <span id="of-shipping-cost" style="font-weight:700; color:#4caf50;">0${currency}</span>
                     </div>
                     <div style="height:1px; background:#333; margin:10px 0;"></div>
                     <div style="display:flex; justify-content:space-between;">
-                        <span style="font-weight:900; font-size:1.1rem;">الإجمالي:</span>
-                        <span id="of-total" style="font-weight:900; font-size:1.3rem; color:#d4af37;">${subtotal} ج.م</span>
+                        <span style="font-weight:900; font-size:1.1rem;">${t.total}:</span>
+                        <span id="of-total" style="font-weight:900; font-size:1.3rem; color:#d4af37;">${subtotal}${currency}</span>
                     </div>
                 </div>
 
                 <div style="display:flex; gap:12px;">
-                    <button onclick="window.submitOrder()" style="
-                        flex:1; background:#25d366; border:none; color:#fff; padding:16px;
-                        border-radius:14px; font-size:1.1rem; font-weight:900; cursor:pointer;
-                        font-family:'Cairo',sans-serif; display:flex; align-items:center; justify-content:center; gap:8px;
-                    ">📲 أرسل عبر واتساب</button>
-                    <button onclick="document.getElementById('order-form-modal').remove()" style="
-                        background:#1a1a1a; border:1px solid #333; color:#aaa; padding:16px 20px;
-                        border-radius:14px; font-size:1rem; cursor:pointer; font-family:'Cairo',sans-serif;
-                    ">إلغاء</button>
+                    <button onclick="window.submitOrder()" style="flex:1; background:#25d366; border:none; color:#fff; padding:16px; border-radius:14px; font-weight:900; cursor:pointer;">${t.whatsapp_btn}</button>
+                    <button onclick="document.getElementById('order-form-modal').remove()" style="background:#1a1a1a; border:1px solid #333; color:#aaa; padding:16px; border-radius:14px; cursor:pointer;">${t.cancel}</button>
                 </div>
             </div>
         `;
-
         document.body.appendChild(modal);
-        window.updateOrderTotal(); // Initial calculation
+        window.updateOrderTotal();
     }
 
     // Store shipping prices for use in form
@@ -594,12 +659,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const discountRow = document.getElementById('of-discount-row');
         const discountAmountEl = document.getElementById('of-discount-amount');
 
-        if (subtotalEl) subtotalEl.innerText = `${subtotal} ج.م`;
+        const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
+        if (subtotalEl) subtotalEl.innerText = `${subtotal}${currency}`;
         if (shippingEl) {
-            shippingEl.innerText = `${shipping} ج.م`;
+            shippingEl.innerText = `${shipping}${currency}`;
             shippingEl.style.color = (shipping > 0) ? '#ff9800' : '#4caf50';
         }
-        if (totalEl) totalEl.innerText = `${total} ج.م`;
+        if (totalEl) totalEl.innerText = `${total}${currency}`;
 
         if (discountRow) discountRow.style.display = (discount > 0) ? 'flex' : 'none';
         if (discountAmountEl) discountAmountEl.innerText = `-${discount} ج.م`;
@@ -631,20 +697,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
 
+        const t = translations[currentLang];
+        const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
         const waText = encodeURIComponent(
-            `🛖 طلب جديد - EL TOUFAN\n` +
+            `${t.order_whatsapp_title}\n` +
             `━━━━━━━━━━━━━━━\n` +
-            `👤 الاسم: ${name}\n` +
-            `📱 التليفون: ${phone}\n` +
-            `📍 العنوان: ${address}\n` +
-            `🗺️ المحافظة: ${govSelection}\n` +
+            `${t.fullname}: ${name}\n` +
+            `${t.phone}: ${phone}\n` +
+            `${t.address}: ${address}\n` +
+            `${t.gov}: ${govSelection}\n` +
             `━━━━━━━━━━━━━━━\n` +
-            `🛒 المنتجات:\n${itemsList}\n` +
+            `${t.items}:\n${itemsList}\n` +
             `━━━━━━━━━━━━━━━\n` +
-            `💰 المنتجات: ${subtotal} ج.م\n` +
-            (discount > 0 ? `🏷️ خصم (${couponCode}): -${discount} ج.م\n` : '') +
-            `🚚 الشحن (${govSelection}): ${shipping} ج.م\n` +
-            `✅ الإجمالي: ${finalTotal} ج.م`
+            `${t.items}: ${subtotal}${currency}\n` +
+            (discount > 0 ? `🏷️ Discount (${couponCode}): -${discount}${currency}\n` : '') +
+            `${t.shipping} (${govSelection}): ${shipping}${currency}\n` +
+            `✅ ${t.total}: ${finalTotal}${currency}`
         );
 
         try {
@@ -729,10 +797,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function renderWishlistModal() {
+        const t = translations[currentLang];
         const container = document.getElementById('wishlist-items');
         if (!container) return;
         if (wishlist.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#666; padding:3rem;">قائمة المفضلة فارغة 🥲</p>';
+            container.innerHTML = `<p style="text-align:center; color:#666; padding:3rem;">${t.wishlist_empty}</p>`;
             return;
         }
         container.innerHTML = wishlist.map((item, i) => `
@@ -742,10 +811,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="wishlist-item-name">${item.name}</div>
                     <div class="wishlist-item-price">${item.price} ج.م</div>
                 </div>
-                <button class="wishlist-add-to-cart-btn" onclick="window.addToCart('${item.name.replace(/'/g, '\\&apos;')}', ${item.price}); window.toggleWishlistModal();">🛒 سلة</button>
+                <button class="wishlist-add-to-cart-btn" onclick="window.addToCart('${item.name.replace(/'/g, '\\&apos;')}', ${item.price}); window.toggleWishlistModal();">🛒 ${t.add_to_cart}</button>
                 <button class="wishlist-remove-btn" onclick="window.removeFromWishlist(${i})"><i data-lucide="x" style="width:16px;"></i></button>
             </div>
         `).join('');
+        const title = document.querySelector('.wishlist-modal-header h3');
+        if (title) title.innerText = currentLang === 'ar' ? 'المفضلة' : 'Wishlist';
         lucide.createIcons();
     }
 
