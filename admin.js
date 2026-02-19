@@ -584,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display:flex; align-items:center; gap:10px;">
                         <input type="number" 
                             id="gov_${gov.replace(/\s/g, '_')}" 
-                            value="${govData[gov] || 0}" 
+                            value="${govData[gov] !== undefined ? govData[gov] : (window.LOCAL_SHIPPING_PRICES ? window.LOCAL_SHIPPING_PRICES[gov] : 0)}" 
                             min="0"
                             style="width:120px; background:var(--card,#111); border:1px solid #333; color:#fff; padding:8px 12px; border-radius:10px; font-size:1rem; text-align:center;"
                         >
