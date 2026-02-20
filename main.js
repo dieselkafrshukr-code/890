@@ -114,21 +114,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const stepIndicator = document.querySelector('.step-indicator');
     const themeToggle = document.getElementById('theme-toggle');
 
-    // --- Theme Logic ---
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-        if (themeToggle) themeToggle.innerHTML = '<i data-lucide="sun"></i>';
-    } else {
-        if (themeToggle) themeToggle.innerHTML = '<i data-lucide="moon"></i>';
+    // --- Theme Logic (Enhanced) ---
+    function updateThemeUI(isDark) {
+        if (isDark) {
+            document.body.classList.add('dark-mode');
+            if (themeToggle) themeToggle.innerHTML = '<i data-lucide="sun"></i>';
+        } else {
+            document.body.classList.remove('dark-mode');
+            if (themeToggle) themeToggle.innerHTML = '<i data-lucide="moon"></i>';
+        }
+        if (window.lucide) lucide.createIcons();
     }
+
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    updateThemeUI(savedTheme === 'dark');
 
     if (themeToggle) {
         themeToggle.onclick = () => {
-            const isDark = document.body.classList.toggle('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            themeToggle.innerHTML = isDark ? '<i data-lucide="sun"></i>' : '<i data-lucide="moon"></i>';
-            lucide.createIcons();
+            const willBeDark = !document.body.classList.contains('dark-mode');
+            localStorage.setItem('theme', willBeDark ? 'dark' : 'light');
+            updateThemeUI(willBeDark);
         };
     }
 
