@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (snap.exists) {
                 storeTree = snap.data();
                 currentLevel = storeTree;
-                navigationStack = [storeTree];
+                navigationStack = [];
             } else {
                 useDefaultData();
             }
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function useDefaultData() {
         storeTree.options = defaultData;
         currentLevel = storeTree;
-        navigationStack = [storeTree];
+        navigationStack = [];
     }
 
     // --- 5. RENDER LOGIC ---
@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const currentStepIndicator = document.querySelector('.step-indicator');
         if (currentStepIndicator) {
-            const depth = Math.max(1, navigationStack.length);
+            const depth = navigationStack.length + 1;
             let stepHtml = '';
             for (let i = 1; i <= depth; i++) {
                 const isLast = (i === depth);
@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.resetApp = async () => {
         currentLevel = storeTree;
-        navigationStack = [storeTree];
+        navigationStack = [];
         await renderStage();
     };
 
