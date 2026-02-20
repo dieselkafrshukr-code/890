@@ -27,6 +27,10 @@
             alert("⚠️ تنبيه برمجي: " + msg + "\nالسطر: " + line);
             return false;
         };
+        // Force Light Mode immediately
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.remove('dark-mode');
+        });
     </script>
 </head>
 
