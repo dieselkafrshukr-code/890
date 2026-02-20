@@ -116,6 +116,11 @@ body {
     opacity: 0;
     transform: translateZ(-200px) scale(0.5);
     filter: blur(20px);
+    border-radius: 50%;
+    border: 4px solid var(--gold);
+    box-shadow: 0 0 50px rgba(212, 175, 55, 0.4);
+    overflow: hidden;
+    /* This crops the logo to the circle */
 }
 
 /* Golden Halo Effect */
@@ -132,10 +137,9 @@ body {
 .intro-logo {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 3px solid var(--gold);
-    box-shadow: 0 0 50px var(--gold);
+    object-fit: contain;
+    transform: scale(1.4);
+    /* Scaled up to fill the gold ring perfectly */
     position: relative;
     z-index: 2;
 }
