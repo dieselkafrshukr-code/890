@@ -306,8 +306,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         stageTitle.innerText = currentLevel[nameKey] || currentLevel.name || "EL TOUFAN";
 
-        if (stepIndicator) {
-            const depth = navigationStack.length;
+        const currentStepIndicator = document.querySelector('.step-indicator');
+        if (currentStepIndicator) {
+            const depth = Math.max(1, navigationStack.length);
             let stepHtml = '';
             for (let i = 1; i <= depth; i++) {
                 const isLast = (i === depth);
@@ -317,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     stepHtml += `<div class="step-line active"></div>`;
                 }
             }
-            stepIndicator.innerHTML = stepHtml;
+            currentStepIndicator.innerHTML = stepHtml;
         }
         optionsGrid.innerHTML = '';
 

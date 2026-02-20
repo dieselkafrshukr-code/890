@@ -220,6 +220,7 @@ body.light-mode .theme-toggle-btn:hover {
     gap: 15px;
     margin-bottom: 3rem;
     padding: 0 10px;
+    min-height: 40px;
 }
 
 .step {
