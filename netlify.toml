@@ -2,7 +2,6 @@
   publish = "."
   command = ""
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# No global redirect needed for simple multi-page static sites.
+# admin.html will be accessible at /admin.html or /admin
+
