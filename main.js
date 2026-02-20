@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stepIndicator = document.querySelector('.step-indicator');
     const themeToggle = document.getElementById('theme-toggle');
 
-    // --- Theme Logic (Enhanced) ---
+    // --- Theme Logic (Enhanced: Force Light on Load) ---
     function updateThemeUI(isDark) {
         if (isDark) {
             document.body.classList.add('dark-mode');
@@ -126,8 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) lucide.createIcons();
     }
 
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    updateThemeUI(savedTheme === 'dark');
+    // Always start with Light Mode regardless of previous state
+    localStorage.setItem('theme', 'light');
+    updateThemeUI(false);
 
     if (themeToggle) {
         themeToggle.onclick = () => {
