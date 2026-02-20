@@ -1,21 +1,6 @@
 :root {
-    --bg: #000000;
-    --surface: #0a0a0a;
-    --primary: #ff1a1a;
-    --primary-glow: rgba(255, 26, 26, 0.4);
-    --btn-bg: #111111;
-    --btn-border: #222222;
-    --text: #ffffff;
-    --text-dim: #888888;
-    --gold: #d4af37;
-    --accent: var(--gold);
-    --border: #222222;
-    --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-body.light-mode {
+    /* DEFAULT: LIGHT MODE (Premium Champagne Silk) */
     --bg: #fdfaf5;
-    /* Premium Champagne Silk */
     --surface: #ffffff;
     --btn-bg: #ffffff;
     --btn-border: #e8e1d5;
@@ -24,6 +9,21 @@ body.light-mode {
     --primary: #c21a1a;
     --border: #f0ede8;
     --primary-glow: rgba(194, 26, 26, 0.1);
+    --gold: #d4af37;
+    --accent: var(--gold);
+    --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.dark-mode {
+    --bg: #000000;
+    --surface: #0a0a0a;
+    --primary: #ff1a1a;
+    --primary-glow: rgba(255, 26, 26, 0.4);
+    --btn-bg: #111111;
+    --btn-border: #222222;
+    --text: #ffffff;
+    --text-dim: #888888;
+    --border: #222222;
 }
 
 * {
@@ -60,64 +60,91 @@ body {
     transform: rotate(15deg);
 }
 
-body.light-mode .theme-toggle-btn:hover {
+body.dark-mode .theme-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.theme-toggle-btn:hover {
     background: rgba(0, 0, 0, 0.05);
 }
 
-/* Intro Overlay */
+/* Intro Overlay (Luxury) */
 .intro-overlay {
     position: fixed;
     inset: 0;
     background: #000;
+    /* Always black background */
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 10000;
+    overflow: hidden;
 }
 
-.intro-box {
-    text-align: center;
-}
-
-.intro-main {
-    font-family: 'Orbitron', sans-serif;
-    font-size: clamp(3rem, 10vw, 6rem);
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: 5px;
-    margin-bottom: 0.5rem;
-}
-
-.intro-sub-line {
+.intro-content {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 30px;
 }
 
-.intro-sub-text {
+.intro-logo-container {
+    opacity: 0;
+    transform: scale(0.8);
+    filter: drop-shadow(0 0 0px var(--gold));
+    animation: logoGlowEntrance 1.5s ease-out forwards;
+}
+
+.intro-logo {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gold);
+}
+
+.intro-brand-name {
     font-family: 'Orbitron', sans-serif;
-    font-size: clamp(1rem, 3vw, 1.5rem);
-    color: var(--primary);
-    letter-spacing: 15px;
-    font-weight: 700;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 950;
+    color: #fff;
+    letter-spacing: 12px;
+    opacity: 0;
+    transform: translateY(30px);
+    animation: smoothBrandEntrance 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
 }
 
-.intro-cursor {
-    color: var(--primary);
-    font-size: 1.5rem;
-    animation: blink 0.8s infinite;
-}
-
-@keyframes blink {
-
-    0%,
-    100% {
-        opacity: 1;
+@keyframes logoGlowEntrance {
+    0% {
+        opacity: 0;
+        transform: scale(0.6);
+        filter: drop-shadow(0 0 0px var(--gold));
     }
 
     50% {
+        opacity: 1;
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 30px var(--gold));
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: drop-shadow(0 0 15px var(--gold));
+    }
+}
+
+@keyframes smoothBrandEntrance {
+    from {
         opacity: 0;
+        transform: translateY(30px);
+        letter-spacing: 30px;
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        letter-spacing: 12px;
     }
 }
 

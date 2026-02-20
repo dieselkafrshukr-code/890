@@ -115,19 +115,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
 
     // --- Theme Logic ---
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light') {
-        document.body.classList.add('light-mode');
-        if (themeToggle) themeToggle.innerHTML = '<i data-lucide="moon"></i>';
-    } else {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
         if (themeToggle) themeToggle.innerHTML = '<i data-lucide="sun"></i>';
+    } else {
+        if (themeToggle) themeToggle.innerHTML = '<i data-lucide="moon"></i>';
     }
 
     if (themeToggle) {
         themeToggle.onclick = () => {
-            const isLight = document.body.classList.toggle('light-mode');
-            localStorage.setItem('theme', isLight ? 'light' : 'dark');
-            themeToggle.innerHTML = isLight ? '<i data-lucide="moon"></i>' : '<i data-lucide="sun"></i>';
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            themeToggle.innerHTML = isDark ? '<i data-lucide="sun"></i>' : '<i data-lucide="moon"></i>';
             lucide.createIcons();
         };
     }
@@ -172,43 +172,19 @@ document.addEventListener('DOMContentLoaded', () => {
     async function startIntro() {
         if (!introScreen) return initApp();
 
-        // Fast, dynamic intro animation
-        const introMain = document.querySelector('.intro-main');
-        const introSub = document.querySelector('.intro-sub-line');
+        // The animations are handled by CSS (logoGlowEntrance and smoothBrandEntrance)
+        // We just need to wait 3 seconds before transitioning out
 
-        if (introMain) {
-            introMain.style.opacity = '0';
-            introMain.style.transform = 'translateY(40px) scale(0.8)';
-            introMain.style.transition = 'none';
-        }
-        if (introSub) {
-            introSub.style.opacity = '0';
-        }
+        setTimeout(() => {
+            introScreen.style.transition = 'opacity 0.8s ease, filter 0.8s ease';
+            introScreen.style.opacity = '0';
+            introScreen.style.filter = 'blur(10px)';
 
-        requestAnimationFrame(() => {
             setTimeout(() => {
-                if (introMain) {
-                    introMain.style.transition = 'opacity 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1)';
-                    introMain.style.opacity = '1';
-                    introMain.style.transform = 'translateY(0) scale(1)';
-                }
-                setTimeout(() => {
-                    if (introSub) {
-                        introSub.style.transition = 'opacity 0.4s ease';
-                        introSub.style.opacity = '1';
-                    }
-                    setTimeout(() => {
-                        introScreen.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
-                        introScreen.style.opacity = '0';
-                        introScreen.style.transform = 'scale(1.05)';
-                        setTimeout(() => {
-                            introScreen.classList.add('hidden');
-                            initApp();
-                        }, 400);
-                    }, 700);
-                }, 500);
-            }, 50);
-        });
+                introScreen.classList.add('hidden');
+                initApp();
+            }, 800);
+        }, 3000); // 3 seconds stay
     }
 
     async function initApp() {
