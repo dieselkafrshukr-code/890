@@ -283,15 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ease: "expo.out"
         }, "-=0.1");
 
-        tl.to('.intro-brand-name', {
-            opacity: 1,
-            y: 0,
-            z: 0,
-            letterSpacing: '10px',
-            duration: 2,
-            ease: "expo.out"
-        }, "-=1.5");
-
         tl.to('.intro-loading-line', {
             width: '300px',
             duration: 3,
