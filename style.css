@@ -1,20 +1,5 @@
 :root {
-    /* DEFAULT: LIGHT MODE (Premium Champagne Silk) */
-    --bg: #fdfaf5;
-    --surface: #ffffff;
-    --btn-bg: #ffffff;
-    --btn-border: #e8e1d5;
-    --text: #171614;
-    --text-dim: #8b7d6b;
-    --primary: #c21a1a;
-    --border: #f0ede8;
-    --primary-glow: rgba(194, 26, 26, 0.1);
-    --gold: #d4af37;
-    --accent: var(--gold);
-    --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-body.dark-mode {
+    /* DEFAULT: DARK MODE */
     --bg: #000000;
     --surface: #0a0a0a;
     --primary: #ff1a1a;
@@ -24,6 +9,22 @@ body.dark-mode {
     --text: #ffffff;
     --text-dim: #888888;
     --border: #222222;
+    --gold: #d4af37;
+    --accent: var(--gold);
+    --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.light-mode {
+    --bg: #fdfaf5;
+    /* Premium Champagne Silk */
+    --surface: #ffffff;
+    --btn-bg: #ffffff;
+    --btn-border: #e8e1d5;
+    --text: #171614;
+    --text-dim: #8b7d6b;
+    --primary: #c21a1a;
+    --border: #f0ede8;
+    --primary-glow: rgba(194, 26, 26, 0.1);
 }
 
 * {
@@ -60,12 +61,12 @@ body {
     transform: rotate(15deg);
 }
 
-body.dark-mode .theme-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+body.light-mode .theme-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .theme-toggle-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* Intro Overlay (Luxury) */
