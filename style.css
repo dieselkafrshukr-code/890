@@ -108,9 +108,11 @@ body {
 
 .intro-logo-outer {
     position: relative;
-    width: 250px;
-    height: 250px;
-    margin-bottom: 25px;
+    width: 350px;
+    height: 350px;
+    max-width: 85vw;
+    max-height: 85vw;
+    margin-bottom: 30px;
     opacity: 0;
     transform: translateZ(-200px) scale(0.5);
     filter: blur(20px);
