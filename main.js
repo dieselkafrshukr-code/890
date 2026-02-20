@@ -172,19 +172,16 @@ document.addEventListener('DOMContentLoaded', () => {
     async function startIntro() {
         if (!introScreen) return initApp();
 
-        // The animations are handled by CSS (logoGlowEntrance and smoothBrandEntrance)
-        // We just need to wait 3 seconds before transitioning out
-
+        // Start fading out after 3.5 seconds
         setTimeout(() => {
-            introScreen.style.transition = 'opacity 0.8s ease, filter 0.8s ease';
-            introScreen.style.opacity = '0';
-            introScreen.style.filter = 'blur(10px)';
+            introScreen.classList.add('fade-out-active');
 
+            // Wait for the 1s animation to finish before hiding and starting app
             setTimeout(() => {
                 introScreen.classList.add('hidden');
                 initApp();
-            }, 800);
-        }, 3000); // 3 seconds stay
+            }, 1000);
+        }, 3500);
     }
 
     async function initApp() {

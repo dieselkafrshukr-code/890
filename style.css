@@ -69,83 +69,84 @@ body.light-mode .theme-toggle-btn:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-/* Intro Overlay (Luxury) */
+/* Intro Overlay (Premium Brand Style) */
 .intro-overlay {
     position: fixed;
     inset: 0;
     background: #000;
-    /* Always black background */
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
     z-index: 10000;
     overflow: hidden;
 }
 
-.intro-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 30px;
-}
-
-.intro-logo-container {
-    opacity: 0;
-    transform: scale(0.8);
-    filter: drop-shadow(0 0 0px var(--gold));
-    animation: logoGlowEntrance 1.5s ease-out forwards;
+.intro-overlay.fade-out-active {
+    animation: introFadeOut 1s ease forwards;
 }
 
 .intro-logo {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--gold);
+    width: 170px;
+    height: auto;
+    border-radius: 20px;
+    opacity: 0;
+    animation: logoReveal 2.5s ease forwards;
 }
 
 .intro-brand-name {
+    color: white;
+    font-size: 42px;
     font-family: 'Orbitron', sans-serif;
-    font-size: clamp(2.5rem, 8vw, 5rem);
-    font-weight: 950;
-    color: #fff;
-    letter-spacing: 12px;
+    font-weight: 900;
+    letter-spacing: 10px;
+    margin-top: 25px;
     opacity: 0;
-    transform: translateY(30px);
-    animation: smoothBrandEntrance 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
+    animation: textReveal 2s ease forwards;
+    animation-delay: 1.5s;
+    text-align: center;
 }
 
-@keyframes logoGlowEntrance {
+/* Logo Animation */
+@keyframes logoReveal {
     0% {
         opacity: 0;
-        transform: scale(0.6);
-        filter: drop-shadow(0 0 0px var(--gold));
+        transform: scale(0.8);
+        filter: drop-shadow(0 0 0px #fff);
     }
 
-    50% {
+    60% {
         opacity: 1;
         transform: scale(1.05);
-        filter: drop-shadow(0 0 30px var(--gold));
+        filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.6));
+    }
+
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3));
+    }
+}
+
+/* Text Animation */
+@keyframes textReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+        letter-spacing: 25px;
     }
 
     100% {
         opacity: 1;
-        transform: scale(1);
-        filter: drop-shadow(0 0 15px var(--gold));
+        transform: translateY(0);
+        letter-spacing: 10px;
     }
 }
 
-@keyframes smoothBrandEntrance {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-        letter-spacing: 30px;
-    }
-
+/* Intro Fade Out Animation */
+@keyframes introFadeOut {
     to {
-        opacity: 1;
-        transform: translateY(0);
-        letter-spacing: 12px;
+        opacity: 0;
+        transform: scale(1.05);
     }
 }
 
