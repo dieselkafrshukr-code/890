@@ -69,7 +69,9 @@ body.light-mode .theme-toggle-btn:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-/* Intro Overlay (Premium Brand Style) */
+/* ============================================================
+   ULTIMATE CINEMATIC INTRO (THE STORM'S EYE)
+   ============================================================ */
 .intro-overlay {
     position: fixed;
     inset: 0;
@@ -77,93 +79,123 @@ body.light-mode .theme-toggle-btn:hover {
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-direction: column;
-    z-index: 10000;
+    z-index: 100000;
     overflow: hidden;
+    perspective: 1000px;
 }
 
 #particles-canvas {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
     height: 100%;
     z-index: 1;
 }
 
-.intro-overlay.fade-out-active {
-    animation: introFadeOut 1s ease forwards;
+.intro-flash {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.intro-elements {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform-style: preserve-3d;
+}
+
+.intro-logo-outer {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin-bottom: 2rem;
+    opacity: 0;
+    transform: translateZ(-200px) scale(0.5);
+    filter: blur(20px);
+}
+
+/* Golden Halo Effect */
+.intro-logo-outer::before {
+    content: '';
+    position: absolute;
+    inset: -20px;
+    background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+    border-radius: 50%;
+    opacity: 0.5;
+    animation: pulseHalo 4s infinite alternate ease-in-out;
 }
 
 .intro-logo {
-    width: clamp(120px, 15vw, 220px);
-    height: auto;
-    border-radius: 20px;
-    opacity: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    box-shadow: 0 0 50px var(--gold);
+    position: relative;
     z-index: 2;
-    animation: logoReveal 2.5s ease forwards, zoomIn 4s ease forwards;
 }
 
 .intro-brand-name {
-    color: white;
-    font-size: clamp(24px, 4vw, 48px);
+    color: #fff;
     font-family: 'Orbitron', sans-serif;
-    font-weight: 900;
-    letter-spacing: 12px;
-    margin-top: 25px;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 950;
+    letter-spacing: 30px;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
     opacity: 0;
-    z-index: 2;
-    animation: textReveal 2s ease forwards, zoomIn 4s ease forwards;
-    animation-delay: 1.5s;
+    transform: translateY(50px) translateZ(-100px);
+    margin-top: 10px;
     text-align: center;
 }
 
-/* Logo Animation */
-@keyframes logoReveal {
-    0% {
-        opacity: 0;
-        transform: scale(0.7);
-        filter: blur(10px);
-    }
+.intro-loading-line {
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin-top: 2rem;
+    opacity: 0.6;
+}
 
-    100% {
-        opacity: 1;
+@keyframes pulseHalo {
+    from {
         transform: scale(1);
-        filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.7));
-    }
-}
-
-/* Text Animation */
-@keyframes textReveal {
-    0% {
-        opacity: 0;
-        letter-spacing: 40px;
-        transform: translateY(40px);
+        opacity: 0.3;
     }
 
-    100% {
-        opacity: 1;
-        letter-spacing: 12px;
-        transform: translateY(0);
-    }
-}
-
-/* Zoom Effect */
-@keyframes zoomIn {
-    0% {
-        transform: scale(1);
-    }
-
-    100% {
-        transform: scale(1.05);
-    }
-}
-
-/* Intro Fade Out Animation */
-@keyframes introFadeOut {
     to {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+}
+
+/* App Transition Blur */
+#main-app.intro-transitioning {
+    filter: blur(20px) brightness(0.5);
+    opacity: 0;
+}
+
+#intro-screen.warp-speed {
+    animation: warpEffect 1s cubic-bezier(1, 0, 0, 1) forwards;
+}
+
+@keyframes warpEffect {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+        filter: blur(0);
+    }
+
+    100% {
+        transform: scale(10);
         opacity: 0;
-        transform: scale(1.1);
+        filter: blur(50px);
     }
 }
 

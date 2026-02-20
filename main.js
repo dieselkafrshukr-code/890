@@ -169,83 +169,162 @@ document.addEventListener('DOMContentLoaded', () => {
     applyTranslations();
 
     // --- 4. INITIALIZATION ---
-    // --- Particle Animation Logic ---
-    function initParticles() {
+    // --- 4. ULTIMATE CINEMATIC INITIALIZATION (THE STORM'S EYE) ---
+    function initUltimateIntro() {
         const canvas = document.getElementById("particles-canvas");
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
+        let w = canvas.width = window.innerWidth;
+        let h = canvas.height = window.innerHeight;
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        let particles = [];
+        let vortexMode = true;
+        let warpMode = false;
+        let vortexSpeed = 0.02;
 
-        let particlesArray = [];
-
-        class Particle {
+        class CosmicParticle {
             constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                this.z = Math.random() * w;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.color = Math.random() > 0.8 ? '#d4af37' : '#ffffff';
                 this.size = Math.random() * 2;
-                this.speedX = (Math.random() - 0.5) * 0.5;
-                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.angle = Math.random() * Math.PI * 2;
+                this.radius = Math.random() * (w / 2);
             }
             update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                if (this.x > canvas.width) this.x = 0;
-                if (this.x < 0) this.x = canvas.width;
-                if (this.y > canvas.height) this.y = 0;
-                if (this.y < 0) this.y = canvas.height;
+                if (warpMode) {
+                    this.z -= 20;
+                    if (this.z <= 1) this.z = w;
+                } else if (vortexMode) {
+                    this.angle += vortexSpeed;
+                    this.x = w / 2 + Math.cos(this.angle) * this.radius;
+                    this.y = h / 2 + Math.sin(this.angle) * this.radius;
+                    this.radius *= 0.995; // Gravity effect
+                    if (this.radius < 10) this.radius = w / 2 + Math.random() * 200;
+                } else {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                }
             }
             draw() {
-                ctx.fillStyle = "rgba(255,255,255,0.5)";
+                let x = this.x;
+                let y = this.y;
+                let s = this.size;
+
+                if (warpMode) {
+                    let k = 1200 / this.z;
+                    x = (this.x - w / 2) * k + w / 2;
+                    y = (this.y - h / 2) * k + h / 2;
+                    s = this.size * k;
+                }
+
+                ctx.fillStyle = this.color;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.arc(x, y, s, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
 
-        function init() {
-            particlesArray = [];
-            for (let i = 0; i < 120; i++) {
-                particlesArray.push(new Particle());
-            }
+        for (let i = 0; i < 400; i++) particles.push(new CosmicParticle());
+
+        function loop() {
+            if (introScreen.classList.contains('hidden')) return;
+            ctx.fillStyle = warpMode ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.4)';
+            ctx.fillRect(0, 0, w, h);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(loop);
         }
 
-        function animate() {
-            if (document.getElementById('intro-screen').classList.contains('hidden')) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particlesArray.forEach(p => {
-                p.update();
-                p.draw();
-            });
-            requestAnimationFrame(animate);
-        }
-
-        window.addEventListener("resize", () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            init();
+        window.addEventListener('resize', () => {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
         });
 
-        init();
-        animate();
+        loop();
+
+        // GSAP ORCHESTRATION
+        const tl = gsap.timeline({
+            onComplete: () => {
+                setTimeout(() => {
+                    initApp();
+                }, 100);
+            }
+        });
+
+        // Step 1: Eye focus
+        tl.to({}, { duration: 1 }); // Silence
+
+        // Step 2: Vortex acceleration
+        tl.to({}, {
+            duration: 2,
+            onUpdate: function () {
+                vortexSpeed = 0.02 + (this.progress() * 0.2);
+            }
+        });
+
+        // Step 3: THE FLASH & IMPACT
+        tl.to('.intro-flash', { opacity: 1, duration: 0.1, ease: "power4.in" });
+        tl.set('.intro-flash', { opacity: 0, delay: 0.1 });
+        tl.set({}, { onUpdate: () => { vortexMode = false; } });
+
+        // Step 4: MATERIALIZATION
+        tl.to('.intro-logo-outer', {
+            opacity: 1,
+            scale: 1,
+            z: 0,
+            filter: 'blur(0px)',
+            duration: 2,
+            ease: "expo.out"
+        }, "-=0.1");
+
+        tl.to('.intro-brand-name', {
+            opacity: 1,
+            y: 0,
+            z: 0,
+            letterSpacing: '10px',
+            duration: 2,
+            ease: "expo.out"
+        }, "-=1.5");
+
+        tl.to('.intro-loading-line', {
+            width: '300px',
+            duration: 3,
+            ease: "power2.inOut"
+        }, "-=1");
+
+        // Step 5: WARP TO STORE
+        tl.to({}, { duration: 1 }); // Admire the logo
+
+        tl.add(() => {
+            warpMode = true;
+            introScreen.classList.add('warp-speed');
+            mainApp.classList.remove('hidden');
+            mainApp.classList.add('intro-transitioning');
+        });
+
+        tl.to('.app-container', {
+            opacity: 1,
+            filter: 'blur(0px)',
+            brightness: 1,
+            duration: 1.5,
+            ease: "power3.inOut"
+        });
+
+        tl.add(() => {
+            introScreen.classList.add('hidden');
+            mainApp.classList.remove('intro-transitioning');
+        });
     }
 
     async function startIntro() {
         if (!introScreen) return initApp();
-
-        initParticles();
-
-        // Start fading out after 4.5 seconds
-        setTimeout(() => {
-            introScreen.classList.add('fade-out-active');
-
-            // Wait for the 1s animation to finish before hiding and starting app
-            setTimeout(() => {
-                introScreen.classList.add('hidden');
-                initApp();
-            }, 1000);
-        }, 4500);
+        initUltimateIntro();
     }
 
     async function initApp() {
