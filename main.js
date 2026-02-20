@@ -384,8 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.goBack = async () => {
         if (navigationStack.length > 1) {
-            navigationStack.pop();
-            currentLevel = navigationStack[navigationStack.length - 1];
+            currentLevel = navigationStack.pop();
             await renderStage();
         }
     };
