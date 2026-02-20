@@ -82,27 +82,38 @@ body.light-mode .theme-toggle-btn:hover {
     overflow: hidden;
 }
 
+#particles-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
 .intro-overlay.fade-out-active {
     animation: introFadeOut 1s ease forwards;
 }
 
 .intro-logo {
-    width: 170px;
+    width: clamp(120px, 15vw, 220px);
     height: auto;
     border-radius: 20px;
     opacity: 0;
-    animation: logoReveal 2.5s ease forwards;
+    z-index: 2;
+    animation: logoReveal 2.5s ease forwards, zoomIn 4s ease forwards;
 }
 
 .intro-brand-name {
     color: white;
-    font-size: 42px;
+    font-size: clamp(24px, 4vw, 48px);
     font-family: 'Orbitron', sans-serif;
     font-weight: 900;
-    letter-spacing: 10px;
+    letter-spacing: 12px;
     margin-top: 25px;
     opacity: 0;
-    animation: textReveal 2s ease forwards;
+    z-index: 2;
+    animation: textReveal 2s ease forwards, zoomIn 4s ease forwards;
     animation-delay: 1.5s;
     text-align: center;
 }
@@ -111,19 +122,14 @@ body.light-mode .theme-toggle-btn:hover {
 @keyframes logoReveal {
     0% {
         opacity: 0;
-        transform: scale(0.8);
-        filter: drop-shadow(0 0 0px #fff);
-    }
-
-    60% {
-        opacity: 1;
-        transform: scale(1.05);
-        filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.6));
+        transform: scale(0.7);
+        filter: blur(10px);
     }
 
     100% {
+        opacity: 1;
         transform: scale(1);
-        filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3));
+        filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.7));
     }
 }
 
@@ -131,14 +137,25 @@ body.light-mode .theme-toggle-btn:hover {
 @keyframes textReveal {
     0% {
         opacity: 0;
-        transform: translateY(30px);
-        letter-spacing: 25px;
+        letter-spacing: 40px;
+        transform: translateY(40px);
     }
 
     100% {
         opacity: 1;
+        letter-spacing: 12px;
         transform: translateY(0);
-        letter-spacing: 10px;
+    }
+}
+
+/* Zoom Effect */
+@keyframes zoomIn {
+    0% {
+        transform: scale(1);
+    }
+
+    100% {
+        transform: scale(1.05);
     }
 }
 
@@ -146,7 +163,7 @@ body.light-mode .theme-toggle-btn:hover {
 @keyframes introFadeOut {
     to {
         opacity: 0;
-        transform: scale(1.05);
+        transform: scale(1.1);
     }
 }
 
