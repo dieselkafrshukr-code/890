@@ -108,9 +108,9 @@ body {
 
 .intro-logo-outer {
     position: relative;
-    width: 180px;
-    height: 180px;
-    margin-bottom: 2rem;
+    width: 250px;
+    height: 250px;
+    margin-bottom: 25px;
     opacity: 0;
     transform: translateZ(-200px) scale(0.5);
     filter: blur(20px);
