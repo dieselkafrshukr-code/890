@@ -115,6 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
 
     // --- Theme Logic ---
+    // Ensure Light Mode is the default for everyone after the update
+    if (!localStorage.getItem('theme_version_1')) {
+        localStorage.setItem('theme', 'light');
+        localStorage.setItem('theme_version_1', 'true');
+    }
+
     const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
