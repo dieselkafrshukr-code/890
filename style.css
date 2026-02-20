@@ -138,8 +138,8 @@ body {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    transform: scale(1.4);
-    /* Scaled up to fill the gold ring perfectly */
+    transform: scale(1.8);
+    /* Maximum zoom to fill the circle with logo details */
     position: relative;
     z-index: 2;
 }
