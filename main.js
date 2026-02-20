@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stageDesc = document.getElementById('stage-desc');
     const backBtn = document.getElementById('back-btn');
     const resetBtn = document.getElementById('reset-btn');
-    const steps = document.querySelectorAll('.step');
+    const stepIndicator = document.querySelector('.step-indicator');
     const themeToggle = document.getElementById('theme-toggle');
 
     // --- Theme Logic ---
@@ -306,8 +306,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         stageTitle.innerText = currentLevel[nameKey] || currentLevel.name || "EL TOUFAN";
 
-        const levelIdx = navigationStack.length;
-        steps.forEach((s, i) => s.classList.toggle('active', i + 1 <= levelIdx));
+        if (stepIndicator) {
+            const depth = navigationStack.length;
+            let stepHtml = '';
+            for (let i = 1; i <= depth; i++) {
+                const isLast = (i === depth);
+                const className = isLast ? 'step active' : 'step completed';
+                stepHtml += `<div class="${className}" data-step="${i}">${i}</div>`;
+                if (i < depth) {
+                    stepHtml += `<div class="step-line active"></div>`;
+                }
+            }
+            stepIndicator.innerHTML = stepHtml;
+        }
         optionsGrid.innerHTML = '';
 
         // Sub-Categories
