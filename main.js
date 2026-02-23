@@ -49,7 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
             select_size: "يرجى اختيار المقاس أولاً!",
             order_whatsapp_title: "🛖 طلب جديد - EL TOUFAN",
             wishlist_empty: "قائمة المفضلة فارغة 🥲",
-            select_category: "اختر القسم أولاً"
+            select_category: "اختر القسم أولاً",
+            payment_method: "طريقة الدفع",
+            pay_online: "دفع اون لاين (فيزا / كارت)",
+            pay_delivery: "عند الاستلام"
         },
         en: {
             welcome: "Welcome to El Toufan",
@@ -78,7 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
             select_size: "Please select size first!",
             order_whatsapp_title: "🛖 New Order - EL TOUFAN",
             wishlist_empty: "Wishlist is empty 🥲",
-            select_category: "Select category first"
+            select_category: "Select category first",
+            payment_method: "Payment Method",
+            pay_online: "Pay Online (Visa/Card)",
+            pay_delivery: "Cash on Delivery"
         }
     };
 
@@ -768,6 +774,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     </select>
                 </div>
 
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; font-weight:700; margin-bottom:1rem; color:#aaa;">${t.payment_method} *</label>
+                    <div class="payment-selector" style="display:flex; gap:12px;">
+                        <div id="pay-delivery" class="payment-opt active" onclick="window.selectPayment('delivery')" style="flex:1; padding:15px; background:#1a1a1a; border:1px solid #d4af37; border-radius:12px; cursor:pointer; text-align:center; transition:0.3s; display:flex; flex-direction:column; align-items:center; gap:8px; color:#fff;">
+                            <i data-lucide="truck"></i>
+                            <span style="font-size:0.85rem; font-weight:600;">${t.pay_delivery}</span>
+                        </div>
+                        <div id="pay-online" class="payment-opt" onclick="window.selectPayment('online')" style="flex:1; padding:15px; background:#1a1a1a; border:1px solid #333; border-radius:12px; cursor:pointer; text-align:center; transition:0.3s; display:flex; flex-direction:column; align-items:center; gap:8px; color:#666;">
+                            <i data-lucide="credit-card"></i>
+                            <span style="font-size:0.85rem; font-weight:600;">${t.pay_online}</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="selected-payment" value="delivery">
+                </div>
+
                 <div id="of-price-box" style="background:#111; border:1px solid #222; border-radius:16px; padding:1.2rem; margin-bottom:1.5rem;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                         <span style="color:#aaa;">${t.items}:</span>
@@ -834,17 +855,50 @@ document.addEventListener('DOMContentLoaded', () => {
         if (discLabel && couponCode) discLabel.innerText = `خصم كوبون (${couponCode}):`;
     };
 
+    window.selectPayment = (method) => {
+        const deliveryBtn = document.getElementById('pay-delivery');
+        const onlineBtn = document.getElementById('pay-online');
+        const input = document.getElementById('selected-payment');
+
+        if (method === 'delivery') {
+            deliveryBtn.style.borderColor = '#d4af37';
+            deliveryBtn.style.color = '#fff';
+            onlineBtn.style.borderColor = '#333';
+            onlineBtn.style.color = '#666';
+            input.value = 'delivery';
+        } else {
+            onlineBtn.style.borderColor = '#d4af37';
+            onlineBtn.style.color = '#fff';
+            deliveryBtn.style.borderColor = '#333';
+            deliveryBtn.style.color = '#666';
+            input.value = 'online';
+        }
+    };
+
     window.submitOrder = async () => {
         const name = document.getElementById('of-name').value.trim();
         const phone = document.getElementById('of-phone').value.trim();
         const address = document.getElementById('of-address').value.trim();
         const govRaw = document.getElementById('of-gov').value || '';
         const govSelection = govRaw.trim();
+        const paymentMethod = document.getElementById('selected-payment').value;
 
         if (!name) return alert("❌ يرجى إدخال الاسم!");
         if (!phone) return alert("❌ يرجى إدخال رقم الهاتف!");
         if (!address) return alert("❌ يرجى إدخال العنوان!");
         if (!govSelection) return alert("❌ يرجى اختيار المحافظة!");
+
+        if (paymentMethod === 'online') {
+            // Placeholder for Payment API
+            console.log("💳 Online Payment initiated... API integration pending.");
+            if (window.processOnlinePayment) {
+                await window.processOnlinePayment({
+                    amount: cart.reduce((s, i) => s + i.price, 0),
+                    customerName: name,
+                    customerPhone: phone
+                });
+            }
+        }
 
         const subtotal = cart.reduce((s, i) => s + i.price, 0);
         const discount = (couponDiscount > 0)
@@ -866,6 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `${t.phone}: ${phone}\n` +
             `${t.address}: ${address}\n` +
             `${t.gov}: ${govSelection}\n` +
+            `${translations[currentLang].payment_method}: ${paymentMethod === 'online' ? t.pay_online : t.pay_delivery}\n` +
             `━━━━━━━━━━━━━━━\n` +
             `${t.items}:\n${itemsList}\n` +
             `━━━━━━━━━━━━━━━\n` +
@@ -891,6 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 images: orderImages,
                 total: finalTotal,
                 shipping: shipping,
+                paymentMethod: paymentMethod,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 status: 'new'
             });

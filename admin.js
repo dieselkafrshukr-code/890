@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let html = `<div class="orders-table-wrapper"><table class="orders-table">
                 <thead><tr>
                     <th>العميل</th><th>التليفون</th><th>العنوان</th><th>المحافظة</th>
-                    <th>المنتجات</th><th>الإجمالي</th><th>الوقت</th><th>الحالة</th><th>إجراءات</th>
+                    <th>المنتجات</th><th>الإجمالي</th><th>الدفع</th><th>الوقت</th><th>الحالة</th><th>إجراءات</th>
                 </tr></thead><tbody>`;
             orders.forEach(o => {
                 const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
@@ -279,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td data-label="المحافظة"><div style="font-weight:700; color:var(--accent);">${o.governorate || '-'}</div></td>
                     <td data-label="المنتجات">${itemText}</td>
                     <td data-label="الإجمالي" style="font-weight:900; color:#4caf50;">${o.total || '-'} ج.م</td>
+                    <td data-label="الدفع"><span class="status-badge" style="background:${o.paymentMethod === 'online' ? 'rgba(33,150,243,0.2)' : 'rgba(76,175,80,0.2)'}; color:${o.paymentMethod === 'online' ? '#2196f3' : '#4caf50'}; border: 1px solid ${o.paymentMethod === 'online' ? '#2196f3' : '#4caf50'};">${o.paymentMethod === 'online' ? 'اون لاين' : 'كاش'}</span></td>
                     <td data-label="الوقت" style="font-size:0.8rem;">${date}</td>
                     <td data-label="الحالة"><span class="status-badge">${o.status || 'جديد'}</span></td>
                     <td data-label="إجراءات"><button onclick="window.deleteOrder('${o.id}')" class="action-link del" style="padding:8px; border-radius:8px;">

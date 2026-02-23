@@ -1600,3 +1600,52 @@ body.light-mode .close-detail {
         overflow-x: hidden;
     }
 }
+
+/* ============================================================
+   PAYMENT SELECTOR
+   ============================================================ */
+.payment-selector {
+    display: flex;
+    gap: 12px;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+}
+
+.payment-opt {
+    flex: 1;
+    padding: 15px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+}
+
+.payment-opt:hover {
+    border-color: rgba(212, 175, 55, 0.5);
+    background: rgba(212, 175, 55, 0.02);
+}
+
+.payment-opt.active {
+    border-color: #d4af37 !important;
+    background: rgba(212, 175, 55, 0.1) !important;
+    color: #fff !important;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+}
+
+.payment-opt i {
+    width: 24px;
+    height: 24px;
+}
+
+@media (max-width: 480px) {
+    .payment-selector {
+        flex-direction: column;
+    }
+}
