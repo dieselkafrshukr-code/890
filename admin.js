@@ -411,12 +411,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     🕒 ${date}
                 </div>
 
-                <div style="display:flex; gap:10px; padding-top:4px;">
-                    <button onclick="window.deleteOrder('${id}')" class="add-btn" style="flex:1; background:#ff4444; color:#fff; justify-content:center; padding:12px;">🗑️ حذف</button>
-                    ${o.phone ? `<a href="https://wa.me/${o.phone.startsWith('0') ? '2' + o.phone : o.phone}?text=${encodeURIComponent(`مرحباً ${o.customer || ''}، بخصوص طلبك رقم: ${id}`)}" target="_blank" class="add-btn" style="flex:2; background:#25d366; color:#fff; justify-content:center; padding:12px; text-decoration:none;">💬 تواصل واتساب</a>` : ''}
+                <div id="order-actions-container" style="display:flex; gap:10px; padding-top:4px;">
+                    <button onclick="window.deleteOrder('${id}')" class="add-btn" style="flex:1; background:#ff4444; color:#fff; justify-content:center; padding:12px;">🗑️ حذف الطلب</button>
+                    <button id="wa-admin-contact" class="add-btn" style="flex:2; background:#25d366; color:#fff; justify-content:center; padding:12px; font-weight:700;">
+                        <i data-lucide="message-circle" style="width:18px; margin-left:8px;"></i> تواصل واتساب
+                    </button>
                 </div>
             </div>
         `;
+
+        // Handle Admin WhatsApp Contact with Template
+        const contactBtn = document.getElementById('wa-admin-contact');
+        if (contactBtn) {
+            contactBtn.onclick = async () => {
+                if (!o.phone) return alert("❌ لم يتم العثور على رقم هاتف لهذا العميل!");
+
+                try {
+                    const msgSnap = await db.collection('settings').doc('adminWaMessage').get();
+                    let template = msgSnap.exists ? msgSnap.data().template : "مرحباً {customer}، بخصوص طلبك رقم {id}:\n\nالمنتجات:\n{items}";
+
+                    // Format items list for message
+                    const itemDetails = rawItems.map(str => "- " + str.replace(/\[.*?\]/g, '').trim()).join('\n');
+
+                    let finalMsg = template
+                        .replace(/{customer}/g, o.customer || 'عميلنا العزيز')
+                        .replace(/{id}/g, id.slice(-6).toUpperCase())
+                        .replace(/{items}/g, itemDetails);
+
+                    const phone = o.phone.startsWith('0') ? '2' + o.phone : o.phone;
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(finalMsg)}`, '_blank');
+                } catch (e) {
+                    console.error("WA Template Error:", e);
+                    const phone = o.phone.startsWith('0') ? '2' + o.phone : o.phone;
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`مرحباً ${o.customer || ''}، بخصوص طلبك رقم: ${id}`)}`, '_blank');
+                }
+            };
+        }
 
         document.getElementById('modal-order-detail').classList.remove('hidden');
         lucide.createIcons();
@@ -1096,7 +1126,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function renderSettings() {
         tabContent.innerHTML = `
             <div class="actions-header"><h3>⚙️ إعدادات المتجر العامة</h3></div>
-            <div class="settings-grid" style="display:grid; gap:30px; margin-top:2rem; max-width:600px;">
+            <div class="settings-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-top:2rem;">
+                
                 <div class="settings-card" style="background:var(--card); padding:24px; border-radius:20px; border:1px solid var(--border);">
                     <div style="font-weight:900; font-size:1.1rem; margin-bottom:20px; color:var(--accent); display:flex; align-items:center; gap:10px;">
                         <i data-lucide="phone"></i> أرقام الواتساب (استقبال الطلبات)
@@ -1111,32 +1142,58 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <button id="save-wa-settings" class="save-btn" style="width:100%; margin-top:10px; height:50px;">حفظ الأرقام</button>
                 </div>
+
+                <div class="settings-card" style="background:var(--card); padding:24px; border-radius:20px; border:1px solid var(--border);">
+                    <div style="font-weight:900; font-size:1.1rem; margin-bottom:20px; color:var(--accent); display:flex; align-items:center; gap:10px;">
+                        <i data-lucide="message-square"></i> رسالة التواصل الإدارية (واتساب)
+                    </div>
+                    <div class="input-group" style="margin-bottom:15px;">
+                        <label>القالب الافتراضي للرسالة:</label>
+                        <textarea id="set-wa-template" style="width:100%; height:120px; background:var(--bg-admin); border:1px solid var(--border); color:#fff; border-radius:12px; padding:12px; font-family:inherit; resize:none;"></textarea>
+                        <p style="color:var(--text-dim); font-size:0.75rem; margin-top:8px; line-height:1.4;">
+                            استخدم الكلمات التالية ليتم استبدالها تلقائياً:<br>
+                            <b>{customer}</b> : اسم العميل<br>
+                            <b>{id}</b> : رقم الطلب<br>
+                            <b>{items}</b> : تفاصيل المنتجات (اسم، لون، مقاس)
+                        </p>
+                    </div>
+                    <button id="save-msg-settings" class="save-btn" style="width:100%; height:50px;">حفظ قالب الرسالة</button>
+                </div>
+
             </div>`;
 
         lucide.createIcons();
 
         // Load existing
         try {
-            const snap = await db.collection('settings').doc('whatsappNumbers').get();
-            if (snap.exists) {
-                const data = snap.data();
+            const waSnap = await db.collection('settings').doc('whatsappNumbers').get();
+            if (waSnap.exists) {
+                const data = waSnap.data();
                 document.getElementById('set-wa-1').value = data.wa1 || '';
                 document.getElementById('set-wa-2').value = data.wa2 || '';
             }
+            const msgSnap = await db.collection('settings').doc('adminWaMessage').get();
+            const defaultMsg = "مرحباً {customer}، بخصوص طلبك رقم {id}:\n\nالمنتجات:\n{items}";
+            document.getElementById('set-wa-template').value = msgSnap.exists ? msgSnap.data().template : defaultMsg;
         } catch (e) { console.error(e); }
 
         document.getElementById('save-wa-settings').onclick = async () => {
             const wa1 = document.getElementById('set-wa-1').value.trim();
             const wa2 = document.getElementById('set-wa-2').value.trim();
-
             if (!wa1) return alert("❌ يجب إدخال الرقم الأول على الأقل!");
-
             try {
                 await db.collection('settings').doc('whatsappNumbers').set({ wa1, wa2 });
-                alert("✅ تم حفظ إعدادات الواتساب بنجاح");
-            } catch (e) {
-                alert("❌ خطأ في الحفظ: " + e.message);
-            }
+                alert("✅ تم حفظ أرقام الواتساب بنجاح");
+            } catch (e) { alert("❌ خطأ في الحفظ: " + e.message); }
+        };
+
+        document.getElementById('save-msg-settings').onclick = async () => {
+            const template = document.getElementById('set-wa-template').value.trim();
+            if (!template) return alert("❌ لا يمكن ترك القالب فارغاً!");
+            try {
+                await db.collection('settings').doc('adminWaMessage').set({ template });
+                alert("✅ تم حفظ قالب الرسالة بنجاح");
+            } catch (e) { alert("❌ خطأ في الحفظ: " + e.message); }
         };
     }
 
