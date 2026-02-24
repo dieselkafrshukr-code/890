@@ -1058,42 +1058,91 @@ document.addEventListener('DOMContentLoaded', () => {
         updateWishlistBtnState();
     };
 
-    window.toggleWishlistModal = () => {
+    window.toggleWishlistModal = async () => {
         const modal = document.getElementById('wishlist-modal');
         if (!modal) return;
+        const isOpening = modal.classList.contains('hidden');
         modal.classList.toggle('hidden');
-        renderWishlistModal();
+        if (isOpening) {
+            await renderWishlistModal();
+        }
         lucide.createIcons();
     };
 
-    function renderWishlistModal() {
+    async function renderWishlistModal() {
         const t = translations[currentLang];
         const container = document.getElementById('wishlist-items');
         if (!container) return;
+
         if (wishlist.length === 0) {
             container.innerHTML = `<p style="text-align:center; color:#666; padding:3rem;">${t.wishlist_empty}</p>`;
             return;
         }
-        container.innerHTML = wishlist.map((item, i) => `
-            <div class="wishlist-item">
+
+        // Show a loader while checking for hidden products
+        container.innerHTML = `
+            <div style="text-align:center; padding:3rem; color:var(--accent);">
+                <div class="loader-spin" style="margin-bottom:1rem;">⏳</div>
+                <div>${currentLang === 'ar' ? 'جاري تحديث المفضلة...' : 'Updating wishlist...'}</div>
+            </div>`;
+
+        // Verify product visibility and existence
+        const ids = wishlist.map(w => w.id);
+        const validItems = [];
+
+        try {
+            // Firestore 'in' query supports up to 10 items.
+            for (let i = 0; i < ids.length; i += 10) {
+                const chunk = ids.slice(i, i + 10);
+                const snap = await db.collection('products').where(firebase.firestore.FieldPath.documentId(), 'in', chunk).get();
+
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.hidden !== true) {
+                        const wishItem = wishlist.find(w => w.id === doc.id);
+                        if (wishItem) validItems.push(wishItem);
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn("Wishlist verification error, showing fallback:", e);
+            validItems.push(...wishlist);
+        }
+
+        if (validItems.length === 0) {
+            if (wishlist.length > 0) {
+                // If we had items but none are valid, maybe they were all hidden
+                container.innerHTML = `<p style="text-align:center; color:#666; padding:3rem;">${currentLang === 'ar' ? 'عذراً، هذه المنتجات لم تعد متوفرة حالياً 🥲' : 'Sorry, these products are no longer available 🥲'}</p>`;
+            } else {
+                container.innerHTML = `<p style="text-align:center; color:#666; padding:3rem;">${t.wishlist_empty}</p>`;
+            }
+            return;
+        }
+
+        container.innerHTML = validItems.map((item) => `
+            <div class="wishlist-item" id="wish-item-${item.id}">
                 <img src="${item.image || ''}" alt="${item.name}">
                 <div class="wishlist-item-info">
                     <div class="wishlist-item-name">${item.name}</div>
                     <div class="wishlist-item-price">${item.price} ج.م</div>
                 </div>
-                <button class="wishlist-add-to-cart-btn" onclick="window.addToCart('${item.name.replace(/'/g, '\\&apos;')}', ${item.price}); window.toggleWishlistModal();">🛒 ${t.add_to_cart}</button>
-                <button class="wishlist-remove-btn" onclick="window.removeFromWishlist(${i})"><i data-lucide="x" style="width:16px;"></i></button>
+                <button class="wishlist-add-to-cart-btn" onclick="window.openProductDetail('${item.id}'); window.toggleWishlistModal();">🛒 ${t.add_to_cart}</button>
+                <button class="wishlist-remove-btn" onclick="window.removeFromWishlist('${item.id}')"><i data-lucide="x" style="width:16px;"></i></button>
             </div>
         `).join('');
+
         const title = document.querySelector('.wishlist-modal-header h3');
-        if (title) title.innerText = currentLang === 'ar' ? 'المفضلة' : 'Wishlist';
+        if (title) title.innerText = currentLang === 'ar' ? 'قائمة المفضلة' : 'My Wishlist';
         lucide.createIcons();
     }
 
-    window.removeFromWishlist = (idx) => {
-        wishlist.splice(idx, 1);
-        saveWishlist();
-        renderWishlistModal();
+    window.removeFromWishlist = (id) => {
+        const idx = wishlist.findIndex(w => w.id === id);
+        if (idx > -1) {
+            wishlist.splice(idx, 1);
+            saveWishlist();
+            renderWishlistModal();
+        }
     };
 
     // Init wishlist count

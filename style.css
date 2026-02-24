@@ -1691,6 +1691,23 @@ body.light-mode .close-detail {
     font-weight: 700;
 }
 
+/* Loader Animation */
+.loader-spin {
+    display: inline-block;
+    animation: rotateLoader 1s linear infinite;
+    font-size: 1.5rem;
+}
+
+@keyframes rotateLoader {
+    from {
+        transform: rotate(360deg);
+    }
+
+    to {
+        transform: rotate(0deg);
+    }
+}
+
 /* Fix Cart Drawer for Mobile Height and Button Visibility */
 @media (max-width: 600px) {
     .cart-drawer {
