@@ -828,14 +828,48 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     };
 
+    /**
+     * يحول الملف إلى Base64 مع ضغط احترافي للحفاظ على الجودة وتقليل الحجم
+     * يقوم بتصغير الأبعاد بحد أقصى 1000 بكسل مع ضغط JPEG بنسبة 60%
+     */
     const fileToBase64 = (file) => new Promise((resolve) => {
-        const reader = new FileReader(); reader.readAsDataURL(file);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
         reader.onload = (e) => {
-            const img = new Image(); img.src = e.target.result;
+            const img = new Image();
+            img.src = e.target.result;
             img.onload = () => {
-                const canvas = document.createElement('canvas'); const MAX = 800; let w = img.width, h = img.height;
-                if (w > MAX) { h *= MAX / w; w = MAX; } canvas.width = w; canvas.height = h;
-                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/jpeg', 0.7));
+                const canvas = document.createElement('canvas');
+                let w = img.width;
+                let h = img.height;
+
+                // تحديد الحد الأقصى للأبعاد (1000 بكسل كافية جداً لجودة عالية وحجم صغير)
+                const MAX_SIDE = 1000;
+
+                if (w > h) {
+                    if (w > MAX_SIDE) {
+                        h = Math.round(h * MAX_SIDE / w);
+                        w = MAX_SIDE;
+                    }
+                } else {
+                    if (h > MAX_SIDE) {
+                        w = Math.round(w * MAX_SIDE / h);
+                        h = MAX_SIDE;
+                    }
+                }
+
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+
+                // تفعيل تنعيم الصور لضمان أفضل جودة عند التصغير
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+
+                ctx.drawImage(img, 0, 0, w, h);
+
+                // ضغط الصورة بصيغة JPEG بجودة 0.6 توفر توازناً ممتازاً بين الحجم والنقاء
+                resolve(canvas.toDataURL('image/jpeg', 0.6));
             };
         };
     });
