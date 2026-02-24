@@ -597,18 +597,30 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.innerHTML = '';
             if (!prods.length) { grid.innerHTML = '<div style="color:var(--text-dim); text-align:center; padding:3rem; grid-column:1/-1;">لا توجد منتجات حالياً. أضف منتجك الأول!</div>'; return; }
             prods.forEach(p => {
+                const isHidden = p.hidden === true;
                 const div = document.createElement('div');
                 div.className = 'product-item-card';
+                div.id = `prod-card-${p.id}`;
+                if (isHidden) div.style.opacity = '0.5';
                 div.innerHTML = `
                     <div style="display:flex; gap:12px; align-items:center;">
-                        <img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;">
+                        <div style="position:relative; flex-shrink:0;">
+                            <img src="${p.mainImage}" style="width:70px; height:70px; border-radius:15px; object-fit:cover;">
+                            ${isHidden ? '<div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);border-radius:15px;display:flex;align-items:center;justify-content:center;"><i data-lucide="eye-off" style="width:20px;color:#fff;"></i></div>' : ''}
+                        </div>
                         <div style="flex-grow:1; min-width:0;">
                             <div style="font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="color:var(--text-dim); font-size:0.8rem;">(${p.nameEn || ''})</span></div>
                             <div style="color:var(--accent); font-weight:800;">${p.price} ج.م</div>
-                            ${p.sku ? `<div style="font-family:monospace; font-size:0.75rem; color:var(--text-dim); background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:6px; display:inline-block; margin-top:4px; letter-spacing:1px;">🏷️ ${p.sku}</div>` : ''}
+                            <div style="display:flex; gap:6px; align-items:center; margin-top:4px; flex-wrap:wrap;">
+                                ${p.sku ? `<span style="font-family:monospace; font-size:0.75rem; color:var(--text-dim); background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:6px; letter-spacing:1px;">🏷️ ${p.sku}</span>` : ''}
+                                ${isHidden ? '<span style="font-size:0.7rem; background:rgba(255,80,80,0.15); color:#ff6b6b; border:1px solid rgba(255,80,80,0.3); padding:2px 8px; border-radius:6px;">مخفي من الموقع</span>' : '<span style="font-size:0.7rem; background:rgba(76,175,80,0.15); color:#4caf50; border:1px solid rgba(76,175,80,0.3); padding:2px 8px; border-radius:6px;">ظاهر</span>'}
+                            </div>
                         </div>
                     </div>
                     <div class="item-actions" style="margin-top:10px;">
+                        <button onclick="window.toggleProductVisibility('${p.id}', ${isHidden})" class="action-link" title="${isHidden ? 'إظهار في الموقع' : 'إخفاء من الموقع'}" style="color:${isHidden ? '#4caf50' : '#ff9800'};">
+                            <i data-lucide="${isHidden ? 'eye' : 'eye-off'}"></i>
+                        </button>
                         <button onclick="window.editProduct('${p.id}')" class="action-link add"><i data-lucide="edit"></i></button>
                         <button onclick="window.deleteProduct('${p.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
                     </div>`;
@@ -635,40 +647,60 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     }
 
-    // --- PRODUCT MANAGEMENT HELPERS ---
     function generateSKU() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        let code = 'ELT-';
-        for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
-        return code;
+        // Just a fallback - sequential SKUs are generated in openProductModal
+        return String(Date.now()).slice(-4);
     }
 
-    window.openProductModal = () => {
+    async function getNextSKU() {
+        try {
+            const snap = await db.collection('products').get();
+            let maxNum = 0;
+            snap.forEach(doc => {
+                const sku = doc.data().sku || '';
+                const num = parseInt(sku);
+                if (!isNaN(num) && num > maxNum) maxNum = num;
+            });
+            return String(maxNum + 1);
+        } catch (e) {
+            return String(Date.now()).slice(-3);
+        }
+    }
+
+    window.openProductModal = async (prefillSku) => {
         document.getElementById('editing-prod-id').value = '';
         document.getElementById('prod-name').value = '';
         document.getElementById('prod-name-en').value = '';
         document.getElementById('prod-price').value = '';
-        document.getElementById('prod-sku').value = generateSKU();
+        document.getElementById('prod-sku').value = prefillSku || await getNextSKU();
         document.getElementById('prod-main-sizes').value = '';
         document.getElementById('prod-main-color').value = '';
         document.getElementById('prod-main-color-en').value = '';
         document.getElementById('prod-main-img').value = '';
         document.getElementById('color-variants-container').innerHTML = '';
 
+        // Always fetch fresh categories from Firestore
         const select = document.getElementById('prod-category');
-        select.innerHTML = '<option value="">-- اختر القسم --</option>';
-        const flatten = (nodes, path = "") => {
-            nodes.forEach(n => {
-                const fullPath = path ? `${path} > ${n.name}` : n.name;
-                const opt = document.createElement('option');
-                opt.value = n.id;
-                opt.dataset.name = fullPath;
-                opt.innerText = fullPath;
-                select.appendChild(opt);
-                if (n.options) flatten(n.options, fullPath);
-            });
-        };
-        flatten(storeTreeData);
+        select.innerHTML = '<option value="">⏳ جاري تحميل الأقسام...</option>';
+        try {
+            const snap = await db.collection('settings').doc('storeTree').get();
+            const treeData = snap.exists ? (snap.data().options || []) : storeTreeData;
+            select.innerHTML = '<option value="">-- اختر القسم --</option>';
+            const flatten = (nodes, path = "") => {
+                nodes.forEach(n => {
+                    const fullPath = path ? `${path} > ${n.name}` : n.name;
+                    const opt = document.createElement('option');
+                    opt.value = n.id;
+                    opt.dataset.name = fullPath;
+                    opt.innerText = fullPath;
+                    select.appendChild(opt);
+                    if (n.options) flatten(n.options, fullPath);
+                });
+            };
+            flatten(treeData);
+        } catch (e) {
+            select.innerHTML = '<option value="">⚠️ تعذر تحميل الأقسام</option>';
+        }
         document.getElementById('modal-product').classList.remove('hidden');
     };
 
@@ -779,23 +811,27 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!doc.exists) return;
             const p = doc.data();
 
-            window.openProductModal();
-            // Fix: correct modal title selector
+            // openProductModal is async - await it so category dropdown is populated
+            await window.openProductModal(p.sku || '');
+
             const mTitle = document.querySelector('#modal-product .modal-header h3');
             if (mTitle) mTitle.innerText = 'تعديل المنتج';
             document.getElementById('editing-prod-id').value = id;
-            document.getElementById('prod-name').value = p.name;
+            document.getElementById('prod-name').value = p.name || '';
             document.getElementById('prod-name-en').value = p.nameEn || '';
-            document.getElementById('prod-price').value = p.price;
-            document.getElementById('prod-category').value = p.categoryId;
+            document.getElementById('prod-price').value = p.price || '';
             document.getElementById('prod-main-color').value = p.mainColor || '';
             document.getElementById('prod-main-color-en').value = p.mainColorEn || '';
             document.getElementById('prod-sku').value = p.sku || '';
             document.getElementById('prod-main-sizes').value = (p.mainSizes || []).join(', ');
 
+            // Set category - dropdown is now populated because openProductModal was awaited
+            if (p.categoryId) {
+                document.getElementById('prod-category').value = p.categoryId;
+            }
+
             const container = document.getElementById('color-variants-container');
             container.innerHTML = '';
-
             if (p.colors && Array.isArray(p.colors)) {
                 p.colors.forEach(v => {
                     const rid = 'v_' + Math.random().toString(36).substr(2, 9);
@@ -803,7 +839,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     div.className = 'variant-card';
                     div.id = rid;
                     div.dataset.existingImg = v.image || '';
-
                     div.innerHTML = `
                         <div class="variant-top" style="grid-template-columns: 1fr 1fr 1fr 2fr auto; gap:10px;">
                             <input type="text" class="v-name" value="${v.name || ''}" placeholder="اسم اللون (عربي)">
@@ -821,7 +856,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             lucide.createIcons();
         } catch (e) {
-            console.error("Error editing product:", e);
+            console.error('Error editing product:', e);
+            alert('❌ خطأ في تحميل بيانات المنتج: ' + e.message);
+        }
+    };
+
+    window.toggleProductVisibility = async (id, currentlyHidden) => {
+        try {
+            const newHidden = !currentlyHidden;
+            await db.collection('products').doc(id).update({ hidden: newHidden });
+            renderProducts();
+        } catch (e) {
+            alert('❌ خطأ: ' + e.message);
         }
     };
 
@@ -833,7 +879,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) { console.error(e); }
         }
     };
-
     // --- 4. GOVERNORATES ---
     async function renderGovernorates() {
         tabContent.innerHTML = `<div class="actions-header"><h3>🗺️ أسعار الشحن للمحافظات</h3></div><div id="gov-container"></div><button id="save-gov-prices" class="add-btn" style="width:100%; justify-content:center; margin-top:2rem; height:60px;"><i data-lucide="save"></i> حفظ أسعار الشحن</button>`;
