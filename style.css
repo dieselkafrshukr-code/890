@@ -584,12 +584,13 @@ body.dark-mode .close-cart:hover {
     background: var(--surface);
     width: 95%;
     max-width: 1000px;
-    height: auto;
+    max-height: 95vh;
     border-radius: 30px;
     position: relative;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5);
 }
 
 .close-detail {
@@ -603,11 +604,12 @@ body.dark-mode .close-cart:hover {
     height: 44px;
     border-radius: 50%;
     cursor: pointer;
-    z-index: 9999;
+    z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .close-detail:hover {
@@ -627,7 +629,9 @@ body.dark-mode .close-detail:hover {
 
 .product-view-split {
     display: flex;
-    min-height: 500px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 .product-image-side {
@@ -647,7 +651,7 @@ body.dark-mode .close-detail:hover {
     text-align: right;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .product-info-side h2 {
@@ -873,7 +877,7 @@ body.dark-mode .close-detail:hover {
     .product-view-split {
         flex-direction: column;
         overflow-y: auto;
-        height: 100%;
+        flex: 1;
     }
 
     .product-image-side {

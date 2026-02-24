@@ -607,7 +607,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('product-detail-modal').classList.remove('hidden');
         updateWishlistBtnState();
-        lucide.createIcons();
+
+        // جلب الأيقونات للتأكد من ظهورها (X و القلب)
+        if (window.lucide) {
+            setTimeout(() => lucide.createIcons(), 10);
+        }
     };
 
     window.closeProductModal = () => document.getElementById('product-detail-modal').classList.add('hidden');
