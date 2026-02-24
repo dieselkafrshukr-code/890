@@ -20,24 +20,23 @@ document.addEventListener('DOMContentLoaded', () => {
         'store@eltoufan.com': ['products', 'categories', 'governorates', 'coupons'] // Content Manager
     };
 
-    auth.signOut().then(() => {
-        loginScreen.classList.remove('hidden');
-        adminPanel.classList.add('hidden');
-    });
-
     auth.onAuthStateChanged(user => {
         if (user) {
             const userEmail = user.email.toLowerCase();
-            const allowedTabs = PERMISSIONS[userEmail] || []; // Default no access if unknown
+            const allowedTabs = PERMISSIONS[userEmail];
+
+            if (!allowedTabs) {
+                // Unknown user - no access
+                alert("⛔ ليس لديك صلاحية للدخول إلى لوحة التحكم.");
+                auth.signOut();
+                loginScreen.classList.remove('hidden');
+                adminPanel.classList.add('hidden');
+                return;
+            }
 
             if (allowedTabs === 'ALL') {
-                // Show all tabs
                 tabItems.forEach(item => item.style.display = 'flex');
-                loginScreen.classList.add('hidden');
-                adminPanel.classList.remove('hidden');
-                loadTab('orders');
-            } else if (Array.isArray(allowedTabs) && allowedTabs.length > 0) {
-                // Filter Tabs
+            } else {
                 let firstValidTab = null;
                 tabItems.forEach(item => {
                     const tabName = item.dataset.tab;
@@ -48,15 +47,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         item.style.display = 'none';
                     }
                 });
-
+                loadTab(firstValidTab);
                 loginScreen.classList.add('hidden');
                 adminPanel.classList.remove('hidden');
-                loadTab(firstValidTab);
-            } else {
-                // Unknown user or restricted
-                alert("⛔ ليس لديك صلاحية للدخول إلى لوحة التحكم.");
-                auth.signOut();
+                return;
             }
+
+            loginScreen.classList.add('hidden');
+            adminPanel.classList.remove('hidden');
+            loadTab('orders');
         } else {
             loginScreen.classList.remove('hidden');
             adminPanel.classList.add('hidden');
@@ -259,8 +258,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             let html = `<div class="orders-table-wrapper"><table class="orders-table">
                 <thead><tr>
-                    <th>العميل</th><th>التليفون</th><th>العنوان</th><th>المحافظة</th>
-                    <th>المنتجات</th><th>الإجمالي</th><th>الدفع</th><th>الوقت</th><th>الحالة</th><th>إجراءات</th>
+                    <th>العميل</th><th>التليفون</th><th class="mobile-hide">العنوان</th><th class="mobile-hide">المحافظة</th>
+                    <th class="mobile-hide">المنتجات</th><th>الإجمالي</th><th class="mobile-hide">الدفع</th><th class="mobile-hide">الوقت</th><th>الحالة</th><th>إجراءات</th>
                 </tr></thead><tbody>`;
             orders.forEach(o => {
                 const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
@@ -272,18 +271,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${imgs}
                     <span style="font-size:0.78rem; color:var(--text-dim);">${o.item || ''}</span>
                 </div>`;
-                html += `<tr id="order-${o.id}">
+                html += `<tr id="order-${o.id}" onclick="window.viewOrder('${o.id}')" style="cursor:pointer;">
                     <td data-label="العميل"><div style="font-weight:900;">${o.customer || '-'}</div></td>
-                    <td data-label="التليفون"><div style="font-size:0.85rem; direction:ltr; font-family:monospace;">${o.phone || '-'}</div></td>
-                    <td data-label="العنوان" style="font-size:0.8rem; color:var(--text-dim);">${o.address || '-'}</td>
-                    <td data-label="المحافظة"><div style="font-weight:700; color:var(--accent);">${o.governorate || '-'}</div></td>
-                    <td data-label="المنتجات">${itemText}</td>
+                    <td data-label="التليفون">
+                        <div style="font-size:0.85rem; direction:ltr; font-family:monospace;">${o.phone || '-'}</div>
+                        ${o.phone2 ? `<div style="font-size:0.7rem; direction:ltr; font-family:monospace; color:var(--accent);">${o.phone2}</div>` : ''}
+                    </td>
+                    <td data-label="العنوان" class="mobile-hide" style="font-size:0.8rem; color:var(--text-dim);">${o.address || '-'}</td>
+                    <td data-label="المحافظة" class="mobile-hide"><div style="font-weight:700; color:var(--accent);">${o.governorate || '-'}</div></td>
+                    <td data-label="المنتجات" class="mobile-hide">${itemText}</td>
                     <td data-label="الإجمالي" style="font-weight:900; color:#4caf50;">${o.total || '-'} ج.م</td>
-                    <td data-label="الدفع"><span class="status-badge" style="background:${o.paymentMethod === 'online' ? 'rgba(33,150,243,0.2)' : 'rgba(76,175,80,0.2)'}; color:${o.paymentMethod === 'online' ? '#2196f3' : '#4caf50'}; border: 1px solid ${o.paymentMethod === 'online' ? '#2196f3' : '#4caf50'};">${o.paymentMethod === 'online' ? 'اون لاين' : 'كاش'}</span></td>
-                    <td data-label="الوقت" style="font-size:0.8rem;">${date}</td>
+                    <td data-label="الدفع" class="mobile-hide"><span class="status-badge" style="background:${o.paymentMethod === 'online' ? 'rgba(33,150,243,0.2)' : 'rgba(76,175,80,0.2)'}; color:${o.paymentMethod === 'online' ? '#2196f3' : '#4caf50'}; border: 1px solid ${o.paymentMethod === 'online' ? '#2196f3' : '#4caf50'};">${o.paymentMethod === 'online' ? 'اون لاين' : 'كاش'}</span></td>
+                    <td data-label="الوقت" class="mobile-hide" style="font-size:0.8rem;">${date}</td>
                     <td data-label="الحالة"><span class="status-badge">${o.status || 'جديد'}</span></td>
-                    <td data-label="إجراءات"><button onclick="window.deleteOrder('${o.id}')" class="action-link del" style="padding:8px; border-radius:8px;">
-                        <i data-lucide="trash-2" style="width:18px;"></i></button></td>
+                    <td data-label="إجراءات" onclick="event.stopPropagation()">
+                        <button onclick="window.deleteOrder('${o.id}')" class="action-link del" style="padding:8px; border-radius:8px;">
+                            <i data-lucide="trash-2" style="width:18px;"></i>
+                        </button>
+                    </td>
                 </tr>`;
             });
             html += '</tbody></table></div>';
@@ -318,6 +323,61 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm("هل تريد حذف هذا الطلب؟")) return;
         await db.collection('orders').doc(id).delete();
         document.getElementById(`order-${id}`)?.remove();
+        closeModal('modal-order-detail');
+    };
+
+    window.viewOrder = async (id) => {
+        const doc = await db.collection('orders').doc(id).get();
+        if (!doc.exists) return;
+        const o = doc.data();
+        const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
+
+        const content = document.getElementById('order-detail-content');
+        content.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:15px; font-family:'Cairo', sans-serif;">
+                <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                    <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">👤 بيانات العميل:</div>
+                    <div style="font-size:1.1rem; font-weight:700;">${o.customer || '-'}</div>
+                    <div style="margin-top:5px; direction:ltr; font-family:monospace;">${o.phone || '-'}</div>
+                    ${o.phone2 ? `<div style="margin-top:2px; direction:ltr; font-family:monospace; color:var(--accent);">${o.phone2}</div>` : ''}
+                </div>
+                
+                <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                    <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">📍 العنوان والمحافظة:</div>
+                    <div>${o.governorate || '-'}</div>
+                    <div style="font-size:0.9rem; color:var(--text-dim); margin-top:5px;">${o.address || '-'}</div>
+                </div>
+                
+                <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                    <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">📦 المنتجات المطلوبة:</div>
+                    <div style="white-space:pre-wrap; line-height:1.6;">${(o.item || '').split(' | ').join('\n')}</div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                        <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">💰 الإجمالي:</div>
+                        <div style="font-size:1.2rem; font-weight:900; color:#4caf50;">${o.total || '-'} ج.م</div>
+                    </div>
+                    <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                        <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">💳 الدفع:</div>
+                        <div style="font-weight:700;">${o.paymentMethod === 'online' ? 'اون لاين (فيزا)' : 'عند الاستلام (كاش)'}</div>
+                    </div>
+                </div>
+
+                <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                    <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">🕒 وقت الطلب:</div>
+                    <div style="font-size:0.9rem;">${date}</div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button onclick="window.deleteOrder('${id}')" class="add-btn" style="flex:1; background:#ff4444; color:#fff; justify-content:center;">حذف الطلب</button>
+                    ${o.phone ? `<a href="https://wa.me/${o.phone.startsWith('0') ? '2' + o.phone : o.phone}" target="_blank" class="add-btn" style="flex:1; background:#25d366; color:#fff; justify-content:center; text-decoration:none;">واتساب</a>` : ''}
+                </div>
+            </div>
+        `;
+
+        document.getElementById('modal-order-detail').classList.remove('hidden');
+        lucide.createIcons();
     };
 
     // --- 2. CATEGORIES ---
@@ -653,7 +713,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const p = doc.data();
 
             window.openProductModal();
-            document.getElementById('modal-title').innerText = 'تعديل المنتج';
+            // Fix: correct modal title selector
+            const mTitle = document.querySelector('#modal-product .modal-header h3');
+            if (mTitle) mTitle.innerText = 'تعديل المنتج';
             document.getElementById('editing-prod-id').value = id;
             document.getElementById('prod-name').value = p.name;
             document.getElementById('prod-name-en').value = p.nameEn || '';

@@ -32,7 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
             confirm_order: "إتمام الطلب",
             empty_cart: "السلة فارغة!",
             fullname: "الاسم الكامل",
-            phone: "رقم الهاتف",
+            phone: "رقم الهاتف الأساسي",
+            phone2: "رقم هاتف إضافي (اختياري)",
             address: "العنوان التفصيلي",
             gov: "المحافظة",
             choose_gov: "-- اختر المحافظة --",
@@ -64,7 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
             confirm_order: "Checkout",
             empty_cart: "Cart is empty!",
             fullname: "Full Name",
-            phone: "Phone Number",
+            phone: "Primary Phone Number",
+            phone2: "Additional Phone (Optional)",
             address: "Full Address",
             gov: "Governorate",
             choose_gov: "-- Select Governorate --",
@@ -762,6 +764,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div style="margin-bottom:1.2rem;">
+                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">${t.phone2}</label>
+                    <input id="of-phone2" type="tel" placeholder="01XXXXXXXXX" style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px; border-radius:12px; text-align:${currentLang === 'ar' ? 'right' : 'left'};">
+                </div>
+
+                <div style="margin-bottom:1.2rem;">
                     <label style="display:block; font-weight:700; margin-bottom:0.5rem; color:#aaa;">${t.address} *</label>
                     <input id="of-address" type="text" placeholder="${t.address}" style="width:100%; background:#1a1a1a; border:1px solid #333; color:#fff; padding:14px; border-radius:12px;">
                 </div>
@@ -876,67 +883,62 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.submitOrder = async () => {
-        const name = document.getElementById('of-name').value.trim();
-        const phone = document.getElementById('of-phone').value.trim();
-        const address = document.getElementById('of-address').value.trim();
-        const govRaw = document.getElementById('of-gov').value || '';
+        const name = document.getElementById('of-name')?.value.trim();
+        const phone = document.getElementById('of-phone')?.value.trim();
+        const phone2 = document.getElementById('of-phone2')?.value.trim() || '';
+        const address = document.getElementById('of-address')?.value.trim();
+        const govRaw = document.getElementById('of-gov')?.value || '';
         const govSelection = govRaw.trim();
-        const paymentMethod = document.getElementById('selected-payment').value;
+        const paymentMethod = document.getElementById('selected-payment')?.value || 'delivery';
 
         if (!name) return alert("❌ يرجى إدخال الاسم!");
         if (!phone) return alert("❌ يرجى إدخال رقم الهاتف!");
+        if (!/^[0-9]{10,15}$/.test(phone)) return alert("❌ رقم الهاتف غير صحيح! أدخل أرقاماً فقط (مثال: 01012345678)");
         if (!address) return alert("❌ يرجى إدخال العنوان!");
         if (!govSelection) return alert("❌ يرجى اختيار المحافظة!");
 
-        if (paymentMethod === 'online') {
-            // Placeholder for Payment API
-            console.log("💳 Online Payment initiated... API integration pending.");
-            if (window.processOnlinePayment) {
-                await window.processOnlinePayment({
-                    amount: cart.reduce((s, i) => s + i.price, 0),
-                    customerName: name,
-                    customerPhone: phone
-                });
-            }
-        }
-
-        const subtotal = cart.reduce((s, i) => s + i.price, 0);
-        const discount = (couponDiscount > 0)
-            ? (couponType === 'percent' ? Math.round(subtotal * couponDiscount / 100) : couponDiscount)
-            : 0;
-        const discountedTotal = Math.max(0, subtotal - discount);
-
-        const shipping = getShippingPrice(govSelection);
-        const finalTotal = discountedTotal + shipping;
-
-        const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
-
-        const t = translations[currentLang];
-        const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
-        const waText = encodeURIComponent(
-            `${t.order_whatsapp_title}\n` +
-            `━━━━━━━━━━━━━━━\n` +
-            `${t.fullname}: ${name}\n` +
-            `${t.phone}: ${phone}\n` +
-            `${t.address}: ${address}\n` +
-            `${t.gov}: ${govSelection}\n` +
-            `${translations[currentLang].payment_method}: ${paymentMethod === 'online' ? t.pay_online : t.pay_delivery}\n` +
-            `━━━━━━━━━━━━━━━\n` +
-            `${t.items}:\n${itemsList}\n` +
-            `━━━━━━━━━━━━━━━\n` +
-            `${t.items}: ${subtotal}${currency}\n` +
-            (discount > 0 ? `🏷️ Discount (${couponCode}): -${discount}${currency}\n` : '') +
-            `${t.shipping} (${govSelection}): ${shipping}${currency}\n` +
-            `✅ ${t.total}: ${finalTotal}${currency}`
-        );
+        // Disable the submit button to avoid double submit
+        const submitBtn = document.querySelector('#order-form-modal button[onclick="window.submitOrder()"]');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = '⏳ جاري إرسال الطلب...'; }
 
         try {
-            // Collect product images for display in admin
-            const orderImages = cart.map(i => i.image).filter(img => img && img.length > 10).slice(0, 5);
+            const subtotal = cart.reduce((s, i) => s + i.price, 0);
+            const discount = (couponDiscount > 0)
+                ? (couponType === 'percent' ? Math.round(subtotal * couponDiscount / 100) : couponDiscount)
+                : 0;
+            const discountedTotal = Math.max(0, subtotal - discount);
+            const shipping = getShippingPrice(govSelection);
+            const finalTotal = discountedTotal + shipping;
 
-            await db.collection('orders').add({
+            const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
+            const t = translations[currentLang];
+            const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
+
+            // Build WhatsApp message
+            const waText = encodeURIComponent(
+                `${t.order_whatsapp_title}\n` +
+                `━━━━━━━━━━━━━━━\n` +
+                `${t.fullname}: ${name}\n` +
+                `${t.phone}: ${phone}\n` +
+                (phone2 ? `${t.phone2}: ${phone2}\n` : '') +
+                `${t.address}: ${address}\n` +
+                `${t.gov}: ${govSelection}\n` +
+                `${t.payment_method}: ${paymentMethod === 'online' ? t.pay_online : t.pay_delivery}\n` +
+                `━━━━━━━━━━━━━━━\n` +
+                `${t.items}:\n${itemsList}\n` +
+                `━━━━━━━━━━━━━━━\n` +
+                `${t.items}: ${subtotal}${currency}\n` +
+                (discount > 0 ? `🏷️ خصم (${couponCode}): -${discount}${currency}\n` : '') +
+                `${t.shipping} (${govSelection}): ${shipping}${currency}\n` +
+                `✅ ${t.total}: ${finalTotal}${currency}`
+            );
+
+            // Save to Firebase
+            const orderImages = cart.map(i => i.image).filter(img => img && img.length > 10).slice(0, 5);
+            const orderDoc = await db.collection('orders').add({
                 customer: name,
                 phone: phone,
+                phone2: phone2,
                 address: address,
                 governorate: govSelection,
                 item: cart.map(i => {
@@ -951,31 +953,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 status: 'new'
             });
 
+            // Send to Shipping API (non-blocking)
+            if (window.ShippingAPI) {
+                window.ShippingAPI.sendOrder({
+                    id: orderDoc.id,
+                    customer: name,
+                    phone: phone,
+                    phone2: phone2,
+                    address: address,
+                    governorate: govSelection,
+                    item: cart.map(i => i.name).join(' | '),
+                    total: finalTotal,
+                    paymentMethod: paymentMethod
+                }).catch(err => console.warn('⚠️ Shipping API (non-critical):', err.message));
+            }
+
             // Increment coupon usage if applied
             if (couponCode) {
-                try {
-                    await db.collection('coupons').doc(couponCode).update({
-                        usageCount: firebase.firestore.FieldValue.increment(1)
-                    });
-                } catch (e) { console.warn("Could not increment coupon count:", e.message); }
+                db.collection('coupons').doc(couponCode).update({
+                    usageCount: firebase.firestore.FieldValue.increment(1)
+                }).catch(e => console.warn('Could not increment coupon count:', e.message));
             }
-        } catch (e) { console.warn("Could not save to Firestore:", e.message); }
 
-        // إرسال للرقم الأول
-        window.open(`https://wa.me/${WA_NUMBER}?text=${waText}`, '_blank');
-        // إرسال للرقم الثاني (بعد ثانية عشان المتصفح مايبلوكوش)
-        if (WA_NUMBER_2 && WA_NUMBER_2 !== WA_NUMBER) {
-            setTimeout(() => {
-                window.open(`https://wa.me/${WA_NUMBER_2}?text=${waText}`, '_blank');
-            }, 1000);
+            // Clear cart & close
+            cart = [];
+            couponDiscount = 0;
+            couponCode = '';
+            updateCartUI();
+            const modal = document.getElementById('order-form-modal');
+            if (modal) modal.remove();
+            cartDrawer.classList.add('hidden');
+
+            // Open WhatsApp AFTER save success
+            window.open(`https://wa.me/${WA_NUMBER}?text=${waText}`, '_blank');
+            if (WA_NUMBER_2 && WA_NUMBER_2 !== WA_NUMBER) {
+                setTimeout(() => {
+                    window.open(`https://wa.me/${WA_NUMBER_2}?text=${waText}`, '_blank');
+                }, 1000);
+            }
+
+            alert("✅ تم إرسال طلبك! شكراً لك 🎉");
+
+        } catch (e) {
+            console.error('❌ Order submission error:', e);
+            alert("❌ حدث خطأ في إرسال الطلب. حاول مرة أخرى!");
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = t?.whatsapp_btn || 'إرسال'; }
         }
-
-        cart = [];
-        updateCartUI();
-        const modal = document.getElementById('order-form-modal');
-        if (modal) modal.remove();
-        cartDrawer.classList.add('hidden');
-        alert("✅ تم إرسال طلبك! شكراً لك 🎉");
     };
 
     startIntro();
