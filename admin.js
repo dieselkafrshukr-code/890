@@ -781,6 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('prod-main-color').value = '';
         document.getElementById('prod-main-color-en').value = '';
         document.getElementById('prod-main-img').value = '';
+        document.getElementById('prod-description').value = '';
         document.getElementById('color-variants-container').innerHTML = '';
 
         // Always fetch fresh categories from Firestore
@@ -864,6 +865,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 mainColor: document.getElementById('prod-main-color').value,
                 mainColorEn: document.getElementById('prod-main-color-en').value || document.getElementById('prod-main-color').value,
                 mainSizes: document.getElementById('prod-main-sizes').value.split(',').map(s => s.trim()).filter(s => s),
+                description: document.getElementById('prod-description').value.trim(),
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
@@ -928,6 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('prod-main-color-en').value = p.mainColorEn || '';
             document.getElementById('prod-sku').value = p.sku || '';
             document.getElementById('prod-main-sizes').value = (p.mainSizes || []).join(', ');
+            document.getElementById('prod-description').value = p.description || '';
 
             // Set category - dropdown is now populated because openProductModal was awaited
             if (p.categoryId) {

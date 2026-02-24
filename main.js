@@ -555,6 +555,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('detail-price').innerText = detailedProd.price;
         document.getElementById('detail-main-img').src = detailedProd.mainImage;
 
+        const descEl = document.getElementById('detail-description');
+        if (descEl) {
+            descEl.innerText = detailedProd.description || "";
+            descEl.style.display = detailedProd.description ? 'block' : 'none';
+        }
+
         // Update static labels in modal
         const sizesLabel = document.querySelector('.detail-section-title:nth-of-type(1)');
         if (sizesLabel) sizesLabel.innerText = t.sizes;
