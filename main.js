@@ -1111,12 +1111,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (validItems.length === 0) {
             if (wishlist.length > 0) {
-                // If we had items but none are valid, maybe they were all hidden
+                // Sync the actual list as empty
+                wishlist = [];
+                saveWishlist();
                 container.innerHTML = `<p style="text-align:center; color:#666; padding:3rem;">${currentLang === 'ar' ? 'عذراً، هذه المنتجات لم تعد متوفرة حالياً 🥲' : 'Sorry, these products are no longer available 🥲'}</p>`;
             } else {
                 container.innerHTML = `<p style="text-align:center; color:#666; padding:3rem;">${t.wishlist_empty}</p>`;
             }
             return;
+        }
+
+        // If some items were filtered out (deleted/hidden in DB), sync the global wishlist
+        if (validItems.length !== wishlist.length) {
+            wishlist = [...validItems];
+            saveWishlist();
         }
 
         container.innerHTML = validItems.map((item) => `
