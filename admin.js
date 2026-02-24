@@ -455,9 +455,46 @@ document.addEventListener('DOMContentLoaded', () => {
             const snap = await db.collection('settings').doc('storeTree').get();
             storeTreeData = snap.exists ? (snap.data().options || []) : [];
         }
-        tabContent.innerHTML = `<div class="actions-header"><h3>هيكل الأقسام</h3><button onclick="window.openCategoryModal('root')" class="add-btn"><i data-lucide="plus"></i> إضافة قسم رئيسي</button></div><div id="tree-container"></div><div style="margin-top:2rem; background:rgba(212,175,55,0.05); border:1px solid rgba(212,175,55,0.2); padding:1rem; border-radius:12px; margin-bottom:1rem;"><p style="color:var(--accent); font-size:0.9rem; font-weight:700;">💡 ملاحظة: التغييرات التي تجريها هنا (إضافة أو حذف) تكون "مؤقتة" حتى تضغط على زر الحفظ بالأسفل لتعميمها على الموقع.</p></div><button id="sync-tree" class="add-btn" style="width:100%; justify-content:center; height:60px;"><i data-lucide="save"></i> حفظ ونشر كوردات الموقع الآن</button>`;
+
+        tabContent.innerHTML = `
+            <div class="actions-header">
+                <h3>هيكل الأقسام</h3>
+                <button onclick="window.openCategoryModal('root')" class="add-btn"><i data-lucide="plus"></i> إضافة قسم رئيسي</button>
+            </div>
+            
+            <div style="margin-bottom:1.5rem; position:relative;">
+                <i data-lucide="search" style="position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--text-dim); width:18px;"></i>
+                <input id="cat-search" type="text" placeholder="🔍 بحث عن قسم محدد..." 
+                    style="width:100%; padding:12px 44px 12px 16px; background:var(--card); border:1px solid var(--border); border-radius:12px; color:var(--text); font-family:inherit;">
+            </div>
+
+            <div id="tree-container"></div>
+            
+            <div style="margin-top:2rem; background:rgba(212,175,55,0.05); border:1px solid rgba(212,175,55,0.2); padding:1rem; border-radius:12px; margin-bottom:1rem;">
+                <p style="color:var(--accent); font-size:0.9rem; font-weight:700;">💡 ملاحظة: التغييرات التي تجريها هنا (إضافة أو حذف) تكون "مؤقتة" حتى تضغط على زر الحفظ بالأسفل لتعميمها على الموقع.</p>
+            </div>
+            
+            <button id="sync-tree" class="add-btn" style="width:100%; justify-content:center; height:60px;"><i data-lucide="save"></i> حفظ ونشر كوردات الموقع الآن</button>
+        `;
+
         const container = document.getElementById('tree-container');
-        if (storeTreeData.length === 0) { container.innerHTML = '<p style="text-align:center; padding:3rem; color:var(--text-dim);">لم يتم إضافة أقسام بعد.</p>'; } else { renderTreeView(storeTreeData, container); }
+        const searchInput = document.getElementById('cat-search');
+
+        const performRender = (query = '') => {
+            container.innerHTML = '';
+            if (storeTreeData.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding:3rem; color:var(--text-dim);">لم يتم إضافة أقسام بعد.</p>';
+            } else {
+                const filteredData = query ? searchInTree(storeTreeData, query.toLowerCase()) : storeTreeData;
+                renderTreeView(filteredData, container, 0, !!query);
+            }
+            lucide.createIcons();
+        };
+
+        searchInput.oninput = (e) => performRender(e.target.value);
+
+        performRender();
+
         document.getElementById('sync-tree').onclick = async () => {
             await db.collection('settings').doc('storeTree').set({ options: storeTreeData });
             alert("✅ تم تحديث ونشر خريطة الأقسام بنجاح!");
@@ -465,13 +502,49 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     }
 
-    function renderTreeView(nodes, container, level = 0) {
+    function searchInTree(nodes, query) {
+        let results = [];
+        nodes.forEach(node => {
+            const matches = node.name.toLowerCase().includes(query) || (node.nameEn && node.nameEn.toLowerCase().includes(query));
+            let subResults = [];
+            if (node.options) subResults = searchInTree(node.options, query);
+
+            if (matches || subResults.length > 0) {
+                // If it matches or has children that match, keep it
+                results.push({ ...node, options: subResults });
+            }
+        });
+        return results;
+    }
+
+    function renderTreeView(nodes, container, level = 0, query = '') {
         nodes.forEach(node => {
             const el = document.createElement('div');
-            // Reduce indentation from 40px to 15px for mobile friendliness
-            el.className = 'tree-item'; el.style.marginRight = `${level * 15}px`;
-            el.innerHTML = `<div style="flex-grow:1; display:flex; align-items:center; gap:10px;"><i data-lucide="${level === 0 ? 'folder' : 'chevron-left'}" style="width:18px; color:var(--accent);"></i><span class="name">${node.name} <span style="color:var(--text-dim); font-size:0.8rem;">(${node.nameEn || 'No EN'})</span></span></div><div class="item-actions"><button onclick="window.openCategoryModal('${node.id}')" class="action-link add"><i data-lucide="plus-square"></i> فرعي</button><button onclick="window.deleteNode('${node.id}')" class="action-link del"><i data-lucide="trash-2"></i></button></div>`;
-            container.appendChild(el); if (node.options) renderTreeView(node.options, container, level + 1);
+            el.className = 'tree-item';
+            el.style.marginRight = `${level * 15}px`;
+
+            let displayName = node.name;
+            let displayEn = node.nameEn || '';
+
+            if (query) {
+                const regex = new RegExp(`(${query})`, 'gi');
+                displayName = node.name.replace(regex, '<mark style="background:var(--accent); color:#000; border-radius:4px; padding:0 2px;">$1</mark>');
+                if (displayEn) displayEn = displayEn.replace(regex, '<mark style="background:var(--accent); color:#000; border-radius:4px; padding:0 2px;">$1</mark>');
+                el.style.borderRight = "2px solid var(--accent)";
+            }
+
+            el.innerHTML = `
+                <div style="flex-grow:1; display:flex; align-items:center; gap:10px;">
+                    <i data-lucide="${level === 0 ? 'folder' : 'chevron-left'}" style="width:18px; color:var(--accent);"></i>
+                    <span class="name">${displayName} <span style="color:var(--text-dim); font-size:0.8rem;">(${displayEn || 'No EN'})</span></span>
+                </div>
+                <div class="item-actions">
+                    <button onclick="window.openCategoryModal('${node.id}')" class="action-link add"><i data-lucide="plus-square"></i> فرعي</button>
+                    <button onclick="window.deleteNode('${node.id}')" class="action-link del"><i data-lucide="trash-2"></i></button>
+                </div>
+            `;
+            container.appendChild(el);
+            if (node.options) renderTreeView(node.options, container, level + 1, query);
         });
     }
 

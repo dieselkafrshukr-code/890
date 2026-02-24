@@ -1649,3 +1649,74 @@ body.light-mode .close-detail {
         flex-direction: column;
     }
 }
+
+/* Coupon Section in Cart */
+.coupon-section {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+}
+
+.coupon-row {
+    display: flex;
+    gap: 8px;
+}
+
+.coupon-input {
+    flex: 1;
+    background: var(--btn-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+
+.coupon-apply-btn {
+    background: var(--gold);
+    color: #000;
+    border: none;
+    padding: 0 20px;
+    border-radius: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.coupon-msg {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* Fix Cart Drawer for Mobile Height and Button Visibility */
+@media (max-width: 600px) {
+    .cart-drawer {
+        height: 100vh !important;
+        height: 100dvh !important;
+        height: -webkit-fill-available !important;
+    }
+
+    .cart-footer {
+        padding: 1.25rem 1.25rem calc(2.5rem + env(safe-area-inset-bottom)) !important;
+        background: var(--surface) !important;
+        flex-shrink: 0 !important;
+        box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .cart-items {
+        flex-grow: 1 !important;
+        overflow-y: auto !important;
+    }
+
+    /* Ensure floating buttons are below the drawer */
+    .wa-float {
+        z-index: 1000 !important;
+    }
+
+    .cart-drawer {
+        z-index: 3000 !important;
+    }
+}
