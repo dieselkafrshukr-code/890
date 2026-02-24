@@ -276,15 +276,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Step 2: Vortex acceleration
         tl.to({}, {
-            duration: 2,
+            duration: 0.8,
             onUpdate: function () {
-                vortexSpeed = 0.02 + (this.progress() * 0.2);
+                vortexSpeed = 0.02 + (this.progress() * 0.3);
             }
         });
 
         // Step 3: THE FLASH & IMPACT
-        tl.to('.intro-flash', { opacity: 1, duration: 0.1, ease: "power4.in" });
-        tl.set('.intro-flash', { opacity: 0, delay: 0.1 });
+        tl.to('.intro-flash', { opacity: 1, duration: 0.05, ease: "power4.in" });
+        tl.set('.intro-flash', { opacity: 0, delay: 0.05 });
         tl.set({}, { onUpdate: () => { vortexMode = false; } });
 
         // Step 4: MATERIALIZATION
@@ -293,15 +293,15 @@ document.addEventListener('DOMContentLoaded', () => {
             scale: 1,
             z: 0,
             filter: 'blur(0px)',
-            duration: 2,
+            duration: 1,
             ease: "expo.out"
-        }, "-=0.1");
+        }, "-=0.05");
 
         tl.to('.intro-loading-line', {
             width: '300px',
-            duration: 3,
+            duration: 1.2,
             ease: "power2.inOut"
-        }, "-=1");
+        }, "-=0.5");
 
         // Step 5: WARP TO STORE
         tl.to({}, { duration: 1 }); // Admire the logo
@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
             opacity: 1,
             filter: 'blur(0px)',
             brightness: 1,
-            duration: 1.5,
+            duration: 0.8,
             ease: "power3.inOut"
         });
 
@@ -484,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             : '';
                         card.innerHTML = `
                             <div class="product-card-img">
-                                <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${pName}">
+                                <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${pName}" loading="lazy">
                             </div>
                             <div class="product-card-info">
                                 <div class="product-card-name">${pName}</div>
