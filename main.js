@@ -461,6 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!prodSnap.empty) {
                     prodSnap.forEach(doc => {
                         const p = doc.data();
+                        if (p.hidden === true) return; // Skip hidden products
                         const card = document.createElement('div');
                         card.className = 'product-card';
                         const pName = p[nameKey] || p.name;
@@ -530,6 +531,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const doc = await db.collection('products').doc(id).get();
         if (!doc.exists) return;
         detailedProd = doc.data();
+        if (detailedProd.hidden === true) {
+            console.warn("Product is hidden.");
+            return;
+        }
         currentProductId = doc.id;
         selSize = ""; selColor = "";
 
