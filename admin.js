@@ -331,47 +331,88 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!doc.exists) return;
         const o = doc.data();
         const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
+        const images = o.images || [];
+
+        // Parse products - actual stored format: "هودي (لون: أسود) (مقاس: L) [‪SKU-001‬]"
+        const rawItems = (o.item || '').split(' | ');
+        const productsHtml = rawItems.map((itemStr, idx) => {
+            const colorMatch = itemStr.match(/\(لون:\s*([^)]+)\)/);
+            const sizeMatch = itemStr.match(/\(مقاس:\s*([^)]+)\)/);
+            const skuMatch = itemStr.match(/\[[\u202a\u202c]*([^\]‪‬]+)[\u202a\u202c]*\]/);
+
+            const color = colorMatch ? colorMatch[1].trim() : null;
+            const size = sizeMatch ? sizeMatch[1].trim() : null;
+            const sku = skuMatch ? skuMatch[1].trim() : null;
+
+            // Clean product name
+            const cleanName = itemStr
+                .replace(/\(لون:[^)]+\)/g, '')
+                .replace(/\(مقاس:[^)]+\)/g, '')
+                .replace(/\[[\u202a\u202c]*[^\]‪‬]+[\u202a\u202c]*\]/g, '')
+                .trim();
+
+            const img = images[idx] || null;
+
+            return `<div style="display:flex; align-items:center; gap:12px; background:#0a0a0a; border:1px solid #222; border-radius:12px; padding:12px;">
+                ${img
+                    ? `<img src="${img}" alt="" onclick="window.openImageModal('${img}')"
+                        style="width:72px; height:72px; object-fit:cover; border-radius:10px; border:2px solid var(--border); cursor:zoom-in; flex-shrink:0; transition:transform 0.2s;"
+                        onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">`
+                    : `<div style="width:72px;height:72px;border-radius:10px;border:2px dashed #333;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#555;font-size:1.8rem;">📦</div>`
+                }
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:900; font-size:0.95rem; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${cleanName || itemStr}</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        ${color ? `<span style="background:rgba(212,175,55,0.15); color:#d4af37; border:1px solid rgba(212,175,55,0.3); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">🎨 ${color}</span>` : ''}
+                        ${size ? `<span style="background:rgba(33,150,243,0.15); color:#64b5f6; border:1px solid rgba(33,150,243,0.3); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">📐 ${size}</span>` : ''}
+                        ${sku ? `<span style="background:rgba(255,255,255,0.05); color:#888; border:1px solid #333; padding:3px 10px; border-radius:20px; font-size:0.72rem; font-family:monospace; letter-spacing:1px;">${sku}</span>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
 
         const content = document.getElementById('order-detail-content');
         content.innerHTML = `
-            <div style="display:flex; flex-direction:column; gap:15px; font-family:'Cairo', sans-serif;">
+            <div style="display:flex; flex-direction:column; gap:14px; font-family:'Cairo', sans-serif;">
                 <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
-                    <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">👤 بيانات العميل:</div>
+                    <div style="color:var(--accent); font-weight:900; margin-bottom:6px;">👤 بيانات العميل:</div>
                     <div style="font-size:1.1rem; font-weight:700;">${o.customer || '-'}</div>
-                    <div style="margin-top:5px; direction:ltr; font-family:monospace;">${o.phone || '-'}</div>
-                    ${o.phone2 ? `<div style="margin-top:2px; direction:ltr; font-family:monospace; color:var(--accent);">${o.phone2}</div>` : ''}
+                    <div style="margin-top:4px; direction:ltr; font-family:monospace; font-size:0.95rem;">${o.phone || '-'}</div>
+                    ${o.phone2 ? `<div style="margin-top:3px; direction:ltr; font-family:monospace; color:var(--accent); font-size:0.9rem;">📞 ${o.phone2}</div>` : ''}
                 </div>
-                
+
                 <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
-                    <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">📍 العنوان والمحافظة:</div>
-                    <div>${o.governorate || '-'}</div>
-                    <div style="font-size:0.9rem; color:var(--text-dim); margin-top:5px;">${o.address || '-'}</div>
+                    <div style="color:var(--accent); font-weight:900; margin-bottom:6px;">📍 العنوان والمحافظة:</div>
+                    <div style="font-weight:700;">${o.governorate || '-'}</div>
+                    <div style="font-size:0.9rem; color:var(--text-dim); margin-top:4px;">${o.address || '-'}</div>
                 </div>
-                
+
                 <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
-                    <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">📦 المنتجات المطلوبة:</div>
-                    <div style="white-space:pre-wrap; line-height:1.6;">${(o.item || '').split(' | ').join('\n')}</div>
+                    <div style="color:var(--accent); font-weight:900; margin-bottom:12px;">📦 المنتجات المطلوبة (${rawItems.length}):</div>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        ${productsHtml || '<div style="color:var(--text-dim);">لا توجد بيانات.</div>'}
+                    </div>
                 </div>
-                
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                     <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
-                        <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">💰 الإجمالي:</div>
+                        <div style="color:var(--accent); font-weight:900; margin-bottom:4px;">💰 الإجمالي:</div>
                         <div style="font-size:1.2rem; font-weight:900; color:#4caf50;">${o.total || '-'} ج.م</div>
+                        ${o.shipping ? `<div style="font-size:0.8rem; color:var(--text-dim); margin-top:2px;">شحن: ${o.shipping} ج.م</div>` : ''}
                     </div>
                     <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
-                        <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">💳 الدفع:</div>
-                        <div style="font-weight:700;">${o.paymentMethod === 'online' ? 'اون لاين (فيزا)' : 'عند الاستلام (كاش)'}</div>
+                        <div style="color:var(--accent); font-weight:900; margin-bottom:4px;">💳 الدفع:</div>
+                        <div style="font-weight:700; font-size:0.9rem;">${o.paymentMethod === 'online' ? '🔵 فيزا / اون لاين' : '💵 عند الاستلام'}</div>
                     </div>
                 </div>
 
-                <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
-                    <div style="color:var(--accent); font-weight:900; margin-bottom:5px;">🕒 وقت الطلب:</div>
-                    <div style="font-size:0.9rem;">${date}</div>
+                <div style="background:var(--glass); padding:12px 15px; border-radius:12px; border:1px solid var(--border); font-size:0.85rem; color:var(--text-dim);">
+                    🕒 ${date}
                 </div>
 
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button onclick="window.deleteOrder('${id}')" class="add-btn" style="flex:1; background:#ff4444; color:#fff; justify-content:center;">حذف الطلب</button>
-                    ${o.phone ? `<a href="https://wa.me/${o.phone.startsWith('0') ? '2' + o.phone : o.phone}" target="_blank" class="add-btn" style="flex:1; background:#25d366; color:#fff; justify-content:center; text-decoration:none;">واتساب</a>` : ''}
+                <div style="display:flex; gap:10px; padding-top:4px;">
+                    <button onclick="window.deleteOrder('${id}')" class="add-btn" style="flex:1; background:#ff4444; color:#fff; justify-content:center; padding:12px;">🗑️ حذف</button>
+                    ${o.phone ? `<a href="https://wa.me/${o.phone.startsWith('0') ? '2' + o.phone : o.phone}?text=${encodeURIComponent(`مرحباً ${o.customer || ''}، بخصوص طلبك رقم: ${id}`)}" target="_blank" class="add-btn" style="flex:2; background:#25d366; color:#fff; justify-content:center; padding:12px; text-decoration:none;">💬 تواصل واتساب</a>` : ''}
                 </div>
             </div>
         `;
@@ -379,6 +420,32 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-order-detail').classList.remove('hidden');
         lucide.createIcons();
     };
+
+    window.openImageModal = (imageUrl) => {
+        const modal = document.getElementById('image-modal');
+        const modalImg = document.getElementById('image-modal-content');
+        modal.style.display = 'block';
+        modalImg.src = imageUrl;
+        const span = document.getElementsByClassName('close-image-modal')[0];
+        span.onclick = () => {
+            modal.style.display = 'none';
+        };
+        modal.onclick = (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+    };
+
+    // Add the image modal HTML to the body if it doesn't exist
+    if (!document.getElementById('image-modal')) {
+        document.body.insertAdjacentHTML('beforeend', `
+            <div id="image-modal" style="display:none; position:fixed; z-index:100000; padding-top:100px; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.9);">
+                <span class="close-image-modal" style="position:absolute; top:15px; right:35px; color:#f1f1f1; font-size:40px; font-weight:bold; transition:0.3s; cursor:pointer;">&times;</span>
+                <img class="modal-content" id="image-modal-content" style="margin:auto; display:block; width:80%; max-width:700px;">
+            </div>
+        `);
+    }
 
     // --- 2. CATEGORIES ---
     async function renderCategories(forceFetch = false) {
