@@ -138,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tab === 'products') renderProducts();
         if (tab === 'governorates') renderGovernorates();
         if (tab === 'coupons') renderCoupons();
+        if (tab === 'settings') renderSettings();
     }
 
     // --- NOTIFICATIONS ---
@@ -1017,5 +1018,53 @@ document.addEventListener('DOMContentLoaded', () => {
         await db.collection('coupons').doc(id).delete();
         renderCoupons();
     };
+
+    // --- 6. GENERAL SETTINGS ---
+    async function renderSettings() {
+        tabContent.innerHTML = `
+            <div class="actions-header"><h3>⚙️ إعدادات المتجر العامة</h3></div>
+            <div class="settings-grid" style="display:grid; gap:30px; margin-top:2rem; max-width:600px;">
+                <div class="settings-card" style="background:var(--card); padding:24px; border-radius:20px; border:1px solid var(--border);">
+                    <div style="font-weight:900; font-size:1.1rem; margin-bottom:20px; color:var(--accent); display:flex; align-items:center; gap:10px;">
+                        <i data-lucide="phone"></i> أرقام الواتساب (استقبال الطلبات)
+                    </div>
+                    <div class="input-group" style="margin-bottom:15px;">
+                        <label>الرقم الأول (مثال: 201012345678):</label>
+                        <input id="set-wa-1" type="text" placeholder="2010xxxxxxxx">
+                    </div>
+                    <div class="input-group" style="margin-bottom:15px;">
+                        <label>الرقم الثاني (اختياري):</label>
+                        <input id="set-wa-2" type="text" placeholder="2010xxxxxxxx">
+                    </div>
+                    <button id="save-wa-settings" class="save-btn" style="width:100%; margin-top:10px; height:50px;">حفظ الأرقام</button>
+                </div>
+            </div>`;
+
+        lucide.createIcons();
+
+        // Load existing
+        try {
+            const snap = await db.collection('settings').doc('whatsappNumbers').get();
+            if (snap.exists) {
+                const data = snap.data();
+                document.getElementById('set-wa-1').value = data.wa1 || '';
+                document.getElementById('set-wa-2').value = data.wa2 || '';
+            }
+        } catch (e) { console.error(e); }
+
+        document.getElementById('save-wa-settings').onclick = async () => {
+            const wa1 = document.getElementById('set-wa-1').value.trim();
+            const wa2 = document.getElementById('set-wa-2').value.trim();
+
+            if (!wa1) return alert("❌ يجب إدخال الرقم الأول على الأقل!");
+
+            try {
+                await db.collection('settings').doc('whatsappNumbers').set({ wa1, wa2 });
+                alert("✅ تم حفظ إعدادات الواتساب بنجاح");
+            } catch (e) {
+                alert("❌ خطأ في الحفظ: " + e.message);
+            }
+        };
+    }
 
 });

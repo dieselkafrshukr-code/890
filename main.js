@@ -91,9 +91,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
-    // WhatsApp Numbers
-    const WA_NUMBER = "201020451206";   // الرقم الأول
-    const WA_NUMBER_2 = "201020451206"; // الرقم الثاني - غيّره حسب رغبتك
+    // WhatsApp Numbers (Defaults - updated from Firebase)
+    let WA_NUMBER = "201020451206";
+    let WA_NUMBER_2 = "201020451206";
 
     // Egypt Governorates
     const EGYPT_GOVERNORATES = [
@@ -343,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
 
         try {
-            await Promise.all([syncData(), loadShippingPrices()]);
+            await Promise.all([syncData(), loadShippingPrices(), loadWhatsAppNumbers()]);
         } catch (e) { console.error("Init failed:", e); }
 
         clearTimeout(emergencyShow);
@@ -383,6 +383,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.CURRENT_SHIPPING_PRICES = shippingPrices;
         console.log('📦 أسعار الشحن النهائية:', shippingPrices);
+    }
+
+    async function loadWhatsAppNumbers() {
+        try {
+            const snap = await db.collection('settings').doc('whatsappNumbers').get();
+            if (snap.exists) {
+                const data = snap.data();
+                if (data.wa1) WA_NUMBER = data.wa1;
+                if (data.wa2) WA_NUMBER_2 = data.wa2;
+                console.log("📲 تم تحديث أرقام الواتساب من الداشبورد");
+            }
+        } catch (e) { console.warn("Could not load WA numbers:", e); }
     }
 
     // Centralized shipping price lookup (handles Arabic text normalization)
