@@ -376,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display:flex; flex-wrap:wrap; gap:6px;">
                         ${color ? `<span style="background:rgba(212,175,55,0.15); color:#d4af37; border:1px solid rgba(212,175,55,0.3); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">🎨 ${color}</span>` : ''}
                         ${size ? `<span style="background:rgba(33,150,243,0.15); color:#64b5f6; border:1px solid rgba(33,150,243,0.3); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">📐 ${size}</span>` : ''}
-                        ${sku ? `<span style="background:rgba(255,255,255,0.05); color:#888; border:1px solid #333; padding:3px 10px; border-radius:20px; font-size:0.72rem; font-family:monospace; letter-spacing:1px;">${sku}</span>` : ''}
+                        ${sku ? `<span style="background:rgba(255,255,255,0.05); color:#eee; border:1px solid #444; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-family:monospace; letter-spacing:1px; font-weight:bold;">🎫 SKU: ${sku}</span>` : ''}
                     </div>
                 </div>
             </div>`;

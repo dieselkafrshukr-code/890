@@ -54,7 +54,8 @@ module.exports = async function handler(req, res) {
                     price: data.price,
                     color: item.color,
                     size: item.size,
-                    image: data.mainImage || '' // ✅ إضافة الصورة
+                    image: data.mainImage || '',
+                    sku: data.sku || '' // ✅ إضافة كود المنتج
                 });
             }
         }
@@ -71,7 +72,7 @@ module.exports = async function handler(req, res) {
         const { Timestamp } = require('firebase-admin/firestore');
 
         // 3. تجهيز بيانات إضافية للوحة التحكم (Summary for Admin)
-        const itemSummary = itemsDetail.map(i => `${i.name} (${i.color || ''} - ${i.size || ''})`).join(' | ');
+        const itemSummary = itemsDetail.map(i => `${i.name} [${i.sku || ''}] (${i.color || ''} - ${i.size || ''})`).join(' | ');
         const productImages = itemsDetail.map(i => i.image).filter(img => img);
 
         // 4. حفظ الأوردر
