@@ -13,24 +13,30 @@ function getDB() {
     if (!getApps().length) {
         try {
             const projectId = "el-toufan";
-            const clientEmail = process.env.FB_CLIENT_EMAIL;
-            let privateKey = process.env.FB_PRIVATE_KEY;
+            const clientEmail = process.env.FB_CLIENT_EMAIL?.trim();
+            let privateKey = process.env.FB_PRIVATE_KEY?.trim();
 
             if (!clientEmail || !privateKey) {
-                console.error("❌ Missing FB_CLIENT_EMAIL or FB_PRIVATE_KEY");
-                throw new Error("بيانات السيرفر ناقصة (FB_CLIENT_EMAIL or FB_PRIVATE_KEY is missing)");
+                console.error("❌ FB_CLIENT_EMAIL or FB_PRIVATE_KEY is missing!");
+                throw new Error("بيانات السيرفر ناقصة (Variables are missing)");
             }
 
-            // 🛡️ تنظيف المفتاح من أي "عك" (مسافات، علامات تنصيص، أو رموز غلط)
-            privateKey = privateKey.trim();
+            // 🛡️ تنظيف "ذكي" للمفتاح (Smart Cleanup)
+            // 1. شيل أي علامات تنصيص في الأول أو الآخر
+            privateKey = privateKey.replace(/^["']|["']$/g, '');
 
-            // لو المستخدم نسخه بـ "علامات تنصيص" في الأول والآخر، نشيلها
-            if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-                privateKey = privateKey.substring(1, privateKey.length - 1);
-            }
-
-            // تحويل الـ \n النصية لأسطر حقيقية (أهم خطوة للـ PEM)
+            // 2. حول أي \n مكتوبة (كـ نص) لسطر حقيقي
             privateKey = privateKey.replace(/\\n/g, '\n');
+
+            // 3. اتأكد إنه بيبدأ وينتهي بالشرطات الصح (لو العميل نسيها)
+            if (!privateKey.includes("-----BEGIN PRIVATE KEY-----")) {
+                privateKey = "-----BEGIN PRIVATE KEY-----\n" + privateKey;
+            }
+            if (!privateKey.includes("-----END PRIVATE KEY-----")) {
+                privateKey = privateKey + "\n-----END PRIVATE KEY-----";
+            }
+
+            console.log("Key Cleaned. Length:", privateKey.length);
 
             initializeApp({
                 credential: cert({
@@ -39,10 +45,11 @@ function getDB() {
                     privateKey: privateKey
                 })
             });
-            console.log("✅ Firebase Admin initialized successfully!");
+            console.log("✅ Firebase Admin initialized!");
         } catch (e) {
             console.error("Firebase Init Error:", e.message);
-            throw e;
+            // هنبعت رسالة مفهومة للعميل عشان نعرف العيب فين
+            throw new Error(`مشكلة في المفتاح: ${e.message} (Length: ${process.env.FB_PRIVATE_KEY?.length || 0})`);
         }
     }
     db = getFirestore();
