@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let couponType = 'percent';
     let allProductCards = [];
     let currentProductId = null;
+    let productCache = {}; // Cache for category products
 
     let currentLang = localStorage.getItem('eltoufan_lang') || 'ar';
 
@@ -262,29 +263,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         loop();
 
-        // GSAP ORCHESTRATION
+        // GSAP ORCHESTRATION - SIGNIFICANTLY SPED UP
         const tl = gsap.timeline({
             onComplete: () => {
                 setTimeout(() => {
                     initApp();
-                }, 100);
+                }, 50);
             }
         });
 
+        // Skip on click
+        introScreen.onclick = () => {
+            tl.progress(0.99);
+            initApp();
+        };
+
         // Step 1: Eye focus
-        tl.to({}, { duration: 1 }); // Silence
+        tl.to({}, { duration: 0.3 }); // Silence
 
         // Step 2: Vortex acceleration
         tl.to({}, {
-            duration: 0.8,
+            duration: 0.4,
             onUpdate: function () {
-                vortexSpeed = 0.02 + (this.progress() * 0.3);
+                vortexSpeed = 0.02 + (this.progress() * 0.5);
             }
         });
 
         // Step 3: THE FLASH & IMPACT
         tl.to('.intro-flash', { opacity: 1, duration: 0.05, ease: "power4.in" });
-        tl.set('.intro-flash', { opacity: 0, delay: 0.05 });
+        tl.set('.intro-flash', { opacity: 0, delay: 0.02 });
         tl.set({}, { onUpdate: () => { vortexMode = false; } });
 
         // Step 4: MATERIALIZATION
@@ -293,18 +300,18 @@ document.addEventListener('DOMContentLoaded', () => {
             scale: 1,
             z: 0,
             filter: 'blur(0px)',
-            duration: 1,
+            duration: 0.5,
             ease: "expo.out"
         }, "-=0.05");
 
         tl.to('.intro-loading-line', {
             width: '300px',
-            duration: 1.2,
+            duration: 0.6,
             ease: "power2.inOut"
-        }, "-=0.5");
+        }, "-=0.3");
 
         // Step 5: WARP TO STORE
-        tl.to({}, { duration: 1 }); // Admire the logo
+        tl.to({}, { duration: 0.4 }); // Reduced wait
 
         tl.add(() => {
             warpMode = true;
@@ -317,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
             opacity: 1,
             filter: 'blur(0px)',
             brightness: 1,
-            duration: 0.8,
+            duration: 0.4,
             ease: "power3.inOut"
         });
 
@@ -332,19 +339,41 @@ document.addEventListener('DOMContentLoaded', () => {
         initUltimateIntro();
     }
 
+    let allProducts = []; // Global products list for instant filtering
+
     async function initApp() {
-        // Show app if it takes more than 3 seconds to load data
+        // Show app if it takes more than 5 seconds to load data
         const emergencyShow = setTimeout(() => {
             if (mainApp && mainApp.classList.contains('hidden')) {
                 mainApp.classList.remove('hidden');
                 mainApp.style.opacity = '1';
                 mainApp.style.transform = 'translateY(0)';
             }
-        }, 3000);
+        }, 5000);
 
         try {
-            await Promise.all([syncData(), loadShippingPrices(), loadWhatsAppNumbers()]);
-        } catch (e) { console.error("Init failed:", e); }
+            // Pre-fetch everything in parallel
+            const [treeSnap, prices, wa, productsSnap] = await Promise.all([
+                db.collection('settings').doc('storeTree').get(),
+                loadShippingPrices(),
+                loadWhatsAppNumbers(),
+                db.collection('products').get()
+            ]);
+
+            if (treeSnap.exists) {
+                storeTree = treeSnap.data();
+                currentLevel = storeTree;
+            } else {
+                useDefaultData();
+            }
+
+            allProducts = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log(`📦 Loaded ${allProducts.length} products locally.`);
+
+        } catch (e) {
+            console.error("Init failed:", e);
+            useDefaultData();
+        }
 
         clearTimeout(emergencyShow);
         mainApp.classList.remove('hidden');
@@ -413,18 +442,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return 0;
     }
 
-    async function syncData() {
-        try {
-            const snap = await db.collection('settings').doc('storeTree').get();
-            if (snap.exists) {
-                storeTree = snap.data();
-                currentLevel = storeTree;
-                navigationStack = [];
-            } else {
-                useDefaultData();
-            }
-        } catch (e) { useDefaultData(); }
-    }
 
     function useDefaultData() {
         storeTree.options = defaultData;
@@ -441,18 +458,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const currentStepIndicator = document.querySelector('.step-indicator');
         if (currentStepIndicator) {
-            const depth = navigationStack.length + 1;
-            let stepHtml = '';
-            for (let i = 1; i <= depth; i++) {
-                const isLast = (i === depth);
-                const className = isLast ? 'step active' : 'step completed';
-                stepHtml += `<div class="${className}" data-step="${i}">${i}</div>`;
-                if (i < depth) {
-                    stepHtml += `<div class="step-line active"></div>`;
-                }
+            const depth = navigationStack.length;
+            let stepHtml = `<div class="step ${depth === 0 ? 'active' : 'completed'}" onclick="window.resetApp()" style="cursor:pointer;">${t.start}</div>`;
+
+            // Skip the first item if it's the store root to avoid redundancy with "Start"
+            navigationStack.forEach((nav, idx) => {
+                if (idx === 0) return;
+                const navName = nav[nameKey] || nav.name;
+                stepHtml += `<div class="step-line active"></div>`;
+                stepHtml += `<div class="step completed" onclick="window.jumpToStep(${idx})" style="cursor:pointer;">${navName}</div>`;
+            });
+
+            if (depth > 0) {
+                stepHtml += `<div class="step-line active"></div>`;
+                stepHtml += `<div class="step active">${currentLevel[nameKey] || currentLevel.name}</div>`;
             }
             currentStepIndicator.innerHTML = stepHtml;
         }
+
+        // Sibling Quick Nav (Other categories at the same level)
+        const parent = navigationStack[navigationStack.length - 1] || storeTree;
+        if (parent.options && parent.options.length > 1 && navigationStack.length > 0) {
+            let siblingHtml = `<div class="sibling-nav-title">${currentLang === 'ar' ? 'أقسام أخرى:' : 'Other Categories:'}</div><div class="sibling-nav-scroll">`;
+            parent.options.forEach(opt => {
+                const isActive = opt.id === currentLevel.id;
+                siblingHtml += `<button class="sibling-chip ${isActive ? 'active' : ''}" onclick="window.switchSibling('${opt.id}')">${opt[nameKey] || opt.name}</button>`;
+            });
+            siblingHtml += `</div>`;
+
+            let siblingContainer = document.getElementById('sibling-nav');
+            if (!siblingContainer) {
+                siblingContainer = document.createElement('div');
+                siblingContainer.id = 'sibling-nav';
+                siblingContainer.className = 'sibling-nav-container';
+                currentStepIndicator.parentNode.insertBefore(siblingContainer, currentStepIndicator.nextSibling);
+            }
+            siblingContainer.innerHTML = siblingHtml;
+            siblingContainer.classList.remove('hidden');
+        } else {
+            const siblingContainer = document.getElementById('sibling-nav');
+            if (siblingContainer) siblingContainer.classList.add('hidden');
+        }
+
         optionsGrid.innerHTML = '';
 
         // Sub-Categories
@@ -466,41 +513,38 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Products
+        // Products - INSTANT LOCAL FILTERING (No more database delay!)
         if (currentLevel.id) {
-            try {
-                const prodSnap = await db.collection('products').where('categoryId', '==', currentLevel.id).get();
-                if (!prodSnap.empty) {
-                    prodSnap.forEach(doc => {
-                        const p = doc.data();
-                        if (p.hidden === true) return; // Skip hidden products
-                        const card = document.createElement('div');
-                        card.className = 'product-card';
-                        const pName = p[nameKey] || p.name;
-                        const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
-                        const mainColorName = (currentLang === 'en' && p.mainColorEn) ? p.mainColorEn : p.mainColor;
-                        const colorBadge = mainColorName
-                            ? `<div class="product-color-badge">🎨 ${mainColorName}</div>`
-                            : '';
-                        card.innerHTML = `
-                            <div class="product-card-img">
-                                <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${pName}" loading="lazy">
-                            </div>
-                            <div class="product-card-info">
-                                <div class="product-card-name">${pName}</div>
-                                ${colorBadge}
-                                <div class="product-card-price">${p.price}${currency}</div>
-                            </div>
-                        `;
-                        card.onclick = () => window.openProductDetail(doc.id);
-                        optionsGrid.appendChild(card);
-                    });
-                }
-            } catch (e) { console.error(e); }
+            const products = allProducts.filter(p => p.categoryId === currentLevel.id);
+            if (products.length > 0) {
+                products.forEach(p => {
+                    if (p.hidden === true) return; // Skip hidden products
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    const pName = p[nameKey] || p.name;
+                    const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
+                    const mainColorName = (currentLang === 'en' && p.mainColorEn) ? p.mainColorEn : p.mainColor;
+                    const colorBadge = mainColorName
+                        ? `<div class="product-color-badge">🎨 ${mainColorName}</div>`
+                        : '';
+                    card.innerHTML = `
+                        <div class="product-card-img">
+                            <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${pName}" loading="lazy">
+                        </div>
+                        <div class="product-card-info">
+                            <div class="product-card-name">${pName}</div>
+                            ${colorBadge}
+                            <div class="product-card-price">${p.price}${currency}</div>
+                        </div>
+                    `;
+                    card.onclick = () => window.openProductDetail(p.id);
+                    optionsGrid.appendChild(card);
+                });
+            }
         }
 
-        backBtn.classList.toggle('hidden', navigationStack.length <= 1);
-        resetBtn.classList.toggle('hidden', navigationStack.length <= 1);
+        backBtn.classList.toggle('hidden', navigationStack.length === 0);
+        resetBtn.classList.toggle('hidden', navigationStack.length === 0);
 
         const searchWrapper = document.getElementById('search-bar-wrapper');
         const hasProducts = currentLevel.id && !currentLevel.options?.length;
@@ -508,6 +552,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         allProductCards = Array.from(optionsGrid.querySelectorAll('.product-card'));
         lucide.createIcons();
+
+        // Scroll to top for a fresh view
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     async function selectOption(opt) {
@@ -517,7 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.goBack = async () => {
-        if (navigationStack.length > 1) {
+        if (navigationStack.length > 0) {
             currentLevel = navigationStack.pop();
             await renderStage();
         }
@@ -527,6 +574,21 @@ document.addEventListener('DOMContentLoaded', () => {
         currentLevel = storeTree;
         navigationStack = [];
         await renderStage();
+    };
+
+    window.jumpToStep = async (idx) => {
+        currentLevel = navigationStack[idx];
+        navigationStack = navigationStack.slice(0, idx);
+        await renderStage();
+    };
+
+    window.switchSibling = async (id) => {
+        const parent = navigationStack[navigationStack.length - 1] || storeTree;
+        const opt = parent.options.find(o => o.id === id);
+        if (opt) {
+            currentLevel = opt;
+            await renderStage();
+        }
     };
 
     backBtn.onclick = window.goBack;
