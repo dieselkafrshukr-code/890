@@ -181,6 +181,9 @@ module.exports = async function handler(req, res) {
 
     } catch (err) {
         console.error('❌ create-order error:', err);
-        return res.status(500).json({ error: 'حدث خطأ في السيرفر. حاول مرة أخرى.' });
+        return res.status(500).json({
+            error: 'خطأ في السيرفر: ' + err.message,
+            details: err.stack
+        });
     }
 };
