@@ -11,8 +11,17 @@ let db;
 function getDB() {
     if (db) return db;
     if (!getApps().length) {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-        initializeApp({ credential: cert(serviceAccount) });
+        try {
+            let serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            // إصلاح مشكلة الـ newlines في المفتاح الخاص (مشكلة مشهورة في Vercel)
+            if (serviceAccount.private_key) {
+                serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+            }
+            initializeApp({ credential: cert(serviceAccount) });
+        } catch (e) {
+            console.error("Firebase Init Error:", e.message);
+            throw new Error("خطأ في تهيئة قاعدة البيانات - تأكد من الـ Environment Variables");
+        }
     }
     db = getFirestore();
     return db;
