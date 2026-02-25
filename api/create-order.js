@@ -12,37 +12,21 @@ function getDB() {
     if (db) return db;
     if (!getApps().length) {
         try {
-            let config;
-            const fullJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+            // الطريقة الأسهل: هنستخدم 3 متغيرات بسيطة جداً
+            const projectId = "el-toufan"; // جبته من ملف firebase-config.js عندك
+            const clientEmail = process.env.FB_CLIENT_EMAIL;
+            const privateKey = process.env.FB_PRIVATE_KEY;
 
-            if (fullJson) {
-                // الطريقة الأولى: مفتاح JSON كامل (سطر واحد)
-                console.log("Attempting to init with full JSON...");
-                config = JSON.parse(fullJson);
-            } else {
-                // الطريقة الثانية: مفاتيح منفصلة
-                console.log("Attempting to init with separate keys...");
-                config = {
-                    projectId: process.env.FB_PROJECT_ID,
-                    clientEmail: process.env.FB_CLIENT_EMAIL,
-                    privateKey: process.env.FB_PRIVATE_KEY
-                };
-            }
-
-            if (!config.projectId || !config.clientEmail || !config.privateKey) {
-                throw new Error("بيانات Firebase ناقصة. تأكد من إدخال FIREBASE_SERVICE_ACCOUNT أو المفاتيح الثلاثة المنفصلة.");
-            }
-
-            // إصلاح الـ newlines في المفتاح الخاص
-            if (config.privateKey) {
-                config.privateKey = config.privateKey.replace(/\\n/g, '\n');
+            if (!clientEmail || !privateKey) {
+                console.error("❌ Missing FB_CLIENT_EMAIL or FB_PRIVATE_KEY");
+                throw new Error("بيانات السيرفر ناقصة (FB_CLIENT_EMAIL or FB_PRIVATE_KEY is missing)");
             }
 
             initializeApp({
                 credential: cert({
-                    projectId: config.projectId,
-                    clientEmail: config.clientEmail,
-                    privateKey: config.privateKey
+                    projectId: projectId,
+                    clientEmail: clientEmail,
+                    privateKey: privateKey.replace(/\\n/g, '\n')
                 })
             });
             console.log("✅ Firebase Admin initialized successfully!");
