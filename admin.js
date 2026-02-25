@@ -141,6 +141,44 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tab === 'settings') renderSettings();
     }
 
+    // --- UTILS ---
+    window.copyToClipboard = (text, btn) => {
+        const fallbackCopy = (str) => {
+            const el = document.createElement('textarea');
+            el.value = str;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+        };
+
+        const performCopy = async () => {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    fallbackCopy(text);
+                }
+
+                // Success Effect
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check" style="width:12px; color:#4caf50;"></i>';
+                lucide.createIcons();
+                btn.style.borderColor = '#4caf50';
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    lucide.createIcons();
+                    btn.style.borderColor = '';
+                }, 2000);
+            } catch (err) {
+                console.error('Copy failed', err);
+                alert("تعذر النسخ التلقائي: " + text);
+            }
+        };
+        performCopy();
+    };
+
     // --- NOTIFICATIONS ---
     let lastOrderCount = null;
     let soundEnabled = true;
@@ -379,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${sku ? `
                             <div style="display:flex; align-items:center; gap:4px;">
                                 <span style="background:rgba(255,255,255,0.05); color:#eee; border:1px solid #444; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-family:monospace; letter-spacing:1px; font-weight:bold;">🎫 SKU: ${sku}</span>
-                                <button onclick="navigator.clipboard.writeText('${sku}'); this.innerHTML='<i data-lucide=\'check\' style=\'width:12px;\'></i>'; setTimeout(()=> { this.innerHTML='<i data-lucide=\'copy\' style=\'width:12px;\'></i>'; lucide.createIcons(); }, 2000); lucide.createIcons();" 
+                                <button onclick="window.copyToClipboard('${sku}', this)" 
                                     class="action-link" style="padding:4px; background:rgba(255,255,255,0.1); border-radius:6px; border:1px solid #444; color:var(--accent); cursor:pointer;" title="نسخ الكود">
                                     <i data-lucide="copy" style="width:12px;"></i>
                                 </button>
