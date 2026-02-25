@@ -12,21 +12,31 @@ function getDB() {
     if (db) return db;
     if (!getApps().length) {
         try {
-            // الطريقة الأسهل: هنستخدم 3 متغيرات بسيطة جداً
-            const projectId = "el-toufan"; // جبته من ملف firebase-config.js عندك
+            const projectId = "el-toufan";
             const clientEmail = process.env.FB_CLIENT_EMAIL;
-            const privateKey = process.env.FB_PRIVATE_KEY;
+            let privateKey = process.env.FB_PRIVATE_KEY;
 
             if (!clientEmail || !privateKey) {
                 console.error("❌ Missing FB_CLIENT_EMAIL or FB_PRIVATE_KEY");
                 throw new Error("بيانات السيرفر ناقصة (FB_CLIENT_EMAIL or FB_PRIVATE_KEY is missing)");
             }
 
+            // 🛡️ تنظيف المفتاح من أي "عك" (مسافات، علامات تنصيص، أو رموز غلط)
+            privateKey = privateKey.trim();
+
+            // لو المستخدم نسخه بـ "علامات تنصيص" في الأول والآخر، نشيلها
+            if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+                privateKey = privateKey.substring(1, privateKey.length - 1);
+            }
+
+            // تحويل الـ \n النصية لأسطر حقيقية (أهم خطوة للـ PEM)
+            privateKey = privateKey.replace(/\\n/g, '\n');
+
             initializeApp({
                 credential: cert({
                     projectId: projectId,
                     clientEmail: clientEmail,
-                    privateKey: privateKey.replace(/\\n/g, '\n')
+                    privateKey: privateKey
                 })
             });
             console.log("✅ Firebase Admin initialized successfully!");
