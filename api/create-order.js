@@ -67,6 +67,8 @@ module.exports = async function handler(req, res) {
 
         const total = subtotal + shipping;
 
+        const { Timestamp } = require('firebase-admin/firestore');
+
         // 3. حفظ الأوردر
         const orderData = {
             customer,
@@ -80,7 +82,7 @@ module.exports = async function handler(req, res) {
             shipping,
             total,
             status: 'pending',
-            createdAt: new Date().toISOString(),
+            createdAt: Timestamp.now(), // ✅ استخدام تايم ستامب حقيقي
             source: 'Server (Base64)'
         };
 
