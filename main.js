@@ -476,29 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentStepIndicator.innerHTML = stepHtml;
         }
 
-        // Sibling Quick Nav (Other categories at the same level)
-        const parent = navigationStack[navigationStack.length - 1] || storeTree;
-        if (parent.options && parent.options.length > 1 && navigationStack.length > 0) {
-            let siblingHtml = `<div class="sibling-nav-title">${currentLang === 'ar' ? 'أقسام أخرى:' : 'Other Categories:'}</div><div class="sibling-nav-scroll">`;
-            parent.options.forEach(opt => {
-                const isActive = opt.id === currentLevel.id;
-                siblingHtml += `<button class="sibling-chip ${isActive ? 'active' : ''}" onclick="window.switchSibling('${opt.id}')">${opt[nameKey] || opt.name}</button>`;
-            });
-            siblingHtml += `</div>`;
-
-            let siblingContainer = document.getElementById('sibling-nav');
-            if (!siblingContainer) {
-                siblingContainer = document.createElement('div');
-                siblingContainer.id = 'sibling-nav';
-                siblingContainer.className = 'sibling-nav-container';
-                currentStepIndicator.parentNode.insertBefore(siblingContainer, currentStepIndicator.nextSibling);
-            }
-            siblingContainer.innerHTML = siblingHtml;
-            siblingContainer.classList.remove('hidden');
-        } else {
-            const siblingContainer = document.getElementById('sibling-nav');
-            if (siblingContainer) siblingContainer.classList.add('hidden');
-        }
+        // Sibling Quick Nav removed as requested
 
         optionsGrid.innerHTML = '';
 
@@ -745,7 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (variant && variant.image) itemImage = variant.image;
         }
 
-        window.addToCart(fullTitle, detailedProd.price, itemImage, detailedProd.sku);
+        window.addToCart(fullTitle, detailedProd.price, itemImage, detailedProd.sku, currentProductId, selColor, selSize);
         window.closeProductModal();
     };
 
@@ -753,8 +731,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cartTrigger) cartTrigger.onclick = () => window.toggleCart();
     window.toggleCart = () => cartDrawer.classList.toggle('hidden');
 
-    window.addToCart = (name, price, image = '', sku = '') => {
-        cart.push({ name, price: parseFloat(price), image, sku });
+    window.addToCart = (name, price, image = '', sku = '', productId = '', color = '', size = '') => {
+        cart.push({ name, price: parseFloat(price), image, sku, productId, color, size });
         updateCartUI();
         if (cartDrawer.classList.contains('hidden')) window.toggleCart();
     };
@@ -991,19 +969,46 @@ document.addEventListener('DOMContentLoaded', () => {
         if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = '⏳ جاري إرسال الطلب...'; }
 
         try {
-            const subtotal = cart.reduce((s, i) => s + i.price, 0);
-            const discount = (couponDiscount > 0)
-                ? (couponType === 'percent' ? Math.round(subtotal * couponDiscount / 100) : couponDiscount)
-                : 0;
-            const discountedTotal = Math.max(0, subtotal - discount);
-            const shipping = getShippingPrice(govSelection);
-            const finalTotal = discountedTotal + shipping;
-
-            const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
             const t = translations[currentLang];
             const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
 
-            // Build WhatsApp message
+            // ✅ بنبعت للسيرفر: product IDs فقط (مش الأسعار)
+            const cartPayload = cart.map(i => ({
+                productId: i.productId,
+                color: i.color || '',
+                size: i.size || ''
+            }));
+
+            // 🔐 السيرفر هو اللي يحسب السعر الحقيقي
+            const response = await fetch('/api/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer: name,
+                    phone: phone,
+                    phone2: phone2,
+                    address: address,
+                    governorate: govSelection,
+                    paymentMethod: paymentMethod,
+                    cartItems: cartPayload,
+                    couponCode: couponCode || ''
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'فشل إنشاء الطلب');
+            }
+
+            // ✅ الأرقام جاية من السيرفر (موثوقة 100%)
+            const finalTotal = result.total;
+            const shipping = result.shipping;
+            const discount = result.discount;
+            const subtotal = result.subtotal;
+
+            // Build WhatsApp message بالأسعار الحقيقية من السيرفر
+            const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
             const waText = encodeURIComponent(
                 `${t.order_whatsapp_title}\n` +
                 `━━━━━━━━━━━━━━━\n` +
@@ -1021,48 +1026,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `${t.shipping} (${govSelection}): ${shipping}${currency}\n` +
                 `✅ ${t.total}: ${finalTotal}${currency}`
             );
-
-            // Save to Firebase
-            const orderImages = cart.map(i => i.image).filter(img => img && img.length > 10).slice(0, 5);
-            const orderDoc = await db.collection('orders').add({
-                customer: name,
-                phone: phone,
-                phone2: phone2,
-                address: address,
-                governorate: govSelection,
-                item: cart.map(i => {
-                    const skuTag = i.sku ? ` [‪${i.sku}‬]` : '';
-                    return `${i.name}${skuTag}`;
-                }).join(' | '),
-                images: orderImages,
-                total: finalTotal,
-                shipping: shipping,
-                paymentMethod: paymentMethod,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                status: 'new'
-            });
-
-            // Send to Shipping API (non-blocking)
-            if (window.ShippingAPI) {
-                window.ShippingAPI.sendOrder({
-                    id: orderDoc.id,
-                    customer: name,
-                    phone: phone,
-                    phone2: phone2,
-                    address: address,
-                    governorate: govSelection,
-                    item: cart.map(i => i.name).join(' | '),
-                    total: finalTotal,
-                    paymentMethod: paymentMethod
-                }).catch(err => console.warn('⚠️ Shipping API (non-critical):', err.message));
-            }
-
-            // Increment coupon usage if applied
-            if (couponCode) {
-                db.collection('coupons').doc(couponCode).update({
-                    usageCount: firebase.firestore.FieldValue.increment(1)
-                }).catch(e => console.warn('Could not increment coupon count:', e.message));
-            }
 
             // Clear cart & close
             cart = [];
@@ -1085,8 +1048,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (e) {
             console.error('❌ Order submission error:', e);
-            alert("❌ حدث خطأ في إرسال الطلب. حاول مرة أخرى!");
-            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = t?.whatsapp_btn || 'إرسال'; }
+            alert(`❌ ${e.message || 'حدث خطأ في إرسال الطلب. حاول مرة أخرى!'}`);
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = translations[currentLang]?.whatsapp_btn || 'إرسال'; }
         }
     };
 

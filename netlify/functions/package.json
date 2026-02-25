@@ -1,0 +1,8 @@
+{
+  "name": "eltoufan-functions",
+  "version": "1.0.0",
+  "description": "Netlify serverless functions for El Toufan store",
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

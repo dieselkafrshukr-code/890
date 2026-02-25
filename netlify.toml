@@ -1,6 +1,9 @@
 [build]
   publish = "."
-  command = ""
+  command = "cd netlify/functions && npm install"
+
+[functions]
+  directory = "netlify/functions"
 
 # No global redirect needed for simple multi-page static sites.
 # admin.html will be accessible at /admin.html or /admin
