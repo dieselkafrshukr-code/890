@@ -12,15 +12,35 @@ function getDB() {
     if (db) return db;
     if (!getApps().length) {
         try {
-            let serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-            // إصلاح مشكلة الـ newlines في المفتاح الخاص (مشكلة مشهورة في Vercel)
+            const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT;
+            console.log("Checking Environment Variable...");
+
+            if (!rawKey) {
+                console.error("❌ ERROR: FIREBASE_SERVICE_ACCOUNT is missing or undefined!");
+                throw new Error("المفتاح غير موجود (Environment Variable is missing)");
+            }
+
+            console.log("Raw Key Length:", rawKey.length);
+            console.log("Raw Key starts with:", rawKey.trim().substring(0, 1));
+
+            let serviceAccount;
+            try {
+                serviceAccount = JSON.parse(rawKey);
+            } catch (pErr) {
+                console.error("❌ JSON Parse Error:", pErr.message);
+                throw new Error("الـ JSON الخاص بالمفتاح غير صحيح (Invalid JSON format)");
+            }
+
+            // إصلاح مشكلة الـ newlines في المفتاح الخاص
             if (serviceAccount.private_key) {
                 serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
             }
+
             initializeApp({ credential: cert(serviceAccount) });
+            console.log("✅ Firebase Admin initialized successfully!");
         } catch (e) {
-            console.error("Firebase Init Error:", e.message);
-            throw new Error("خطأ في تهيئة قاعدة البيانات - تأكد من الـ Environment Variables");
+            console.error("Firebase Init Error Details:", e);
+            throw e;
         }
     }
     db = getFirestore();
