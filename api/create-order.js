@@ -12,44 +12,22 @@ function getDB() {
     if (db) return db;
     if (!getApps().length) {
         try {
-            const projectId = "el-toufan";
-            const clientEmail = process.env.FB_CLIENT_EMAIL?.trim();
-            let privateKey = process.env.FB_PRIVATE_KEY?.trim();
-
-            if (!clientEmail || !privateKey) {
-                console.error("❌ FB_CLIENT_EMAIL or FB_PRIVATE_KEY is missing!");
-                throw new Error("بيانات السيرفر ناقصة (Variables are missing)");
+            const base64Config = process.env.FB_CONFIG_BASE64;
+            if (!base64Config) {
+                throw new Error("Missing FB_CONFIG_BASE64 environment variable");
             }
 
-            // 🛡️ تنظيف "ذكي" للمفتاح (Smart Cleanup)
-            // 1. شيل أي علامات تنصيص في الأول أو الآخر
-            privateKey = privateKey.replace(/^["']|["']$/g, '');
-
-            // 2. حول أي \n مكتوبة (كـ نص) لسطر حقيقي
-            privateKey = privateKey.replace(/\\n/g, '\n');
-
-            // 3. اتأكد إنه بيبدأ وينتهي بالشرطات الصح (لو العميل نسيها)
-            if (!privateKey.includes("-----BEGIN PRIVATE KEY-----")) {
-                privateKey = "-----BEGIN PRIVATE KEY-----\n" + privateKey;
-            }
-            if (!privateKey.includes("-----END PRIVATE KEY-----")) {
-                privateKey = privateKey + "\n-----END PRIVATE KEY-----";
-            }
-
-            console.log("Key Cleaned. Length:", privateKey.length);
+            // فك التشفير وتحويله لـ JSON
+            const jsonString = Buffer.from(base64Config, 'base64').toString('utf-8');
+            const serviceAccount = JSON.parse(jsonString);
 
             initializeApp({
-                credential: cert({
-                    projectId: projectId,
-                    clientEmail: clientEmail,
-                    privateKey: privateKey
-                })
+                credential: cert(serviceAccount)
             });
-            console.log("✅ Firebase Admin initialized!");
+            console.log("✅ Firebase Admin initialized via Base64!");
         } catch (e) {
             console.error("Firebase Init Error:", e.message);
-            // هنبعت رسالة مفهومة للعميل عشان نعرف العيب فين
-            throw new Error(`مشكلة في المفتاح: ${e.message} (Length: ${process.env.FB_PRIVATE_KEY?.length || 0})`);
+            throw new Error(`خطأ في تهيئة السيرفر: ${e.message}`);
         }
     }
     db = getFirestore();
