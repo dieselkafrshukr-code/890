@@ -53,7 +53,8 @@ module.exports = async function handler(req, res) {
                     name: data.name,
                     price: data.price,
                     color: item.color,
-                    size: item.size
+                    size: item.size,
+                    image: data.mainImage || '' // ✅ إضافة الصورة
                 });
             }
         }
@@ -69,7 +70,11 @@ module.exports = async function handler(req, res) {
 
         const { Timestamp } = require('firebase-admin/firestore');
 
-        // 3. حفظ الأوردر
+        // 3. تجهيز بيانات إضافية للوحة التحكم (Summary for Admin)
+        const itemSummary = itemsDetail.map(i => `${i.name} (${i.color || ''} - ${i.size || ''})`).join(' | ');
+        const productImages = itemsDetail.map(i => i.image).filter(img => img);
+
+        // 4. حفظ الأوردر
         const orderData = {
             customer,
             phone,
@@ -77,12 +82,14 @@ module.exports = async function handler(req, res) {
             address,
             governorate,
             paymentMethod,
-            items: itemsDetail,
+            items: itemsDetail, // التفاصيل الكاملة
+            item: itemSummary,   // ملخص نصي للجدول
+            images: productImages, // صور للجدول
             subtotal,
             shipping,
             total,
             status: 'pending',
-            createdAt: Timestamp.now(), // ✅ استخدام تايم ستامب حقيقي
+            timestamp: Timestamp.now(), // ✅ الحقل اللي الداشبورد بيدور عليه
             source: 'Server (Base64)'
         };
 

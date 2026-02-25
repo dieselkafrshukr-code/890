@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. ORDERS ---
     async function renderOrders() {
-        const snap = await db.collection('orders').orderBy('timestamp', 'desc').get();
+        const snap = await db.collection('orders').get();
 
         // Calculate Stats
         let todaySales = 0, todayCount = 0;
@@ -203,12 +203,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const o = { id: doc.id, ...doc.data() };
             allOrders.push(o);
 
-            const date = o.timestamp ? o.timestamp.toDate() : new Date();
+            const orderDateValue = o.timestamp || o.createdAt;
+            const date = orderDateValue ? (typeof orderDateValue.toDate === 'function' ? orderDateValue.toDate() : new Date(orderDateValue)) : new Date();
             const total = parseFloat(o.total) || 0;
 
             if (date >= startOfDay) { todaySales += total; todayCount++; }
             if (date >= startOfWeek) { weekSales += total; weekCount++; }
             if (date >= startOfMonth) { monthSales += total; monthCount++; }
+        });
+
+        // 🕒 Sort by Date Descending (Newest First)
+        allOrders.sort((a, b) => {
+            const dateA = a.timestamp || a.createdAt ? (typeof (a.timestamp || a.createdAt).toDate === 'function' ? (a.timestamp || a.createdAt).toDate() : new Date(a.timestamp || a.createdAt)) : new Date(0);
+            const dateB = b.timestamp || b.createdAt ? (typeof (b.timestamp || b.createdAt).toDate === 'function' ? (b.timestamp || b.createdAt).toDate() : new Date(b.timestamp || b.createdAt)) : new Date(0);
+            return dateB - dateA;
         });
 
         // Stats HTML
@@ -263,7 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th class="mobile-hide">المنتجات</th><th>الإجمالي</th><th class="mobile-hide">الدفع</th><th class="mobile-hide">الوقت</th><th>الحالة</th><th>إجراءات</th>
                 </tr></thead><tbody>`;
             orders.forEach(o => {
-                const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
+                const dateValue = o.timestamp || o.createdAt;
+                const date = dateValue ? (typeof dateValue.toDate === 'function' ? dateValue.toDate().toLocaleString('ar-EG') : new Date(dateValue).toLocaleString('ar-EG')) : 'قيد المعالجة';
                 // Build product thumbnails
                 const imgs = (o.images || []).map(img =>
                     `<img src="${img}" style="width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid var(--border);">`
@@ -331,7 +340,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const doc = await db.collection('orders').doc(id).get();
         if (!doc.exists) return;
         const o = doc.data();
-        const date = o.timestamp ? new Date(o.timestamp.toDate()).toLocaleString('ar-EG') : 'قيد المعالجة';
+        const dateValue = o.timestamp || o.createdAt;
+        const date = dateValue ? (typeof dateValue.toDate === 'function' ? dateValue.toDate().toLocaleString('ar-EG') : new Date(dateValue).toLocaleString('ar-EG')) : 'قيد المعالجة';
         const images = o.images || [];
 
         // Parse products - actual stored format: "هودي (لون: أسود) (مقاس: L) [‪SKU-001‬]"
