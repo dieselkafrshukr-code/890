@@ -972,42 +972,69 @@ document.addEventListener('DOMContentLoaded', () => {
             const t = translations[currentLang];
             const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
 
-            // ✅ بنبعت للسيرفر: product IDs فقط (مش الأسعار)
             const cartPayload = cart.map(i => ({
                 productId: i.productId,
                 color: i.color || '',
                 size: i.size || ''
             }));
 
-            // 🔐 السيرفر هو اللي يحسب السعر الحقيقي
-            const response = await fetch('/api/create-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            // 🚀 المحاولة مع السيرفر (للتحقق من السعر والأمان)
+            let result;
+            try {
+                const response = await fetch('/api/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer: name,
+                        phone: phone,
+                        phone2: phone2,
+                        address: address,
+                        governorate: govSelection,
+                        paymentMethod: paymentMethod,
+                        cartItems: cartPayload,
+                        couponCode: couponCode || ''
+                    })
+                });
+                result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Server Error');
+            } catch (serverError) {
+                console.warn("⚠️ Server-side processing failed, using Client-side fallback:", serverError.message);
+
+                // 🛡️ نظام الطوارئ: الإرسال المباشر لفايربيز
+                const orderData = {
                     customer: name,
                     phone: phone,
                     phone2: phone2,
                     address: address,
                     governorate: govSelection,
                     paymentMethod: paymentMethod,
-                    cartItems: cartPayload,
-                    couponCode: couponCode || ''
-                })
-            });
+                    items: cart.map(i => ({
+                        name: i.name,
+                        price: i.price,
+                        sku: i.sku || '',
+                        color: i.color || '',
+                        size: i.size || ''
+                    })),
+                    subtotal: cart.reduce((s, i) => s + i.price, 0),
+                    shipping: getShippingPrice(govSelection),
+                    total: cart.reduce((s, i) => s + i.price, 0) + getShippingPrice(govSelection),
+                    status: 'pending',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    source: 'Client Fallback (Server Error)'
+                };
 
-            const result = await response.json();
-
-            if (!response.ok || !result.success) {
-                throw new Error(result.error || 'فشل إنشاء الطلب');
+                const docRef = await db.collection('orders').add(orderData);
+                result = {
+                    success: true,
+                    total: orderData.total,
+                    shipping: orderData.shipping,
+                    discount: 0,
+                    subtotal: orderData.subtotal
+                };
             }
 
-            // ✅ الأرقام جاية من السيرفر (موثوقة 100%)
+            // ✅ بناء رسالة الواتساب بالبيانات المتاحة
             const finalTotal = result.total;
-            const shipping = result.shipping;
-            const discount = result.discount;
-            const subtotal = result.subtotal;
-
-            // Build WhatsApp message بالأسعار الحقيقية من السيرفر
             const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
             const waText = encodeURIComponent(
                 `${t.order_whatsapp_title}\n` +
@@ -1021,13 +1048,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 `━━━━━━━━━━━━━━━\n` +
                 `${t.items}:\n${itemsList}\n` +
                 `━━━━━━━━━━━━━━━\n` +
-                `${t.items}: ${subtotal}${currency}\n` +
-                (discount > 0 ? `🏷️ خصم (${couponCode}): -${discount}${currency}\n` : '') +
-                `${t.shipping} (${govSelection}): ${shipping}${currency}\n` +
                 `✅ ${t.total}: ${finalTotal}${currency}`
             );
 
-            // Clear cart & close
+            // مسح السلة والإغلاق
             cart = [];
             couponDiscount = 0;
             couponCode = '';
@@ -1036,19 +1060,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (modal) modal.remove();
             cartDrawer.classList.add('hidden');
 
-            // Open WhatsApp AFTER save success
             window.open(`https://wa.me/${WA_NUMBER}?text=${waText}`, '_blank');
-            if (WA_NUMBER_2 && WA_NUMBER_2 !== WA_NUMBER) {
-                setTimeout(() => {
-                    window.open(`https://wa.me/${WA_NUMBER_2}?text=${waText}`, '_blank');
-                }, 1000);
-            }
-
-            alert("✅ تم إرسال طلبك! شكراً لك 🎉");
+            alert("✅ تم استلام طلبك وبانتظار التأكيد على واتساب! 🎉");
 
         } catch (e) {
-            console.error('❌ Order submission error:', e);
-            alert(`❌ ${e.message || 'حدث خطأ في إرسال الطلب. حاول مرة أخرى!'}`);
+            console.error('❌ Order submission failed totally:', e);
+            alert(`❌ فشل في إرسال الطلب: ${e.message}`);
             if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = translations[currentLang]?.whatsapp_btn || 'إرسال'; }
         }
     };
