@@ -376,7 +376,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display:flex; flex-wrap:wrap; gap:6px;">
                         ${color ? `<span style="background:rgba(212,175,55,0.15); color:#d4af37; border:1px solid rgba(212,175,55,0.3); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">🎨 ${color}</span>` : ''}
                         ${size ? `<span style="background:rgba(33,150,243,0.15); color:#64b5f6; border:1px solid rgba(33,150,243,0.3); padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">📐 ${size}</span>` : ''}
-                        ${sku ? `<span style="background:rgba(255,255,255,0.05); color:#eee; border:1px solid #444; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-family:monospace; letter-spacing:1px; font-weight:bold;">🎫 SKU: ${sku}</span>` : ''}
+                        ${sku ? `
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <span style="background:rgba(255,255,255,0.05); color:#eee; border:1px solid #444; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-family:monospace; letter-spacing:1px; font-weight:bold;">🎫 SKU: ${sku}</span>
+                                <button onclick="navigator.clipboard.writeText('${sku}'); this.innerHTML='<i data-lucide=\'check\' style=\'width:12px;\'></i>'; setTimeout(()=> { this.innerHTML='<i data-lucide=\'copy\' style=\'width:12px;\'></i>'; lucide.createIcons(); }, 2000); lucide.createIcons();" 
+                                    class="action-link" style="padding:4px; background:rgba(255,255,255,0.1); border-radius:6px; border:1px solid #444; color:var(--accent); cursor:pointer;" title="نسخ الكود">
+                                    <i data-lucide="copy" style="width:12px;"></i>
+                                </button>
+                            </div>` : ''}
                     </div>
                 </div>
             </div>`;
