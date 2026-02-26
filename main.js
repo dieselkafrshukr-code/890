@@ -922,28 +922,60 @@ document.addEventListener('DOMContentLoaded', () => {
     window.toggleCart = () => cartDrawer.classList.toggle('hidden');
 
     window.addToCart = (name, price, image = '', sku = '', productId = '', color = '', size = '') => {
-        cart.push({ name, price: parseFloat(price), image, sku, productId, color, size });
+        // Check if same product+color+size already in cart
+        const key = `${productId}|${color}|${size}`;
+        const existing = cart.find(i => i.key === key);
+        if (existing) {
+            existing.qty = (existing.qty || 1) + 1;
+        } else {
+            cart.push({ name, price: parseFloat(price), image, sku, productId, color, size, key, qty: 1 });
+        }
         updateCartUI();
         if (cartDrawer.classList.contains('hidden')) window.toggleCart();
+    };
+
+    window.changeQty = (key, delta) => {
+        const item = cart.find(i => i.key === key);
+        if (!item) return;
+        item.qty = (item.qty || 1) + delta;
+        if (item.qty <= 0) cart.splice(cart.indexOf(item), 1);
+        updateCartUI();
+    };
+
+    window.removeFromCart = (key) => {
+        const idx = cart.findIndex(i => i.key === key);
+        if (idx > -1) cart.splice(idx, 1);
+        updateCartUI();
     };
 
     function updateCartUI() {
         cartItemsContainer.innerHTML = '';
         let subtotal = 0;
-        cart.forEach((item, index) => {
-            subtotal += item.price;
+        cart.forEach((item) => {
+            const qty = item.qty || 1;
+            subtotal += item.price * qty;
             const div = document.createElement('div');
             div.className = 'cart-item';
+            div.style.cssText = 'display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #1a1a1a;';
+            const colorLine = item.color ? ` <span style="color:#888;font-size:0.78rem;">لون: ${item.color}</span>` : '';
+            const sizeLine = item.size ? ` <span style="color:#888;font-size:0.78rem;">مقاس: ${item.size}</span>` : '';
+            const skuLine = item.sku ? ` <span style="font-family:monospace;color:#555;font-size:0.72rem;">[${item.sku}]</span>` : '';
             div.innerHTML = `
-                <div>
-                    <div style="font-weight:700;">${item.name}</div>
-                    <div style="color:var(--accent); font-size:0.8rem;">${item.price} ج.م</div>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:700; font-size:0.92rem;">${item.name}</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;">${colorLine}${sizeLine}${skuLine}</div>
+                    <div style="color:var(--accent); font-size:0.85rem; margin-top:2px;">${(item.price * qty).toFixed(0)} ج.م ${qty > 1 ? `<span style="color:#666;font-size:0.75rem;">(${item.price} × ${qty})</span>` : ''}</div>
                 </div>
-                <button onclick="window.removeFromCart(${index})" style="background:none; border:none; color:#ff3a3a; cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
+                <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                    <button onclick="window.changeQty('${item.key}', -1)" style="width:28px;height:28px;border-radius:8px;background:#1a1a1a;border:1px solid #333;color:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">-</button>
+                    <span style="font-weight:800;min-width:18px;text-align:center;">${qty}</span>
+                    <button onclick="window.changeQty('${item.key}', 1)" style="width:28px;height:28px;border-radius:8px;background:#1a1a1a;border:1px solid #333;color:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">+</button>
+                    <button onclick="window.removeFromCart('${item.key}')" style="width:28px;height:28px;border-radius:8px;background:rgba(255,58,58,0.1);border:none;color:#ff3a3a;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i data-lucide="trash-2" style="width:14px;"></i></button>
+                </div>
             `;
             cartItemsContainer.appendChild(div);
         });
-        badge.innerText = cart.length;
+        badge.innerText = cart.reduce((s, i) => s + (i.qty || 1), 0);
 
         // Coupon section
         const couponSection = document.querySelector('.coupon-section');
@@ -1157,102 +1189,86 @@ document.addEventListener('DOMContentLoaded', () => {
         // Disable the submit button to avoid double submit
         const submitBtn = document.querySelector('#order-form-modal button[onclick="window.submitOrder()"]');
         if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = '⏳ جاري إرسال الطلب...'; }
-
         try {
             const t = translations[currentLang];
             const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
 
-            const cartPayload = cart.map(i => ({
-                productId: i.productId,
+            // حساب المجاميع مع الكميات
+            const fbSubtotal = cart.reduce((s, i) => s + i.price * (i.qty || 1), 0);
+            const fbShipping = getShippingPrice(govSelection);
+
+            // تحسيب الخصم
+            let discount = 0;
+            if (couponCode && couponDiscount > 0) {
+                discount = couponType === 'percent'
+                    ? Math.round(fbSubtotal * couponDiscount / 100)
+                    : couponDiscount;
+            }
+            const fbTotal = Math.max(0, fbSubtotal - discount) + fbShipping;
+
+            // تجهيز المنتجات لحفظها
+            const itemsForDB = cart.map(i => ({
+                name: i.name,
+                price: i.price,
+                qty: i.qty || 1,
+                sku: i.sku || '',
                 color: i.color || '',
-                size: i.size || ''
+                size: i.size || '',
+                productId: i.productId || ''
             }));
 
-            // 🚀 المحاولة مع السيرفر (للتحقق من السعر والأمان)
-            let result;
-            try {
-                const response = await fetch('/api/create-order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        customer: name,
-                        phone: phone,
-                        phone2: phone2,
-                        address: address,
-                        governorate: govSelection,
-                        paymentMethod: paymentMethod,
-                        cartItems: cartPayload,
-                        couponCode: couponCode || '',
-                        customerEmail: auth.currentUser ? auth.currentUser.email : null
-                    })
-                });
-                result = await response.json();
-                if (!response.ok || !result.success) throw new Error(result.error || 'Server Error');
-            } catch (serverError) {
-                console.warn("⚠️ Server-side processing failed, using Client-side fallback:", serverError.message);
+            const fbItemString = cart.map(i => {
+                const qty = i.qty || 1;
+                let s = qty > 1 ? `${qty}× ` : '';
+                s += i.name;
+                if (i.color) s += ` (لون: ${i.color})`;
+                if (i.size) s += ` (مقاس: ${i.size})`;
+                if (i.sku) s += ` [${i.sku}]`;
+                return s;
+            }).join(' | ');
 
-                // 🛡️ نظام الطوارئ: الإرسال المباشر لفايربيز
-                const fbSubtotal = cart.reduce((s, i) => s + i.price, 0);
-                const fbShipping = getShippingPrice(govSelection);
-                const fbTotal = fbSubtotal + fbShipping;
-                const fbItemString = cart.map(i => {
-                    let s = i.name;
-                    if (i.color) s += ` (لون: ${i.color})`;
-                    if (i.size) s += ` (مقاس: ${i.size})`;
-                    if (i.sku) s += ` [${i.sku}]`;
-                    return s;
-                }).join(' | ');
+            // حفظ مباشر إلى Firebase (Firestore) بدون سيرفر وسيط
+            const orderData = {
+                customer: name,
+                phone: phone,
+                phone2: phone2,
+                address: address,
+                governorate: govSelection,
+                paymentMethod: paymentMethod,
+                item: fbItemString,
+                items: itemsForDB,
+                subtotal: fbSubtotal,
+                shipping: fbShipping,
+                discount: discount,
+                coupon: couponCode || '',
+                total: fbTotal,
+                status: 'جديد',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                customerEmail: auth.currentUser ? auth.currentUser.email :
+                    (localStorage.getItem('eltoufan_user') ? JSON.parse(localStorage.getItem('eltoufan_user')).email : null),
+                source: 'Client Direct'
+            };
 
-                const orderData = {
-                    customer: name,
-                    phone: phone,
-                    phone2: phone2,
-                    address: address,
-                    governorate: govSelection,
-                    paymentMethod: paymentMethod,
-                    item: fbItemString,
-                    items: cart.map(i => ({
-                        name: i.name,
-                        price: i.price,
-                        sku: i.sku || '',
-                        color: i.color || '',
-                        size: i.size || ''
-                    })),
-                    subtotal: fbSubtotal,
-                    shipping: fbShipping,
-                    total: fbTotal,
-                    status: 'جديد',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    customerEmail: auth.currentUser ? auth.currentUser.email : (localStorage.getItem('eltoufan_user') ? JSON.parse(localStorage.getItem('eltoufan_user')).email : null),
-                    source: 'Client Fallback'
-                };
+            const docRef = await db.collection('orders').add(orderData);
+            const orderId = docRef.id.slice(-6).toUpperCase();
 
-                const docRef = await db.collection('orders').add(orderData);
-                result = {
-                    success: true,
-                    orderId: docRef.id,
-                    total: fbTotal,
-                    shipping: fbShipping,
-                    discount: 0,
-                    subtotal: fbSubtotal
-                };
-            }
-
-            // ✅ بناء رسالة الواتساب بالبيانات المتاحة
-            const finalTotal = result.total;
-            const orderId = result.orderId ? result.orderId.slice(-6).toUpperCase() : '';
+            // ✅ بناء رسالة الواتساب مع الكميات والكود
             const itemsList = cart.map(i => {
-                let line = `• ${i.name}`;
+                const qty = i.qty || 1;
+                let line = qty > 1 ? `${qty}× ` : '• ';
+                line += i.name;
                 if (i.color) line += ` (لون: ${i.color})`;
                 if (i.size) line += ` (مقاس: ${i.size})`;
                 if (i.sku) line += ` [${i.sku}]`;
-                line += ` - ${i.price} ج.م`;
+                line += ` - ${i.price * qty} ج.م`;
                 return line;
             }).join('\n');
+
             const waText = encodeURIComponent(
                 `${t.order_whatsapp_title}\n` +
                 `━━━━━━━━━━━━━━━\n` +
-                (orderId ? `📦 رقم الطلب: #${orderId}\n` : '') +
+                `📦 رقم الطلب: #${orderId}\n` +
                 `${t.fullname}: ${name}\n` +
                 `${t.phone}: ${phone}\n` +
                 (phone2 ? `${t.phone2}: ${phone2}\n` : '') +
@@ -1262,9 +1278,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 `━━━━━━━━━━━━━━━\n` +
                 `${t.items}:\n${itemsList}\n` +
                 `━━━━━━━━━━━━━━━\n` +
-                (result.discount > 0 ? `🎟️ خصم: -${result.discount} ج.م\n` : '') +
-                `🚚 شحن: ${result.shipping} ج.م\n` +
-                `✅ ${t.total}: ${finalTotal}${currency}`
+                (discount > 0 ? `🎟️ خصم: -${discount} ج.م\n` : '') +
+                `🚚 شحن: ${fbShipping} ج.م\n` +
+                `✅ ${t.total}: ${fbTotal}${currency}`
             );
 
             // مسح السلة والإغلاق
@@ -1277,10 +1293,10 @@ document.addEventListener('DOMContentLoaded', () => {
             cartDrawer.classList.add('hidden');
 
             window.open(`https://wa.me/${WA_NUMBER}?text=${waText}`, '_blank');
-            alert("✅ تم استلام طلبك وبانتظار التأكيد على واتساب! 🎉");
+            alert(`✅ تم استلام طلبك #${orderId} وبانتظار التأكيد على واتساب! 🎉`);
 
         } catch (e) {
-            console.error('❌ Order submission failed totally:', e);
+            console.error('❌ Order submission failed:', e);
             alert(`❌ فشل في إرسال الطلب: ${e.message}`);
             if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = translations[currentLang]?.whatsapp_btn || 'إرسال'; }
         }
