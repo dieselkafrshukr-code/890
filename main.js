@@ -1010,7 +1010,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     }
 
-    window.removeFromCart = (idx) => { cart.splice(idx, 1); updateCartUI(); };
 
     // --- 8. ORDER FORM (Customer Info + Governorate) ---
     window.confirmOrder = () => {
@@ -1034,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.className = 'admin-modal'; // Use existing class for styling
         modal.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.95); backdrop-filter:blur(15px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:1rem; animation: modalPop 0.35s;`;
 
-        const subtotal = cart.reduce((s, i) => s + i.price, 0);
+        const subtotal = cart.reduce((s, i) => s + i.price * (i.qty || 1), 0);
         const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
 
         modal.innerHTML = `
@@ -1214,7 +1213,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 sku: i.sku || '',
                 color: i.color || '',
                 size: i.size || '',
-                productId: i.productId || ''
+                productId: i.productId || '',
+                image: i.image || ''
             }));
 
             const fbItemString = cart.map(i => {
@@ -1227,6 +1227,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return s;
             }).join(' | ');
 
+            const orderImages = itemsForDB.map(i => i.image).filter(img => img && img.length > 5);
+
             // حفظ مباشر إلى Firebase (Firestore) بدون سيرفر وسيط
             const orderData = {
                 customer: name,
@@ -1237,6 +1239,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 paymentMethod: paymentMethod,
                 item: fbItemString,
                 items: itemsForDB,
+                images: orderImages,
                 subtotal: fbSubtotal,
                 shipping: fbShipping,
                 discount: discount,
@@ -1253,15 +1256,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const docRef = await db.collection('orders').add(orderData);
             const orderId = docRef.id.slice(-6).toUpperCase();
 
-            // ✅ بناء رسالة الواتساب مع الكميات والكود
-            const itemsList = cart.map(i => {
+            // ✅ بناء رسالة الواتساب من itemsForDB (يضمن أن qty صحيح دايماً)
+            const itemsList = itemsForDB.map(i => {
                 const qty = i.qty || 1;
-                let line = qty > 1 ? `${qty}× ` : '• ';
-                line += i.name;
+                let line = `${qty}× ${i.name}`;
                 if (i.color) line += ` (لون: ${i.color})`;
                 if (i.size) line += ` (مقاس: ${i.size})`;
                 if (i.sku) line += ` [${i.sku}]`;
-                line += ` - ${i.price * qty} ج.م`;
+                line += ` — ${(i.price * qty).toFixed(0)} ج.م`;
                 return line;
             }).join('\n');
 
