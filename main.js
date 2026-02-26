@@ -183,39 +183,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
     applyTranslations();
 
-    // --- GOOGLE SIGN IN & ORDER TRACKING ---
-    window.handleUserIconClick = () => {
-        let cachedUser = null;
-        try { cachedUser = JSON.parse(localStorage.getItem('eltoufan_cached_user')); } catch (e) { }
+    // ============================================
+    // GOOGLE SIGN IN & ORDER TRACKING (REWRITTEN)
+    // ============================================
 
-        if (auth.currentUser || cachedUser) {
-            window.showUserOrdersModal();
-        } else {
-            window.showLoginPromptModal();
-        }
-    };
+    function initUserAuthModals() {
+        if (document.getElementById('customer-login-modal')) return;
 
-    window.showLoginPromptModal = () => {
-        const existing = document.getElementById('customer-login-modal');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'customer-login-modal';
-        modal.className = 'admin-modal';
-        modal.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:1rem; animation: modalPop 0.35s; direction:rtl;`;
-
-        modal.innerHTML = `
+        // Create Login Modal Static HTML
+        const loginModal = document.createElement('div');
+        loginModal.id = 'customer-login-modal';
+        loginModal.className = 'admin-modal';
+        loginModal.style.cssText = `display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center; padding:1rem; direction:rtl;`;
+        loginModal.innerHTML = `
             <div style="background:#0a0a0a; border:1px solid #222; border-radius:30px; padding:3rem 2rem; width:100%; max-width:400px; position:relative; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
-                <button type="button" onclick="document.getElementById('customer-login-modal').remove()" style="position:absolute; top:20px; left:20px; background:#1a1a1a; border:none; color:#fff; width:36px; height:36px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;"><i data-lucide="x" style="width:18px;"></i></button>
-                
+                <button type="button" id="close-login-btn" style="position:absolute; top:20px; left:20px; background:#1a1a1a; border:none; color:#fff; width:36px; height:36px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;"><i data-lucide="x" style="width:18px;"></i></button>
                 <div style="background:#e50914; width:70px; height:70px; border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem auto; box-shadow:0 10px 20px rgba(229,9,20,0.3);">
                     <i data-lucide="package" style="color:#fff; width:36px; height:36px;"></i>
                 </div>
-                
                 <h2 style="font-family:'Cairo', sans-serif; font-weight:900; font-size:2rem; color:#fff; margin-bottom:10px;">تتبع طلباتك</h2>
                 <p style="color:#888; font-size:1rem; font-weight:600; margin-bottom:2.5rem; line-height:1.5;">سجل دخول بحساب جوجل لمتابعة حالة طلباتك</p>
-                
-                <button type="button" onclick="window.executeGoogleLogin()" style="background:#e50914; color:#fff; width:100%; border:none; padding:16px; border-radius:18px; font-family:'Cairo', sans-serif; font-weight:800; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer; transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 10px 25px rgba(229,9,20,0.4)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                <button type="button" id="execute-google-login-btn" style="background:#e50914; color:#fff; width:100%; border:none; padding:16px; border-radius:18px; font-family:'Cairo', sans-serif; font-weight:800; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer;">
                     تسجيل الدخول بجوجل
                     <div style="background:#fff; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center;">
                         <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
@@ -223,139 +211,133 @@ document.addEventListener('DOMContentLoaded', () => {
                 </button>
             </div>
         `;
-        document.body.appendChild(modal);
-        if (window.lucide) lucide.createIcons();
-    };
+        document.body.appendChild(loginModal);
 
-    window.executeGoogleLogin = async () => {
-        try {
-            await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-            const provider = new firebase.auth.GoogleAuthProvider();
-            const result = await auth.signInWithPopup(provider);
-            const user = result.user;
-            window.updateGoogleBtnUI(user);
-            const loginModal = document.getElementById('customer-login-modal');
-            if (loginModal) loginModal.remove();
-            // Automatically show orders after successful login
-            window.showUserOrdersModal();
-        } catch (error) {
-            console.error("Google Sign-In Error:", error);
-            alert("حدث خطأ أثناء تسجيل الدخول. " + error.message);
-        }
-    };
-
-    window.showUserOrdersModal = async () => {
-        let user = auth.currentUser;
-        if (!user) {
-            try { user = JSON.parse(localStorage.getItem('eltoufan_cached_user')); } catch (e) { }
-        }
-        if (!user) return;
-
-        const existing = document.getElementById('user-orders-modal');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'user-orders-modal';
-        modal.className = 'admin-modal';
-        modal.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:1rem; animation: modalPop 0.35s; direction:rtl;`;
-
-        modal.innerHTML = `
+        // Create Orders Modal Static HTML
+        const ordersModal = document.createElement('div');
+        ordersModal.id = 'user-orders-modal';
+        ordersModal.className = 'admin-modal';
+        ordersModal.style.cssText = `display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:99999; align-items:center; justify-content:center; padding:1rem; direction:rtl;`;
+        ordersModal.innerHTML = `
             <div style="background:#0f0f0f; border:1px solid #333; border-radius:24px; width:100%; max-width:600px; max-height:90vh; display:flex; flex-direction:column; position:relative; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
                 <div style="padding:1.5rem; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-                    <h3 style="font-family:'Cairo', sans-serif; font-weight:900; font-size:1.4rem; color:#fff; display:flex; align-items:center; gap:10px;"><img src="${user.photoURL}" style="width:36px;height:36px;border-radius:50%;"> حسابي وطلباتي</h3>
-                    <button type="button" onclick="document.getElementById('user-orders-modal').style.display='none'" style="background:none; border:none; color:#888; cursor:pointer; width:36px; height:36px; display:flex; align-items:center; justify-content:center;"><i data-lucide="x"></i></button>
+                    <h3 id="orders-modal-title" style="font-family:'Cairo', sans-serif; font-weight:900; font-size:1.4rem; color:#fff; display:flex; align-items:center; gap:10px;">حسابي وطلباتي</h3>
+                    <button type="button" id="close-orders-btn" style="background:none; border:none; color:#888; cursor:pointer; width:36px; height:36px; display:flex; align-items:center; justify-content:center;"><i data-lucide="x"></i></button>
                 </div>
-                
                 <div id="user-orders-list" style="padding:1.5rem; overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; gap:15px;">
-                    <div style="text-align:center; padding:3rem; color:var(--accent);">
-                        <i data-lucide="loader" class="spin" style="width:30px; margin-bottom:15px;"></i>
-                        <br>جاري جلب الطلبات...
-                    </div>
                 </div>
-
                 <div style="padding:1rem 1.5rem; border-top:1px solid #222; flex-shrink:0;">
-                    <button type="button" onclick="window.customerLogout()" style="background:none; border:1px solid #444; color:#aaa; width:100%; padding:12px; border-radius:12px; cursor:pointer; font-family:'Cairo', sans-serif; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <button type="button" id="customer-logout-btn" style="background:none; border:1px solid #444; color:#aaa; width:100%; padding:12px; border-radius:12px; cursor:pointer; font-family:'Cairo', sans-serif; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px;">
                         <i data-lucide="log-out" style="width:16px;"></i> تسجيل خروج
                     </button>
                 </div>
             </div>
         `;
-        document.body.appendChild(modal);
+        document.body.appendChild(ordersModal);
         if (window.lucide) lucide.createIcons();
 
-        try {
-            document.getElementById('user-orders-modal').style.display = 'flex';
-            const snap = await db.collection('orders').where('customerEmail', '==', user.email).get();
-            const listContainer = document.getElementById('user-orders-list');
+        // Bind standard event listeners explicitly (no inline onclicks)
+        document.getElementById('close-login-btn').addEventListener('click', () => {
+            document.getElementById('customer-login-modal').style.display = 'none';
+        });
 
-            if (snap.empty) {
-                listContainer.innerHTML = `
-                    <div style="text-align:center; padding:3rem; color:#666;">
-                        <i data-lucide="package-open" style="width:48px; height:48px; margin-bottom:1rem; opacity:0.5;"></i>
-                        <p style="font-size:1.1rem; font-weight:700;">لا توجد طلبات سابقة</p>
-                    </div>`;
-            } else {
-                let ordersHtml = '';
-                const orders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => {
-                    const dateA = a.createdAt ? (typeof a.createdAt.toDate === 'function' ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
-                    const dateB = b.createdAt ? (typeof b.createdAt.toDate === 'function' ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
-                    return dateB - dateA;
-                });
+        document.getElementById('close-orders-btn').addEventListener('click', () => {
+            document.getElementById('user-orders-modal').style.display = 'none';
+        });
 
-                orders.forEach(o => {
-                    let statusColor = '#4caf50'; // Green for delivered
-                    let statusLabel = o.status || 'جديد';
-                    if (statusLabel === 'جديد') statusColor = '#2196f3'; // Blue
-                    if (statusLabel === 'جاري تجهيز') statusColor = '#ff9800'; // Orange
-                    if (statusLabel === 'ملغي') statusColor = '#f44336'; // Red
-
-                    let itemsHtml = '';
-                    if (o.items && Array.isArray(o.items)) {
-                        itemsHtml = o.items.map(item => `
-                            <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:4px 0; color:#ccc;">
-                                <span>${item.name} ${item.color ? `(${item.color})` : ''} ${item.size ? `(${item.size})` : ''}</span>
-                                <span style="font-weight:700;">${item.price} ج.م</span>
-                            </div>
-                        `).join('');
-                    } else {
-                        itemsHtml = `<div style="font-size:0.85rem; color:#aaa;">${o.item || 'منتجات متعددة'}</div>`;
-                    }
-
-                    const dateValue = o.createdAt || o.timestamp;
-                    const dateStr = dateValue ? (typeof dateValue.toDate === 'function' ? dateValue.toDate().toLocaleString('ar-EG') : new Date(dateValue).toLocaleString('ar-EG')) : '';
-
-                    ordersHtml += `
-                        <div style="background:#151515; border:1px solid #2a2a2a; border-radius:16px; padding:15px; position:relative;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #222; padding-bottom:10px;">
-                                <span style="color:#666; font-size:0.8rem; font-family:monospace;">#${o.id.slice(-6).toUpperCase()}</span>
-                                <span style="background:${statusColor}22; color:${statusColor}; border:1px solid ${statusColor}44; padding:4px 12px; border-radius:20px; font-size:0.8rem; font-weight:800;">${statusLabel}</span>
-                            </div>
-                            <div style="margin-bottom:12px;">
-                                ${itemsHtml}
-                            </div>
-                            <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid #222; padding-top:10px;">
-                                <div style="font-size:0.75rem; color:#666;">${dateStr}</div>
-                                <div style="font-size:1.1rem; font-weight:900; color:var(--accent);">${o.total} ج.م</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                listContainer.innerHTML = ordersHtml;
+        document.getElementById('execute-google-login-btn').addEventListener('click', async () => {
+            try {
+                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+                const provider = new firebase.auth.GoogleAuthProvider();
+                const result = await auth.signInWithPopup(provider);
+                document.getElementById('customer-login-modal').style.display = 'none';
+                window.handleUserIconClick(); // Refresh UI and open orders
+            } catch (err) {
+                console.error("Login Error:", err);
+                alert("تعذر تسجيل الدخول. " + err.message);
             }
-            if (window.lucide) lucide.createIcons();
-        } catch (e) {
-            console.error("Orders fetch error:", e);
-            document.getElementById('user-orders-list').innerHTML = `<div style="color:#ff3a3a; text-align:center; padding:2rem;">حدث خطأ أثناء تحميل الطلبات</div>`;
-        }
-    };
+        });
 
-    window.customerLogout = () => {
-        auth.signOut().then(() => {
-            const modal = document.getElementById('user-orders-modal');
-            if (modal) modal.remove();
-            alert("تم تسجيل الخروج!");
+        document.getElementById('customer-logout-btn').addEventListener('click', async () => {
+            await auth.signOut();
+            localStorage.removeItem('eltoufan_user');
+            document.getElementById('user-orders-modal').style.display = 'none';
+            window.updateGoogleBtnUI(null);
+            alert("تم تسجيل الخروج بنجاح!");
         });
     }
+
+    window.handleUserIconClick = async () => {
+        initUserAuthModals(); // Ensure Modals are created first
+
+        try {
+            // Guarantee firebase is ready
+            await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        } catch (e) { }
+
+        const storedUser = localStorage.getItem('eltoufan_user');
+        const user = auth.currentUser || (storedUser ? JSON.parse(storedUser) : null);
+
+        if (user) {
+            const m = document.getElementById('user-orders-modal');
+            m.style.display = 'flex';
+
+            const title = document.getElementById('orders-modal-title');
+            if (user.photoURL) {
+                title.innerHTML = `<img src="${user.photoURL}" style="width:36px;height:36px;border-radius:50%;"> حسابي وطلباتي`;
+            } else {
+                title.innerHTML = `حسابي وطلباتي`;
+            }
+
+            const list = document.getElementById('user-orders-list');
+            list.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--accent);"><i data-lucide="loader" class="spin" style="width:30px; margin-bottom:15px;"></i><br>جاري جلب الطلبات...</div>`;
+            if (window.lucide) lucide.createIcons();
+
+            try {
+                const snap = await db.collection('orders').where('customerEmail', '==', user.email).get();
+                if (snap.empty) {
+                    list.innerHTML = `<div style="text-align:center; padding:3rem; color:#666;"><i data-lucide="package-open" style="width:48px;height:48px;margin-bottom:1rem;opacity:0.5;"></i><p>لا توجد طلبات سابقة</p></div>`;
+                } else {
+                    let html = '';
+                    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.toMillis?.() || Date.now()) - (a.createdAt?.toMillis?.() || Date.now()));
+                    docs.forEach(o => {
+                        let sc = o.status === 'جديد' ? '#2196f3' : (o.status === 'ملغي' ? '#f44336' : '#4caf50');
+                        let label = o.status || 'جديد';
+
+                        let items = '';
+                        if (Array.isArray(o.items)) {
+                            items = o.items.map(i => `<div style="display:flex;justify-content:space-between;color:#ccc;font-size:0.85rem;padding:4px 0;"><span>${i.name} ${i.color ? `(${i.color})` : ''} ${i.size ? `(${i.size})` : ''}</span><strong>${i.price} ج.م</strong></div>`).join('');
+                        } else {
+                            items = `<div style="color:#aaa;font-size:0.85rem">${o.item || 'منتجات متعددة'}</div>`;
+                        }
+
+                        const dt = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString('ar-EG') : '';
+
+                        html += `
+                        <div style="background:#151515; border:1px solid #2a2a2a; border-radius:16px; padding:15px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #222; padding-bottom:10px;">
+                                <span style="color:#666; font-size:0.8rem; font-family:monospace;">#${o.id.slice(-6).toUpperCase()}</span> 
+                                <span style="background:${sc}22; color:${sc}; border:1px solid ${sc}44; padding:4px 12px; border-radius:20px; font-size:0.8rem; font-weight:800;">${label}</span>
+                            </div>
+                            <div style="margin-bottom:10px;">${items}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid #222; padding-top:10px;">
+                                <div style="font-size:0.75rem; color:#666;">${dt}</div>
+                                <div style="color:var(--accent); font-weight:900; font-size:1.1rem;">${o.total} ج.م</div>
+                            </div>
+                        </div>`;
+                    });
+                    list.innerHTML = html;
+                }
+                if (window.lucide) lucide.createIcons();
+            } catch (e) {
+                console.error(e);
+                list.innerHTML = `<div style="color:#ff3a3a; text-align:center; padding:2rem;">حدث خطأ أثناء تحميل الطلبات</div>`;
+            }
+        } else {
+            const m = document.getElementById('customer-login-modal');
+            m.style.display = 'flex';
+        }
+    };
 
     window.updateGoogleBtnUI = (user) => {
         const btn = document.getElementById('google-login-btn');
@@ -369,23 +351,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    auth.onAuthStateChanged((user) => {
+    auth.onAuthStateChanged(user => {
         if (user) {
-            localStorage.setItem('eltoufan_cached_user', JSON.stringify({ email: user.email, photoURL: user.photoURL }));
+            localStorage.setItem('eltoufan_user', JSON.stringify({ email: user.email, photoURL: user.photoURL }));
             window.updateGoogleBtnUI(user);
-            console.log("Customer logged in:", user.email);
         } else {
-            localStorage.removeItem('eltoufan_cached_user');
-            window.updateGoogleBtnUI(null);
-            console.log("Customer logged out.");
+            // Only erase if it's explicitly logged out, keep cache as fallback for quick reload flashes
         }
     });
 
-    // Check cached user on load to prevent UI flash
+    // Run UI update immediately from cache if available to prevent flashes
     try {
-        const cached = localStorage.getItem('eltoufan_cached_user');
-        if (cached) window.updateGoogleBtnUI(JSON.parse(cached));
+        const c = localStorage.getItem('eltoufan_user');
+        if (c) window.updateGoogleBtnUI(JSON.parse(c));
     } catch (e) { }
+
+    // Auto-init modals on load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initUserAuthModals);
+    } else {
+        initUserAuthModals();
+    }
 
     // --- 4. INITIALIZATION ---
     // --- 4. ULTIMATE CINEMATIC INITIALIZATION (THE STORM'S EYE) ---
