@@ -183,20 +183,172 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
     applyTranslations();
 
-    // --- GOOGLE SIGN IN ---
-    window.googleSignInFlow = () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider)
-            .then((result) => {
-                const user = result.user;
-                updateGoogleBtnUI(user);
-                alert("تم تسجيل الدخول بنجاح: " + (user.displayName || user.email));
-            })
-            .catch((error) => {
-                console.error("Google Sign-In Error:", error);
-                alert("حدث خطأ أثناء تسجيل الدخول. تأكد من إعدادات Google في Firebase.");
-            });
+    // --- GOOGLE SIGN IN & ORDER TRACKING ---
+    window.handleUserIconClick = () => {
+        if (auth.currentUser) {
+            window.showUserOrdersModal();
+        } else {
+            window.showLoginPromptModal();
+        }
     };
+
+    window.showLoginPromptModal = () => {
+        const existing = document.getElementById('customer-login-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'customer-login-modal';
+        modal.className = 'admin-modal';
+        modal.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:1rem; animation: modalPop 0.35s; direction:rtl;`;
+
+        modal.innerHTML = `
+            <div style="background:#0a0a0a; border:1px solid #222; border-radius:30px; padding:3rem 2rem; width:100%; max-width:400px; position:relative; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+                <button onclick="document.getElementById('customer-login-modal').remove()" style="position:absolute; top:20px; left:20px; background:#1a1a1a; border:none; color:#fff; width:36px; height:36px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;"><i data-lucide="x" style="width:18px;"></i></button>
+                
+                <div style="background:#e50914; width:70px; height:70px; border-radius:20px; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem auto; box-shadow:0 10px 20px rgba(229,9,20,0.3);">
+                    <i data-lucide="package" style="color:#fff; width:36px; height:36px;"></i>
+                </div>
+                
+                <h2 style="font-family:'Cairo', sans-serif; font-weight:900; font-size:2rem; color:#fff; margin-bottom:10px;">تتبع طلباتك</h2>
+                <p style="color:#888; font-size:1rem; font-weight:600; margin-bottom:2.5rem; line-height:1.5;">سجل دخول بحساب جوجل لمتابعة حالة طلباتك</p>
+                
+                <button onclick="window.executeGoogleLogin()" style="background:#e50914; color:#fff; width:100%; border:none; padding:16px; border-radius:18px; font-family:'Cairo', sans-serif; font-weight:800; font-size:1.1rem; display:flex; align-items:center; justify-content:center; gap:12px; cursor:pointer; transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 10px 25px rgba(229,9,20,0.4)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+                    تسجيل الدخول بجوجل
+                    <div style="background:#fff; border-radius:50%; width:28px; height:28px; display:flex; align-items:center; justify-content:center;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/><path d="M1 1h22v22H1z" fill="none"/></svg>
+                    </div>
+                </button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        if (window.lucide) lucide.createIcons();
+    };
+
+    window.executeGoogleLogin = () => {
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            return auth.signInWithPopup(provider);
+        }).then((result) => {
+            const user = result.user;
+            window.updateGoogleBtnUI(user);
+            const loginModal = document.getElementById('customer-login-modal');
+            if (loginModal) loginModal.remove();
+            // Automatically show orders after successful login
+            window.showUserOrdersModal();
+        }).catch((error) => {
+            console.error("Google Sign-In Error:", error);
+            alert("حدث خطأ أثناء تسجيل الدخول. " + error.message);
+        });
+    };
+
+    window.showUserOrdersModal = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const existing = document.getElementById('user-orders-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'user-orders-modal';
+        modal.className = 'admin-modal';
+        modal.style.cssText = `position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:1rem; animation: modalPop 0.35s; direction:rtl;`;
+
+        modal.innerHTML = `
+            <div style="background:#0f0f0f; border:1px solid #333; border-radius:24px; width:100%; max-width:600px; max-height:90vh; display:flex; flex-direction:column; position:relative; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+                <div style="padding:1.5rem; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+                    <h3 style="font-family:'Cairo', sans-serif; font-weight:900; font-size:1.4rem; color:#fff; display:flex; align-items:center; gap:10px;"><img src="${user.photoURL}" style="width:36px;height:36px;border-radius:50%;"> حسابي وطلباتي</h3>
+                    <button onclick="document.getElementById('user-orders-modal').remove()" style="background:none; border:none; color:#888; cursor:pointer; width:36px; height:36px; display:flex; align-items:center; justify-content:center;"><i data-lucide="x"></i></button>
+                </div>
+                
+                <div id="user-orders-list" style="padding:1.5rem; overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; gap:15px;">
+                    <div style="text-align:center; padding:3rem; color:var(--accent);">
+                        <i data-lucide="loader" class="spin" style="width:30px; margin-bottom:15px;"></i>
+                        <br>جاري جلب الطلبات...
+                    </div>
+                </div>
+
+                <div style="padding:1rem 1.5rem; border-top:1px solid #222; flex-shrink:0;">
+                    <button onclick="window.customerLogout()" style="background:none; border:1px solid #444; color:#aaa; width:100%; padding:12px; border-radius:12px; cursor:pointer; font-family:'Cairo', sans-serif; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <i data-lucide="log-out" style="width:16px;"></i> تسجيل خروج
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        if (window.lucide) lucide.createIcons();
+
+        try {
+            const snap = await db.collection('orders').where('customerEmail', '==', user.email).get();
+            const listContainer = document.getElementById('user-orders-list');
+
+            if (snap.empty) {
+                listContainer.innerHTML = `
+                    <div style="text-align:center; padding:3rem; color:#666;">
+                        <i data-lucide="package-open" style="width:48px; height:48px; margin-bottom:1rem; opacity:0.5;"></i>
+                        <p style="font-size:1.1rem; font-weight:700;">لا توجد طلبات سابقة</p>
+                    </div>`;
+            } else {
+                let ordersHtml = '';
+                const orders = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => {
+                    const dateA = a.createdAt ? (typeof a.createdAt.toDate === 'function' ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
+                    const dateB = b.createdAt ? (typeof b.createdAt.toDate === 'function' ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
+                    return dateB - dateA;
+                });
+
+                orders.forEach(o => {
+                    let statusColor = '#4caf50'; // Green for delivered
+                    let statusLabel = o.status || 'جديد';
+                    if (statusLabel === 'جديد') statusColor = '#2196f3'; // Blue
+                    if (statusLabel === 'جاري تجهيز') statusColor = '#ff9800'; // Orange
+                    if (statusLabel === 'ملغي') statusColor = '#f44336'; // Red
+
+                    let itemsHtml = '';
+                    if (o.items && Array.isArray(o.items)) {
+                        itemsHtml = o.items.map(item => `
+                            <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:4px 0; color:#ccc;">
+                                <span>${item.name} ${item.color ? `(${item.color})` : ''} ${item.size ? `(${item.size})` : ''}</span>
+                                <span style="font-weight:700;">${item.price} ج.م</span>
+                            </div>
+                        `).join('');
+                    } else {
+                        itemsHtml = `<div style="font-size:0.85rem; color:#aaa;">${o.item || 'منتجات متعددة'}</div>`;
+                    }
+
+                    const dateValue = o.createdAt || o.timestamp;
+                    const dateStr = dateValue ? (typeof dateValue.toDate === 'function' ? dateValue.toDate().toLocaleString('ar-EG') : new Date(dateValue).toLocaleString('ar-EG')) : '';
+
+                    ordersHtml += `
+                        <div style="background:#151515; border:1px solid #2a2a2a; border-radius:16px; padding:15px; position:relative;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #222; padding-bottom:10px;">
+                                <span style="color:#666; font-size:0.8rem; font-family:monospace;">#${o.id.slice(-6).toUpperCase()}</span>
+                                <span style="background:${statusColor}22; color:${statusColor}; border:1px solid ${statusColor}44; padding:4px 12px; border-radius:20px; font-size:0.8rem; font-weight:800;">${statusLabel}</span>
+                            </div>
+                            <div style="margin-bottom:12px;">
+                                ${itemsHtml}
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid #222; padding-top:10px;">
+                                <div style="font-size:0.75rem; color:#666;">${dateStr}</div>
+                                <div style="font-size:1.1rem; font-weight:900; color:var(--accent);">${o.total} ج.م</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                listContainer.innerHTML = ordersHtml;
+            }
+            if (window.lucide) lucide.createIcons();
+        } catch (e) {
+            console.error("Orders fetch error:", e);
+            document.getElementById('user-orders-list').innerHTML = `<div style="color:#ff3a3a; text-align:center; padding:2rem;">حدث خطأ أثناء تحميل الطلبات</div>`;
+        }
+    };
+
+    window.customerLogout = () => {
+        auth.signOut().then(() => {
+            const modal = document.getElementById('user-orders-modal');
+            if (modal) modal.remove();
+            alert("تم تسجيل الخروج!");
+        });
+    }
 
     window.updateGoogleBtnUI = (user) => {
         const btn = document.getElementById('google-login-btn');
