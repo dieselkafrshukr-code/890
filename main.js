@@ -183,6 +183,37 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
     applyTranslations();
 
+    // --- GOOGLE SIGN IN ---
+    window.googleSignInFlow = () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider)
+            .then((result) => {
+                const user = result.user;
+                updateGoogleBtnUI(user);
+                alert("تم تسجيل الدخول بنجاح: " + (user.displayName || user.email));
+            })
+            .catch((error) => {
+                console.error("Google Sign-In Error:", error);
+                alert("حدث خطأ أثناء تسجيل الدخول. تأكد من إعدادات Google في Firebase.");
+            });
+    };
+
+    window.updateGoogleBtnUI = (user) => {
+        const btn = document.getElementById('google-login-btn');
+        if (btn) {
+            if (user && user.photoURL) {
+                btn.innerHTML = `<img src="${user.photoURL}" alt="User" style="width:100%;height:100%;object-fit:cover;">`;
+            } else {
+                btn.innerHTML = `<i data-lucide="user"></i>`;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+    };
+
+    auth.onAuthStateChanged((user) => {
+        window.updateGoogleBtnUI(user);
+    });
+
     // --- 4. INITIALIZATION ---
     // --- 4. ULTIMATE CINEMATIC INITIALIZATION (THE STORM'S EYE) ---
     function initUltimateIntro() {
@@ -992,7 +1023,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         governorate: govSelection,
                         paymentMethod: paymentMethod,
                         cartItems: cartPayload,
-                        couponCode: couponCode || ''
+                        couponCode: couponCode || '',
+                        customerEmail: auth.currentUser ? auth.currentUser.email : null
                     })
                 });
                 result = await response.json();
@@ -1018,8 +1050,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     subtotal: cart.reduce((s, i) => s + i.price, 0),
                     shipping: getShippingPrice(govSelection),
                     total: cart.reduce((s, i) => s + i.price, 0) + getShippingPrice(govSelection),
-                    status: 'pending',
+                    status: 'جديد',
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    customerEmail: auth.currentUser ? auth.currentUser.email : null,
                     source: 'Client Fallback (Server Error)'
                 };
 

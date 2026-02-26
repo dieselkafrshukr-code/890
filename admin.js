@@ -382,6 +382,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const date = dateValue ? (typeof dateValue.toDate === 'function' ? dateValue.toDate().toLocaleString('ar-EG') : new Date(dateValue).toLocaleString('ar-EG')) : 'قيد المعالجة';
         const images = o.images || [];
 
+        // Fetch old orders for this phone number
+        let oldOrdersSection = '';
+        if (o.phone) {
+            try {
+                const oldOrdersSnap = await db.collection('orders').where('phone', '==', o.phone).get();
+                const pastOrders = oldOrdersSnap.docs
+                    .filter(d => d.id !== id) // exclude current order
+                    .map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a, b) => {
+                        const dateA = a.timestamp ? (typeof a.timestamp.toDate === 'function' ? a.timestamp.toDate() : new Date(a.timestamp)) : new Date(0);
+                        const dateB = b.timestamp ? (typeof b.timestamp.toDate === 'function' ? b.timestamp.toDate() : new Date(b.timestamp)) : new Date(0);
+                        return dateB - dateA; // newest first
+                    });
+
+                if (pastOrders.length > 0) {
+                    const oldOrdersHtml = pastOrders.map(od => {
+                        const firstImg = (od.images && od.images.length > 0) ? od.images[0] : null;
+                        const itemText = (od.item || 'منتج').split(' | ')[0]; // simple split
+                        return `<div style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid #333; cursor:pointer;" onclick="window.viewOrder('${od.id}')">
+                            ${firstImg ? `<img src="${firstImg}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:6px;background:#222;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📦</div>`}
+                            <div style="flex:1;">
+                                <div style="font-size:0.85rem;font-weight:bold;">${itemText}</div>
+                                <div style="font-size:0.75rem;color:var(--text-dim);">${od.status || 'جديد'} - ${od.total} ج.م</div>
+                            </div>
+                            <button style="background:#333;color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:0.75rem;">عرض</button>
+                        </div>`;
+                    }).join('');
+
+                    oldOrdersSection = `
+                    <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border); margin-top:10px;">
+                        <div style="color:var(--accent); font-weight:900; margin-bottom:10px;">🕒 طلبات سابقة للعميل (${pastOrders.length}):</div>
+                        <div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto;">
+                            ${oldOrdersHtml}
+                        </div>
+                    </div>`;
+                }
+            } catch (e) { console.error("Could not fetch old orders:", e); }
+        }
+
         // Parse products - actual stored format: "هودي (لون: أسود) (مقاس: L) [‪SKU-001‬]"
         const rawItems = (o.item || '').split(' | ');
         const productsHtml = rawItems.map((itemStr, idx) => {
@@ -462,6 +501,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
+                <div style="background:var(--glass); padding:15px; border-radius:12px; border:1px solid var(--border);">
+                    <div style="color:var(--accent); font-weight:900; margin-bottom:6px;">🔄 حالة الطلب:</div>
+                    <select onchange="window.updateOrderStatus('${id}', this.value)" style="width:100%; padding:10px; border-radius:8px; background:#111; color:#fff; border:1px solid #333;">
+                        <option value="جديد" ${o.status === 'جديد' || !o.status ? 'selected' : ''}>🌟 جديد</option>
+                        <option value="جاري تجهيز" ${o.status === 'جاري تجهيز' ? 'selected' : ''}>⏳ جاري تجهيز</option>
+                        <option value="تم الشحن" ${o.status === 'تم الشحن' ? 'selected' : ''}>🚚 تم الشحن</option>
+                        <option value="تم تسليم" ${o.status === 'تم تسليم' ? 'selected' : ''}>✅ تم تسليم</option>
+                        <option value="ملغي" ${o.status === 'ملغي' ? 'selected' : ''}>❌ ملغي</option>
+                    </select>
+                </div>
+
+                ${oldOrdersSection}
+
                 <div style="background:var(--glass); padding:12px 15px; border-radius:12px; border:1px solid var(--border); font-size:0.85rem; color:var(--text-dim);">
                     🕒 ${date}
                 </div>
@@ -505,6 +557,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('modal-order-detail').classList.remove('hidden');
         lucide.createIcons();
+    };
+
+    window.updateOrderStatus = async (id, newStatus) => {
+        try {
+            await db.collection('orders').doc(id).update({ status: newStatus });
+            // Re-render orders table smoothly without full page reload
+            renderOrders();
+        } catch (e) {
+            console.error("Error updating status:", e);
+            alert("❌ حدث خطأ أثناء تحديث حالة الطلب");
+        }
     };
 
     window.openImageModal = (imageUrl) => {

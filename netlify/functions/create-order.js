@@ -22,7 +22,7 @@ exports.handler = async (event) => {
 
     try {
         const body = JSON.parse(event.body);
-        const { customer, phone, phone2, address, governorate, paymentMethod, cartItems, couponCode } = body;
+        const { customer, phone, phone2, address, governorate, paymentMethod, cartItems, couponCode, customerEmail } = body;
 
         // ── 1. Validate required fields ──────────────────────────
         if (!customer || customer.trim().length < 3)
@@ -150,7 +150,8 @@ exports.handler = async (event) => {
             paymentMethod: paymentMethod,
             coupon: couponCode || '',
             discount: discount,
-            status: 'new',
+            status: 'جديد',
+            customerEmail: customerEmail || null,
             timestamp: FieldValue.serverTimestamp()
         });
 
