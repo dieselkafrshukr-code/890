@@ -185,7 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- GOOGLE SIGN IN & ORDER TRACKING ---
     window.handleUserIconClick = () => {
-        if (auth.currentUser) {
+        let cachedUser = null;
+        try { cachedUser = JSON.parse(localStorage.getItem('eltoufan_cached_user')); } catch (e) { }
+
+        if (auth.currentUser || cachedUser) {
             window.showUserOrdersModal();
         } else {
             window.showLoginPromptModal();
@@ -242,7 +245,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.showUserOrdersModal = async () => {
-        const user = auth.currentUser;
+        let user = auth.currentUser;
+        if (!user) {
+            try { user = JSON.parse(localStorage.getItem('eltoufan_cached_user')); } catch (e) { }
+        }
         if (!user) return;
 
         const existing = document.getElementById('user-orders-modal');
@@ -257,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="background:#0f0f0f; border:1px solid #333; border-radius:24px; width:100%; max-width:600px; max-height:90vh; display:flex; flex-direction:column; position:relative; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
                 <div style="padding:1.5rem; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
                     <h3 style="font-family:'Cairo', sans-serif; font-weight:900; font-size:1.4rem; color:#fff; display:flex; align-items:center; gap:10px;"><img src="${user.photoURL}" style="width:36px;height:36px;border-radius:50%;"> حسابي وطلباتي</h3>
-                    <button type="button" onclick="document.getElementById('user-orders-modal').remove()" style="background:none; border:none; color:#888; cursor:pointer; width:36px; height:36px; display:flex; align-items:center; justify-content:center;"><i data-lucide="x"></i></button>
+                    <button type="button" onclick="document.getElementById('user-orders-modal').style.display='none'" style="background:none; border:none; color:#888; cursor:pointer; width:36px; height:36px; display:flex; align-items:center; justify-content:center;"><i data-lucide="x"></i></button>
                 </div>
                 
                 <div id="user-orders-list" style="padding:1.5rem; overflow-y:auto; flex-grow:1; display:flex; flex-direction:column; gap:15px;">
@@ -278,6 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) lucide.createIcons();
 
         try {
+            document.getElementById('user-orders-modal').style.display = 'flex';
             const snap = await db.collection('orders').where('customerEmail', '==', user.email).get();
             const listContainer = document.getElementById('user-orders-list');
 
@@ -364,13 +371,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     auth.onAuthStateChanged((user) => {
         if (user) {
+            localStorage.setItem('eltoufan_cached_user', JSON.stringify({ email: user.email, photoURL: user.photoURL }));
             window.updateGoogleBtnUI(user);
             console.log("Customer logged in:", user.email);
         } else {
+            localStorage.removeItem('eltoufan_cached_user');
             window.updateGoogleBtnUI(null);
             console.log("Customer logged out.");
         }
     });
+
+    // Check cached user on load to prevent UI flash
+    try {
+        const cached = localStorage.getItem('eltoufan_cached_user');
+        if (cached) window.updateGoogleBtnUI(JSON.parse(cached));
+    } catch (e) { }
 
     // --- 4. INITIALIZATION ---
     // --- 4. ULTIMATE CINEMATIC INITIALIZATION (THE STORM'S EYE) ---
