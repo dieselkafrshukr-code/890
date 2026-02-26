@@ -927,9 +927,9 @@ body.dark-mode .close-detail:hover {
 
 /* Modal Centering Fix */
 .admin-modal {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: fixed;
     inset: 0;
     z-index: 9999;
@@ -1039,9 +1039,9 @@ body.dark-mode .close-detail:hover {
 
 /* Ensure modal is perfectly centered */
 .admin-modal {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .product-view-card {
