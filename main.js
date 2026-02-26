@@ -224,21 +224,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) lucide.createIcons();
     };
 
-    window.executeGoogleLogin = () => {
-        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(() => {
+    window.executeGoogleLogin = async () => {
+        try {
+            await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
             const provider = new firebase.auth.GoogleAuthProvider();
-            return auth.signInWithPopup(provider);
-        }).then((result) => {
+            const result = await auth.signInWithPopup(provider);
             const user = result.user;
             window.updateGoogleBtnUI(user);
             const loginModal = document.getElementById('customer-login-modal');
             if (loginModal) loginModal.remove();
             // Automatically show orders after successful login
             window.showUserOrdersModal();
-        }).catch((error) => {
+        } catch (error) {
             console.error("Google Sign-In Error:", error);
             alert("حدث خطأ أثناء تسجيل الدخول. " + error.message);
-        });
+        }
     };
 
     window.showUserOrdersModal = async () => {
@@ -363,7 +363,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     auth.onAuthStateChanged((user) => {
-        window.updateGoogleBtnUI(user);
+        if (user) {
+            window.updateGoogleBtnUI(user);
+            console.log("Customer logged in:", user.email);
+        } else {
+            window.updateGoogleBtnUI(null);
+            console.log("Customer logged out.");
+        }
     });
 
     // --- 4. INITIALIZATION ---
