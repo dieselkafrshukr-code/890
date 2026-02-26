@@ -1192,6 +1192,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn("⚠️ Server-side processing failed, using Client-side fallback:", serverError.message);
 
                 // 🛡️ نظام الطوارئ: الإرسال المباشر لفايربيز
+                const fbSubtotal = cart.reduce((s, i) => s + i.price, 0);
+                const fbShipping = getShippingPrice(govSelection);
+                const fbTotal = fbSubtotal + fbShipping;
+                const fbItemString = cart.map(i => {
+                    let s = i.name;
+                    if (i.color) s += ` (لون: ${i.color})`;
+                    if (i.size) s += ` (مقاس: ${i.size})`;
+                    if (i.sku) s += ` [${i.sku}]`;
+                    return s;
+                }).join(' | ');
+
                 const orderData = {
                     customer: name,
                     phone: phone,
@@ -1199,6 +1210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     address: address,
                     governorate: govSelection,
                     paymentMethod: paymentMethod,
+                    item: fbItemString,
                     items: cart.map(i => ({
                         name: i.name,
                         price: i.price,
@@ -1206,31 +1218,41 @@ document.addEventListener('DOMContentLoaded', () => {
                         color: i.color || '',
                         size: i.size || ''
                     })),
-                    subtotal: cart.reduce((s, i) => s + i.price, 0),
-                    shipping: getShippingPrice(govSelection),
-                    total: cart.reduce((s, i) => s + i.price, 0) + getShippingPrice(govSelection),
+                    subtotal: fbSubtotal,
+                    shipping: fbShipping,
+                    total: fbTotal,
                     status: 'جديد',
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    customerEmail: auth.currentUser ? auth.currentUser.email : null,
-                    source: 'Client Fallback (Server Error)'
+                    customerEmail: auth.currentUser ? auth.currentUser.email : (localStorage.getItem('eltoufan_user') ? JSON.parse(localStorage.getItem('eltoufan_user')).email : null),
+                    source: 'Client Fallback'
                 };
 
                 const docRef = await db.collection('orders').add(orderData);
                 result = {
                     success: true,
-                    total: orderData.total,
-                    shipping: orderData.shipping,
+                    orderId: docRef.id,
+                    total: fbTotal,
+                    shipping: fbShipping,
                     discount: 0,
-                    subtotal: orderData.subtotal
+                    subtotal: fbSubtotal
                 };
             }
 
             // ✅ بناء رسالة الواتساب بالبيانات المتاحة
             const finalTotal = result.total;
-            const itemsList = cart.map(i => `• ${i.name} (${i.price} ج.م)`).join('\n');
+            const orderId = result.orderId ? result.orderId.slice(-6).toUpperCase() : '';
+            const itemsList = cart.map(i => {
+                let line = `• ${i.name}`;
+                if (i.color) line += ` (لون: ${i.color})`;
+                if (i.size) line += ` (مقاس: ${i.size})`;
+                if (i.sku) line += ` [${i.sku}]`;
+                line += ` - ${i.price} ج.م`;
+                return line;
+            }).join('\n');
             const waText = encodeURIComponent(
                 `${t.order_whatsapp_title}\n` +
                 `━━━━━━━━━━━━━━━\n` +
+                (orderId ? `📦 رقم الطلب: #${orderId}\n` : '') +
                 `${t.fullname}: ${name}\n` +
                 `${t.phone}: ${phone}\n` +
                 (phone2 ? `${t.phone2}: ${phone2}\n` : '') +
@@ -1240,6 +1262,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 `━━━━━━━━━━━━━━━\n` +
                 `${t.items}:\n${itemsList}\n` +
                 `━━━━━━━━━━━━━━━\n` +
+                (result.discount > 0 ? `🎟️ خصم: -${result.discount} ج.م\n` : '') +
+                `🚚 شحن: ${result.shipping} ج.م\n` +
                 `✅ ${t.total}: ${finalTotal}${currency}`
             );
 

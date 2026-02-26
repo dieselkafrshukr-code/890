@@ -144,14 +144,22 @@ exports.handler = async (event) => {
             address: address.trim(),
             governorate: governorate.trim(),
             item: itemString,
+            items: validatedItems.map(i => ({
+                name: i.name,
+                price: i.price,
+                sku: i.sku || '',
+                color: i.color || '',
+                size: i.size || ''
+            })),
             images: orderImages,
-            total: finalTotal,       // ✅ محسوب في السيرفر
-            shipping: shipping,      // ✅ محسوب في السيرفر
+            total: finalTotal,
+            shipping: shipping,
             paymentMethod: paymentMethod,
             coupon: couponCode || '',
             discount: discount,
             status: 'جديد',
             customerEmail: customerEmail || null,
+            createdAt: FieldValue.serverTimestamp(),
             timestamp: FieldValue.serverTimestamp()
         });
 
