@@ -16,4 +16,5 @@ if (!firebase.apps.length) {
 
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage();
+const storage = (typeof firebase.storage === "function") ? firebase.storage() : null;
+if (!storage) console.warn("⚠️ Firebase Storage is not loaded correctly. Check script imports.");
