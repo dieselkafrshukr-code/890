@@ -143,8 +143,10 @@
                     </div>
                 </div>
                 <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:20px; margin-bottom:15px;">
-                    <div class="input-group">
-                        <label>القسم المخصص:</label>
+                    <div class="input-group" style="grid-column: span 1;">
+                        <label>🔍 بحث عن قسم:</label>
+                        <input type="text" id="prod-category-search" placeholder="اكتب اسم القسم هنا..."
+                            style="margin-bottom: 8px;">
                         <select id="prod-category">
                             <option value="">اختر القسم...</option>
                         </select>

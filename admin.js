@@ -902,25 +902,43 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('prod-description').value = '';
         document.getElementById('color-variants-container').innerHTML = '';
 
+        // Reset Category Search
+        const catSearch = document.getElementById('prod-category-search');
+        if (catSearch) catSearch.value = '';
+
         // Always fetch fresh categories from Firestore
         const select = document.getElementById('prod-category');
         select.innerHTML = '<option value="">⏳ جاري تحميل الأقسام...</option>';
         try {
             const snap = await db.collection('settings').doc('storeTree').get();
             const treeData = snap.exists ? (snap.data().options || []) : storeTreeData;
-            select.innerHTML = '<option value="">-- اختر القسم --</option>';
-            const flatten = (nodes, path = "") => {
-                nodes.forEach(n => {
-                    const fullPath = path ? `${path} > ${n.name}` : n.name;
-                    const opt = document.createElement('option');
-                    opt.value = n.id;
-                    opt.dataset.name = fullPath;
-                    opt.innerText = fullPath;
-                    select.appendChild(opt);
-                    if (n.options) flatten(n.options, fullPath);
-                });
+
+            // Function to build options
+            const buildOptions = (query = '') => {
+                select.innerHTML = '<option value="">-- اختر القسم --</option>';
+                const flatten = (nodes, path = "") => {
+                    nodes.forEach(n => {
+                        const fullPath = path ? `${path} > ${n.name}` : n.name;
+                        if (!query || fullPath.toLowerCase().includes(query.toLowerCase())) {
+                            const opt = document.createElement('option');
+                            opt.value = n.id;
+                            opt.dataset.name = fullPath;
+                            opt.innerText = fullPath;
+                            select.appendChild(opt);
+                        }
+                        if (n.options) flatten(n.options, fullPath);
+                    });
+                };
+                flatten(treeData);
             };
-            flatten(treeData);
+
+            buildOptions();
+
+            // Hook up search
+            if (catSearch) {
+                catSearch.oninput = (e) => buildOptions(e.target.value);
+            }
+
         } catch (e) {
             select.innerHTML = '<option value="">⚠️ تعذر تحميل الأقسام</option>';
         }
