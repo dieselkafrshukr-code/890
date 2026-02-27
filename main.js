@@ -268,17 +268,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.handleUserIconClick = async () => {
-        initUserAuthModals(); // Ensure Modals are created first
+        initUserAuthModals();
 
-        try {
-            // Guarantee firebase is ready
-            await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        } catch (e) { }
+        // Wait for Firebase Auth to initialize if it hasn't yet
+        if (!auth.currentUser) {
+            await new Promise(resolve => {
+                const unsubscribe = auth.onAuthStateChanged(user => {
+                    unsubscribe();
+                    resolve(user);
+                });
+                setTimeout(resolve, 1500); // Max wait 1.5s
+            });
+        }
 
-        const storedUser = localStorage.getItem('eltoufan_user');
-        const user = auth.currentUser || (storedUser ? JSON.parse(storedUser) : null);
-
-        if (user) {
+        const user = auth.currentUser;
+        if (user && user.email) {
             const m = document.getElementById('user-orders-modal');
             m.style.display = 'flex';
 
@@ -294,9 +298,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) lucide.createIcons();
 
             try {
-                const snap = await db.collection('orders').where('customerEmail', '==', user.email).get();
+                // Ensure email is lowercase for comparison if needed, and definitely not null
+                const cleanEmail = String(user.email).toLowerCase().trim();
+                const snap = await db.collection('orders').where('customerEmail', '==', cleanEmail).get();
+
                 if (snap.empty) {
-                    list.innerHTML = `<div style="text-align:center; padding:3rem; color:#666;"><i data-lucide="package-open" style="width:48px;height:48px;margin-bottom:1rem;opacity:0.5;"></i><p>لا توجد طلبات سابقة</p></div>`;
+                    list.innerHTML = `<div style="text-align:center; padding:3rem; color:#666;"><i data-lucide="package-open" style="width:48px;height:48px;margin-bottom:1rem;opacity:0.5;"></i><p>لا توجد طلبات سابقة مرتبطة بهذا الإيميل (${cleanEmail})</p></div>`;
                 } else {
                     let html = '';
                     const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.toMillis?.() || Date.now()) - (a.createdAt?.toMillis?.() || Date.now()));

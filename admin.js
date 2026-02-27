@@ -916,10 +916,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Function to build options
             const buildOptions = (query = '') => {
                 select.innerHTML = '<option value="">-- اختر القسم --</option>';
+                const terms = query.trim().toLowerCase().split(/\s+/).filter(t => t);
+
                 const flatten = (nodes, path = "") => {
                     nodes.forEach(n => {
                         const fullPath = path ? `${path} > ${n.name}` : n.name;
-                        if (!query || fullPath.toLowerCase().includes(query.toLowerCase())) {
+                        const match = terms.every(t => fullPath.toLowerCase().includes(t));
+
+                        if (!query || match) {
                             const opt = document.createElement('option');
                             opt.value = n.id;
                             opt.dataset.name = fullPath;

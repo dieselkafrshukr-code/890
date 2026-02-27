@@ -90,7 +90,7 @@ module.exports = async function handler(req, res) {
             shipping,
             total,
             status: 'جديد',
-            customerEmail: customerEmail || null,
+            customerEmail: customerEmail ? String(customerEmail).toLowerCase().trim() : null,
             timestamp: Timestamp.now(), // ✅ الحقل اللي الداشبورد بيدور عليه
             createdAt: Timestamp.now(),
             source: 'Server (Base64) Vercel'
