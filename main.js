@@ -240,11 +240,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('google-login-action').onclick = async () => {
             try {
                 const provider = new firebase.auth.GoogleAuthProvider();
-                // Switching to Redirect for maximum compatibility with COOP policies
-                await auth.signInWithRedirect(provider);
+                // Switching back to Popup as Redirect is causing reload loops in some environments
+                await auth.signInWithPopup(provider);
+                document.getElementById('customer-login-modal').style.display = 'none';
+                window.handleUserIconClick(); // Refresh UI to show orders
             } catch (err) {
                 console.error("Login Error:", err);
-                alert("تعذر بدء تسجيل الدخول: " + err.message);
+                if (err.code === 'auth/popup-closed-by-user') return;
+                alert("تعذر تسجيل الدخول: " + err.message);
             }
         };
 
@@ -253,24 +256,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 await auth.signOut();
                 localStorage.removeItem('eltoufan_user');
                 document.getElementById('user-orders-modal').style.display = 'none';
-                window.location.reload(); // Force reload to clear state cleanly
             }
         };
 
         if (window.lucide) lucide.createIcons();
     }
-
-    // Handle Redirect Result at startup
-    auth.getRedirectResult().then((result) => {
-        if (result.user) {
-            console.log("✅ Logged in via redirect:", result.user.email);
-            window.handleUserIconClick();
-        }
-    }).catch((error) => {
-        if (error.code !== 'auth/operation-not-supported-in-this-environment') {
-            console.error("Redirect Auth Error:", error);
-        }
-    });
 
     // Global listener for header UI
     auth.onAuthStateChanged(user => {
