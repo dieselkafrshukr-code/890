@@ -34,7 +34,7 @@ module.exports = async function handler(req, res) {
 
     try {
         const firestore = getDB();
-        const { customer, phone, phone2, address, governorate, paymentMethod, cartItems, couponCode } = req.body;
+        const { customer, phone, phone2, address, governorate, paymentMethod, cartItems, couponCode, customerEmail } = req.body;
 
         if (!customer || !phone || !address || !governorate || !cartItems) {
             return res.status(400).json({ success: false, error: 'بيانات الطلب ناقصة' });
@@ -89,9 +89,11 @@ module.exports = async function handler(req, res) {
             subtotal,
             shipping,
             total,
-            status: 'pending',
+            status: 'جديد',
+            customerEmail: customerEmail || null,
             timestamp: Timestamp.now(), // ✅ الحقل اللي الداشبورد بيدور عليه
-            source: 'Server (Base64)'
+            createdAt: Timestamp.now(),
+            source: 'Server (Base64) Vercel'
         };
 
         const docRef = await firestore.collection('orders').add(orderData);

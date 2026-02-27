@@ -512,8 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tl.to('.app-container', {
             opacity: 1,
-            filter: 'blur(0px)',
-            brightness: 1,
+            filter: 'blur(0px) brightness(1)',
             duration: 0.4,
             ease: "power3.inOut"
         });
@@ -1229,32 +1228,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const orderImages = itemsForDB.map(i => i.image).filter(img => img && img.length > 5);
 
-            // حفظ مباشر إلى Firebase (Firestore) بدون سيرفر وسيط
-            const orderData = {
-                customer: name,
-                phone: phone,
-                phone2: phone2,
-                address: address,
-                governorate: govSelection,
-                paymentMethod: paymentMethod,
-                item: fbItemString,
-                items: itemsForDB,
-                images: orderImages,
-                subtotal: fbSubtotal,
-                shipping: fbShipping,
-                discount: discount,
-                coupon: couponCode || '',
-                total: fbTotal,
-                status: 'جديد',
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                customerEmail: auth.currentUser ? auth.currentUser.email :
-                    (localStorage.getItem('eltoufan_user') ? JSON.parse(localStorage.getItem('eltoufan_user')).email : null),
-                source: 'Client Direct'
-            };
+            // حفظ عبر السيرفر (Vercel API) لزيادة الأمان ومنع التلاعب
+            const response = await fetch('/api/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer: name,
+                    phone: phone,
+                    phone2: phone2,
+                    address: address,
+                    governorate: govSelection,
+                    paymentMethod: paymentMethod,
+                    cartItems: itemsForDB,
+                    couponCode: couponCode || '',
+                    customerEmail: auth.currentUser ? auth.currentUser.email :
+                        (localStorage.getItem('eltoufan_user') ? JSON.parse(localStorage.getItem('eltoufan_user')).email : null)
+                })
+            });
 
-            const docRef = await db.collection('orders').add(orderData);
-            const orderId = docRef.id.slice(-6).toUpperCase();
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error || 'Failed to create order');
+
+            const orderId = result.orderId.slice(-6).toUpperCase();
+            fbShipping = result.shipping;
+            fbTotal = result.total;
+            discount = result.discount;
 
             // ✅ بناء رسالة الواتساب من itemsForDB (يضمن أن qty صحيح دايماً)
             const itemsList = itemsForDB.map(i => {
