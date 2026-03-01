@@ -1576,4 +1576,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 });
-// Updated
+
+// --- PWA Registration ---
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").then((reg) => {
+            console.log("🌊 EL TOUFAN PWA: Service Worker Registered!", reg.scope);
+        }).catch((err) => {
+            console.error("🌊 EL TOUFAN PWA: Service Worker Registration Failed:", err);
+        });
+    });
+}
