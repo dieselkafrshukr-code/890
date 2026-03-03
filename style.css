@@ -1785,11 +1785,71 @@ body.dark-mode .search-bar-inner {
 }
 
 /* Fix Cart Drawer for Mobile Height and Button Visibility */
+/* PWA Install Button Styles */
+.install-pwa-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 20px auto 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.install-btn {
+    width: 100% !important;
+    min-width: unset !important;
+    background: linear-gradient(135deg, var(--gold), #b8860b) !important;
+    color: #000 !important;
+    border: none !important;
+    box-shadow: 0 10px 20px rgba(212, 175, 55, 0.3) !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 30px !important;
+    font-size: 1.1rem !important;
+}
+
+.install-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 15px 30px rgba(212, 175, 55, 0.5) !important;
+}
+
+.ios-guide {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed var(--gold);
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 0.9rem;
+    color: var(--text);
+    text-align: center;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.ios-guide i {
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @media (max-width: 600px) {
     .cart-drawer {
         height: 100vh !important;
         height: 100dvh !important;
         height: -webkit-fill-available !important;
+        z-index: 3000 !important;
     }
 
     .cart-footer {
@@ -1804,12 +1864,7 @@ body.dark-mode .search-bar-inner {
         overflow-y: auto !important;
     }
 
-    /* Ensure floating buttons are below the drawer */
     .wa-float {
         z-index: 1000 !important;
-    }
-
-    .cart-drawer {
-        z-index: 3000 !important;
     }
 }
