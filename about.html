@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عن الطوفان للملابس | أكبر محل ملابس استوك وبالة في بورسعيد - EL TOUFAN</title>
+    <meta name="description"
+        content="تعرف على الطوفان للملابس EL TOUFAN - أكبر محل ملابس استوك وبالة في بورسعيد. نوفر ملابس رجالي وحريمي وأطفال من براندات أصلية مستوردة بأسعار الجملة والقطاعي.">
+    <meta name="keywords"
+        content="عن الطوفان للملابس, محلات الطوفان, محل الطوفان, الطوفان استوك, الطوفان بورسعيد, ملابس استوك بورسعيد, ملابس بالة بورسعيد, EL TOUFAN about">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://eltoufan.vercel.app/about.html">
+    <meta property="og:title" content="عن الطوفان للملابس | أكبر محل ملابس استوك وبالة في بورسعيد">
+    <meta property="og:description"
+        content="تعرف على الطوفان للملابس - محل ملابس استوك وبالة في بورسعيد. براندات أصلية مستوردة بأسعار الجملة والقطاعي.">
+    <meta property="og:url" content="https://eltoufan.vercel.app/about.html">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ar_EG">
+    <link rel="icon" type="image/png" href="logo/1.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@400;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #fdfaf5;
+            --surface: #ffffff;
+            --text: #171614;
+            --text-dim: #8b7d6b;
+            --primary: #c21a1a;
+            --border: #f0ede8;
+            --gold: #d4af37;
+            --accent: var(--gold);
+        }
+
+        body.dark-mode {
+            --bg: #000000;
+            --surface: #0a0a0a;
+            --text: #ffffff;
+            --text-dim: #888888;
+            --border: #222222;
+            --primary: #ff1a1a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Cairo', sans-serif;
+            min-height: 100vh;
+            transition: background 0.5s ease, color 0.4s ease;
+        }
+
+        .page-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-nav a {
+            color: var(--gold);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.3s;
+        }
+
+        .page-nav a:hover {
+            color: var(--primary);
+        }
+
+        .logo-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-link img {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            border: 1px solid var(--gold);
+        }
+
+        .logo-link span {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            color: var(--gold);
+            font-size: 1.2rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin: 2rem 0 1rem;
+            color: var(--gold);
+        }
+
+        p {
+            font-size: 1.05rem;
+            line-height: 2;
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+        }
+
+        p strong {
+            color: var(--text);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 1.5rem 0 2rem;
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        }
+
+        .feature-card i {
+            color: var(--gold);
+            margin-bottom: 10px;
+        }
+
+        .feature-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .feature-card p {
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .cta-section {
+            text-align: center;
+            margin: 3rem 0 2rem;
+            padding: 2rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+        }
+
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 40px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: 'Cairo', sans-serif;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.3s;
+            margin-top: 1rem;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(194, 26, 26, 0.3);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: var(--gold);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.4rem;
+            }
+
+            .page-container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-container">
+        <nav class="page-nav">
+            <a href="index.html" class="logo-link">
+                <img src="logo/1.png" alt="الطوفان للملابس">
+                <span>EL TOUFAN</span>
+            </a>
+            <a href="index.html">
+                <i data-lucide="arrow-right" style="width:18px;"></i>
+                الرئيسية
+            </a>
+        </nav>
+
+        <article>
+            <h1>عن الطوفان للملابس - أكبر محل ملابس استوك وبالة في بورسعيد</h1>
+
+            <p>
+                <strong>الطوفان للملابس (EL TOUFAN)</strong> هو وجهتك الأولى للملابس الأصلية بأسعار لا تُنافس في
+                <strong>بورسعيد</strong> ومصر كلها.
+                نحن متخصصون في بيع <strong>ملابس استوك وبالة</strong> من <strong>براندات عالمية مستوردة</strong>، ونقدم
+                تشكيلة ضخمة تناسب كل العائلة.
+            </p>
+
+            <h2>🔹 ليه تختار الطوفان للملابس؟</h2>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i data-lucide="award" style="width:32px; height:32px;"></i>
+                    <h3>براندات أصلية</h3>
+                    <p>ملابس مستوردة وتصدير من أشهر الماركات العالمية</p>
+                </div>
+                <div class="feature-card">
+                    <i data-lucide="tag" style="width:32px; height:32px;"></i>
+                    <h3>أسعار الجملة</h3>
+                    <p>أوفرستوك بأسعار تنافسية للجملة والقطاعي</p>
+                </div>
+                <div class="feature-card">
+                    <i data-lucide="truck" style="width:32px; height:32px;"></i>
+                    <h3>شحن لكل مصر</h3>
+                    <p>شحن سريع وآمن لجميع محافظات مصر</p>
+                </div>
+                <div class="feature-card">
+                    <i data-lucide="users" style="width:32px; height:32px;"></i>
+                    <h3>لكل العائلة</h3>
+                    <p>ملابس رجالي وحريمي وأطفال بكل المقاسات</p>
+                </div>
+            </div>
+
+            <h2>🔹 تشكيلتنا تشمل</h2>
+            <p>
+                <strong>ملابس رجالي:</strong> تيشيرتات، بناطيل، قمصان، جاكيتات، بدل رجالي استوك، ملابس رجالي ماركات.
+            </p>
+            <p>
+                <strong>ملابس حريمي:</strong> فساتين، بلوزات، بناطيل حريمي، عبايات، ملابس خروج حريمي، ملابس حريمي
+                ماركات.
+            </p>
+            <p>
+                <strong>ملابس أطفال:</strong> ملابس بيبي، بناتي، ولادي، أطقم أطفال، ملابس مدارس.
+            </p>
+
+            <h2>🔹 موقعنا</h2>
+            <p>
+                <strong>محلات الطوفان</strong> موجودة في <strong>بورسعيد</strong> - مصر.
+                تقدر تتسوق أونلاين أو تزورنا في المحل. نوفرلك أفضل تجربة شراء مع ضمان الجودة وأحسن الأسعار.
+            </p>
+
+            <div class="cta-section">
+                <h2 style="margin-top:0;">تسوق دلوقتي من الطوفان!</h2>
+                <p>اكتشف أحدث العروض والتخفيضات على الملابس الأصلية</p>
+                <a href="index.html" class="cta-btn">
+                    <i data-lucide="shopping-bag" style="width:20px;"></i>
+                    تسوق الآن
+                </a>
+            </div>
+        </article>
+
+        <footer class="footer">
+            <p>
+                <a href="index.html">الرئيسية</a> |
+                <a href="about.html">عن الطوفان</a> |
+                <a href="contact.html">تواصل معنا</a>
+            </p>
+            <p style="margin-top:10px;">© 2026 الطوفان للملابس - EL TOUFAN. جميع الحقوق محفوظة.</p>
+        </footer>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

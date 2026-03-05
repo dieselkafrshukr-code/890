@@ -201,6 +201,49 @@ body {
     }
 }
 
+/* SEO Hero Section */
+.seo-hero-section {
+    text-align: center;
+    padding: 1.5rem 1rem 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.seo-main-heading {
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: var(--text);
+    margin-bottom: 0.8rem;
+    line-height: 1.6;
+    opacity: 0.9;
+}
+
+.seo-description {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    line-height: 1.9;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 0.8rem 1rem;
+    background: var(--btn-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+}
+
+.seo-description strong {
+    color: var(--text);
+    font-weight: 700;
+}
+
+@media (max-width: 600px) {
+    .seo-main-heading {
+        font-size: 1.1rem;
+    }
+
+    .seo-description {
+        font-size: 0.85rem;
+    }
+}
+
 /* App Layout */
 .app-container {
     max-width: 1000px;
