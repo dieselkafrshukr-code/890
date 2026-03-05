@@ -1395,66 +1395,118 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('set-wa-template').value = msgSnap.exists ? msgSnap.data().template : defaultMsg;
         } catch (e) { console.error(e); }
 
-        // Account Updates Logic
-        document.getElementById('update-email-btn').onclick = async function () {
-            const btn = this;
-            const newEmail = document.getElementById('set-admin-email').value.trim();
-            const user = auth.currentUser;
-            if (!user) return alert("❌ يجب تسجيل الدخول أولاً");
-            if (!newEmail || newEmail === user.email) return alert("❌ يرجى إدخال بريد إلكتروني جديد");
+        // Account Updates Logic (Only for Super Admin)
+        const user = auth.currentUser;
+        const userEmail = user ? user.email.toLowerCase() : '';
+        const isSuperAdmin = PERMISSIONS[userEmail] === 'ALL';
 
-            if (confirm(`هل أنت متأكد من تغيير بريدك إلى ${newEmail}؟\nسيتم تسجيل خروجك لتأكيد الهوية بعد التغيير.`)) {
-                const originalText = btn.innerText;
-                btn.innerText = "⏳ جاري التحديث...";
-                btn.disabled = true;
+        if (isSuperAdmin) {
+            document.getElementById('update-email-btn').onclick = async function () {
+                const btn = this;
+                const newEmail = document.getElementById('set-admin-email').value.trim();
+                const user = auth.currentUser;
+                if (!user) return alert("❌ يجب تسجيل الدخول أولاً");
+                if (!newEmail || newEmail === user.email) return alert("❌ يرجى إدخال بريد إلكتروني جديد");
 
-                try {
-                    await user.updateEmail(newEmail);
-                    alert("✅ تم تحديث البريد الإلكتروني بنجاح! سيتم تسجيل خروجك الآن.");
-                    auth.signOut();
-                    window.location.reload();
-                } catch (e) {
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                    if (e.code === 'auth/requires-recent-login') {
-                        alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى فوراً ثم العودة لتغيير البريد.");
+                if (confirm(`هل أنت متأكد من تغيير بريدك إلى ${newEmail}؟\nسيتم تسجيل خروجك لتأكيد الهوية بعد التغيير.`)) {
+                    const originalText = btn.innerText;
+                    btn.innerText = "⏳ جاري التحديث...";
+                    btn.disabled = true;
+
+                    try {
+                        await user.updateEmail(newEmail);
+                        alert("✅ تم تحديث البريد الإلكتروني بنجاح! سيتم تسجيل خروجك الآن.");
                         auth.signOut();
-                    } else {
-                        alert("❌ خطأ: " + e.message);
+                        window.location.reload();
+                    } catch (e) {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                        if (e.code === 'auth/requires-recent-login') {
+                            alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى فوراً ثم العودة لتغيير البريد.");
+                            auth.signOut();
+                        } else {
+                            alert("❌ خطأ: " + e.message);
+                        }
                     }
                 }
-            }
-        };
+            };
 
-        document.getElementById('update-pass-btn').onclick = async function () {
-            const btn = this;
-            const newPass = document.getElementById('set-admin-pass').value.trim();
-            const user = auth.currentUser;
-            if (!user) return alert("❌ يجب تسجيل الدخول أولاً");
-            if (newPass.length < 6) return alert("❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+            document.getElementById('update-pass-btn').onclick = async function () {
+                const btn = this;
+                const newPass = document.getElementById('set-admin-pass').value.trim();
+                const user = auth.currentUser;
+                if (!user) return alert("❌ يجب تسجيل الدخول أولاً");
+                if (newPass.length < 6) return alert("❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل");
 
-            if (confirm("هل أنت متأكد من تغيير كلمة المرور؟\nسيتم تسجيل خروجك لتأكيد الهوية بعد التغيير.")) {
-                const originalText = btn.innerText;
-                btn.innerText = "⏳ جاري التحديث...";
-                btn.disabled = true;
+                if (confirm("هل أنت متأكد من تغيير كلمة المرور؟\nسيتم تسجيل خروجك لتأكيد الهوية بعد التغيير.")) {
+                    const originalText = btn.innerText;
+                    btn.innerText = "⏳ جاري التحديث...";
+                    btn.disabled = true;
 
-                try {
-                    await user.updatePassword(newPass);
-                    alert("✅ تم تحديث كلمة المرور بنجاح! سيتم تسجيل خروجك الآن.");
-                    auth.signOut();
-                    window.location.reload();
-                } catch (e) {
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                    if (e.code === 'auth/requires-recent-login') {
-                        alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى فوراً ثم العودة لتغيير الباسورد.");
+                    try {
+                        await user.updatePassword(newPass);
+                        alert("✅ تم تحديث كلمة المرور بنجاح! سيتم تسجيل خروجك الآن.");
                         auth.signOut();
-                    } else {
-                        alert("❌ خطأ: " + e.message);
+                        window.location.reload();
+                    } catch (e) {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                        if (e.code === 'auth/requires-recent-login') {
+                            alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى فوراً ثم العودة لتغيير الباسورد.");
+                            auth.signOut();
+                        } else {
+                            alert("❌ خطأ: " + e.message);
+                        }
                     }
                 }
+            };
+
+            // Buttons for managing Staff passwords
+            const staffEmails = Object.keys(PERMISSIONS).filter(e => PERMISSIONS[e] !== 'ALL');
+
+            // Create UI for Staff password reset
+            const settingsCards = document.querySelectorAll('.settings-card');
+            const accountCard = settingsCards[settingsCards.length - 1];
+
+            if (accountCard) {
+                const staffSection = document.createElement('div');
+                staffSection.style.marginTop = '30px';
+                staffSection.style.paddingTop = '20px';
+                staffSection.style.borderTop = '1px dashed var(--border)';
+                staffSection.innerHTML = `
+                    <div style="font-weight:900; font-size:1.1rem; margin-bottom:15px; color:#ff9800; display:flex; align-items:center; gap:10px;">
+                        <i data-lucide="shield-alert"></i> إدارة كلمات مرور الموظفين
+                    </div>
+                    <p style="color:var(--text-dim); font-size:0.8rem; margin-bottom:15px;">يمكنك إرسال رابط إعادة تعيين كلمة المرور لإيميل الموظف في حال نسيانه لها.</p>
+                    <div id="staff-reset-btns" style="display:flex; flex-direction:column; gap:10px;"></div>
+                `;
+                accountCard.appendChild(staffSection);
+                lucide.createIcons();
+
+                const btnsContainer = document.getElementById('staff-reset-btns');
+                staffEmails.forEach(staffEmail => {
+                    const sBtn = document.createElement('button');
+                    sBtn.className = 'save-btn';
+                    sBtn.style.cssText = 'width:100%; background:rgba(255,152,0,0.1); color:#ff9800; border:1px solid #ff9800; height:45px; font-size:0.85rem; cursor:pointer; font-family:inherit;';
+                    sBtn.innerText = `إرسال رابط استعادة لـ (${staffEmail})`;
+                    sBtn.onclick = async () => {
+                        if (confirm(`هل تريد إرسال رابط تغيير كلمة المرور للموظف: ${staffEmail}؟`)) {
+                            try {
+                                await auth.sendPasswordResetEmail(staffEmail);
+                                alert(`✅ تم إرسال الرابط لـ ${staffEmail} بنجاح!`);
+                            } catch (e) { alert("❌ خطأ: " + e.message); }
+                        }
+                    };
+                    btnsContainer.appendChild(sBtn);
+                });
             }
-        };
+
+        } else {
+            // If NOT Super Admin, hide the account settings card entirely
+            const settingsCards = document.querySelectorAll('.settings-card');
+            const accountCard = settingsCards[settingsCards.length - 1];
+            if (accountCard) accountCard.style.display = 'none';
+        }
 
         document.getElementById('save-wa-settings').onclick = async () => {
             const wa1 = document.getElementById('set-wa-1').value.trim();
