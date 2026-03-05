@@ -586,12 +586,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 5000);
 
         try {
-            // Pre-fetch everything in parallel
-            const [treeSnap, prices, wa, productsSnap] = await Promise.all([
+            // Pre-fetch only essential settings
+            const [treeSnap, prices, wa] = await Promise.all([
                 db.collection('settings').doc('storeTree').get(),
                 loadShippingPrices(),
-                loadWhatsAppNumbers(),
-                db.collection('products').get()
+                loadWhatsAppNumbers()
             ]);
 
             if (treeSnap.exists) {
@@ -600,9 +599,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 useDefaultData();
             }
-
-            allProducts = productsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            console.log(`📦 Loaded ${allProducts.length} products locally.`);
 
         } catch (e) {
             console.error("Init failed:", e);
@@ -725,9 +721,30 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Products - INSTANT LOCAL FILTERING (No more database delay!)
+        // Products - LAZY LOADING
         if (currentLevel.id) {
-            const products = allProducts.filter(p => p.categoryId === currentLevel.id);
+            if (!productCache[currentLevel.id]) {
+                const searchWrapper = document.getElementById('search-bar-wrapper');
+                if (searchWrapper) searchWrapper.classList.add('hidden'); // Hide search while loading
+
+                // Show a loading indicator
+                const loader = document.createElement('div');
+                loader.style.cssText = 'text-align:center; padding:3rem; grid-column:1/-1; color:var(--accent);';
+                loader.innerHTML = `<div class="custom-loader" style="width:40px; height:40px; border:3px solid #222; border-top-color:var(--accent); border-radius:50%; margin:0 auto 1rem auto; animation: spin 0.8s linear infinite;"></div><div style="font-weight:700; font-size:0.9rem;">${currentLang === 'ar' ? 'جاري تحميل المنتجات...' : 'Loading products...'}</div>`;
+                optionsGrid.appendChild(loader);
+
+                try {
+                    const snap = await db.collection('products').where('categoryId', '==', currentLevel.id).get();
+                    productCache[currentLevel.id] = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                } catch (e) {
+                    console.error("Failed to load category products:", e);
+                    productCache[currentLevel.id] = [];
+                }
+
+                if (loader.parentNode) loader.remove();
+            }
+
+            const products = productCache[currentLevel.id] || [];
             if (products.length > 0) {
                 products.forEach(p => {
                     if (p.hidden === true) return; // Skip hidden products
