@@ -1461,10 +1461,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            // Buttons for managing Staff passwords
+            // 🛠️ Management of Staff Passwords (THE BIG BOSS SECTION)
             const staffEmails = Object.keys(PERMISSIONS).filter(e => PERMISSIONS[e] !== 'ALL');
 
-            // Create UI for Staff password reset
             const settingsCards = document.querySelectorAll('.settings-card');
             const accountCard = settingsCards[settingsCards.length - 1];
 
@@ -1472,32 +1471,78 @@ document.addEventListener('DOMContentLoaded', () => {
                 const staffSection = document.createElement('div');
                 staffSection.style.marginTop = '30px';
                 staffSection.style.paddingTop = '20px';
-                staffSection.style.borderTop = '1px dashed var(--border)';
+                staffSection.style.borderTop = '2px solid var(--border)';
                 staffSection.innerHTML = `
                     <div style="font-weight:900; font-size:1.1rem; margin-bottom:15px; color:#ff9800; display:flex; align-items:center; gap:10px;">
-                        <i data-lucide="shield-alert"></i> إدارة كلمات مرور الموظفين
+                        <i data-lucide="shield-check"></i> التحكم في كلمات مرور الموظفين
                     </div>
-                    <p style="color:var(--text-dim); font-size:0.8rem; margin-bottom:15px;">يمكنك إرسال رابط إعادة تعيين كلمة المرور لإيميل الموظف في حال نسيانه لها.</p>
-                    <div id="staff-reset-btns" style="display:flex; flex-direction:column; gap:10px;"></div>
+                    <p style="color:var(--text-dim); font-size:0.8rem; margin-bottom:20px;">هنا يمكنك تعيين كلمة مرور جديدة لأي موظف يدوياً وبشكل فوري.</p>
+                    <div id="staff-admin-list" style="display:flex; flex-direction:column; gap:25px;"></div>
                 `;
                 accountCard.appendChild(staffSection);
                 lucide.createIcons();
 
-                const btnsContainer = document.getElementById('staff-reset-btns');
+                const listContainer = document.getElementById('staff-admin-list');
                 staffEmails.forEach(staffEmail => {
-                    const sBtn = document.createElement('button');
-                    sBtn.className = 'save-btn';
-                    sBtn.style.cssText = 'width:100%; background:rgba(255,152,0,0.1); color:#ff9800; border:1px solid #ff9800; height:45px; font-size:0.85rem; cursor:pointer; font-family:inherit;';
-                    sBtn.innerText = `إرسال رابط استعادة لـ (${staffEmail})`;
-                    sBtn.onclick = async () => {
-                        if (confirm(`هل تريد إرسال رابط تغيير كلمة المرور للموظف: ${staffEmail}؟`)) {
+                    const row = document.createElement('div');
+                    row.style.background = 'rgba(255,152,0,0.05)';
+                    row.style.padding = '15px';
+                    row.style.borderRadius = '15px';
+                    row.style.border = '1px solid rgba(255,152,0,0.2)';
+
+                    row.innerHTML = `
+                        <div style="font-weight:700; color:var(--text); margin-bottom:12px; font-size:0.9rem;">إيميل الموظف: <span style="color:#ff9800">${staffEmail}</span></div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="password" id="pass-input-${staffEmail.replace(/[@.]/g, '')}" placeholder="اكتب الباسورد الجديد هنا" 
+                                   style="flex:1; background:var(--bg-admin); border:1px solid var(--border); color:#fff; padding:10px; border-radius:10px; font-size:0.9rem;">
+                            <button class="update-staff-btn" data-email="${staffEmail}" 
+                                   style="background:#ff9800; color:#000; border:none; padding:0 20px; border-radius:10px; font-weight:700; cursor:pointer; height:42px;">تحديث</button>
+                        </div>
+                    `;
+                    listContainer.appendChild(row);
+                });
+
+                // Attach clicks
+                document.querySelectorAll('.update-staff-btn').forEach(btn => {
+                    btn.onclick = async function () {
+                        const emailToUpdate = this.getAttribute('data-email');
+                        const inputId = `pass-input-${emailToUpdate.replace(/[@.]/g, '')}`;
+                        const newPass = document.getElementById(inputId).value.trim();
+
+                        if (newPass.length < 6) return alert("❌ كلمة المرور لا يمكن أن تقل عن 6 أحرف");
+
+                        if (confirm(`هل أنت متأكد من تغيير كلمة مرور الموظف ${emailToUpdate}؟`)) {
+                            const originalText = this.innerText;
+                            this.innerText = "⌛...";
+                            this.disabled = true;
+
                             try {
-                                await auth.sendPasswordResetEmail(staffEmail);
-                                alert(`✅ تم إرسال الرابط لـ ${staffEmail} بنجاح!`);
-                            } catch (e) { alert("❌ خطأ: " + e.message); }
+                                const adminToken = await auth.currentUser.getIdToken();
+                                const res = await fetch('/api/update-user', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        email: emailToUpdate,
+                                        newPassword: newPass,
+                                        adminToken: adminToken
+                                    })
+                                });
+
+                                const result = await res.json();
+                                if (result.success) {
+                                    alert(`✅ تم تغيير الباسورد لـ ${emailToUpdate} بنجاح!`);
+                                    document.getElementById(inputId).value = '';
+                                } else {
+                                    alert("❌ خطأ: " + result.error);
+                                }
+                            } catch (e) {
+                                alert("❌ حدث خطأ فني: " + e.message);
+                            } finally {
+                                this.innerText = originalText;
+                                this.disabled = false;
+                            }
                         }
                     };
-                    btnsContainer.appendChild(sBtn);
                 });
             }
 
