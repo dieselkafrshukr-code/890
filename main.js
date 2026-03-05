@@ -676,16 +676,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.enabled && !isClosed) {
                         textEl.innerText = data.text || '';
                         bar.classList.remove('hidden');
+                        document.body.classList.add('has-announcement');
                     } else {
                         bar.classList.add('hidden');
+                        document.body.classList.remove('has-announcement');
                     }
                 } else {
                     bar.classList.add('hidden');
+                    document.body.classList.remove('has-announcement');
                 }
             });
 
             window.closeAnnouncement = () => {
                 bar.classList.add('hidden');
+                document.body.classList.remove('has-announcement');
                 sessionStorage.setItem('eltoufan_ann_closed', 'true');
             };
         }

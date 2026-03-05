@@ -221,20 +221,36 @@ body {
 .announcement-bar {
     background: var(--primary);
     color: #fff;
-    padding: 8px 15px;
+    padding: 10px 20px;
     text-align: center;
-    position: relative;
-    z-index: 1001;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 99999;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.9rem;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 40px;
-    border-radius: 0 0 15px 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    margin: -2rem -2rem 2rem -2rem;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.announcement-bar.hidden {
+    display: none !important;
+}
+
+body.has-announcement {
+    padding-top: 40px;
+    /* Space for the fixed bar */
+}
+
+@media (max-width: 600px) {
+    body.has-announcement {
+        padding-top: 50px;
+    }
 }
 
 .announcement-content {

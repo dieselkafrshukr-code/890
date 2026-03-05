@@ -51,6 +51,18 @@
 </head>
 
 <body>
+    <!-- Announcement Bar -->
+    <div id="announcement-bar" class="announcement-bar hidden">
+        <div class="announcement-content">
+            <span id="announcement-text"></span>
+        </div>
+        <button id="close-announcement" class="close-announcement" onclick="window.closeAnnouncement()"
+            style="position:absolute; left:15px; background:transparent; border:none; color:white; cursor:pointer; opacity:0.8;"
+            title="إغلاق">
+            <i data-lucide="x" style="width:16px;"></i>
+        </button>
+    </div>
+
     <!-- Cinematic Intro (THE STORM'S EYE) -->
     <div id="intro-screen" class="intro-overlay">
         <canvas id="particles-canvas"></canvas>
@@ -65,16 +77,6 @@
 
     <!-- Main App Container -->
     <div id="main-app" class="app-container hidden">
-        <!-- Announcement Bar -->
-        <div id="announcement-bar" class="announcement-bar hidden">
-            <div class="announcement-content">
-                <span id="announcement-text"></span>
-            </div>
-            <button id="close-announcement" class="close-announcement" onclick="window.closeAnnouncement()"
-                title="إغلاق">
-                <i data-lucide="x"></i>
-            </button>
-        </div>
 
         <header class="header">
             <div class="logo-box">
