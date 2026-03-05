@@ -593,8 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadShippingPrices(),
                 loadWhatsAppNumbers(),
                 checkMaintenanceMode(),
-                checkAnnouncement(),
-                loadSpecialOffers()
+                checkAnnouncement()
             ]);
 
             if (treeSnap.exists) {
@@ -670,10 +669,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!bar || !textEl) return;
 
             db.collection('settings').doc('announcement').onSnapshot(doc => {
-                const isClosed = sessionStorage.getItem('eltoufan_ann_closed');
                 if (doc.exists) {
                     const data = doc.data();
-                    if (data.enabled && !isClosed) {
+                    if (data.enabled) {
                         textEl.innerText = data.text || '';
                         bar.classList.remove('hidden');
                         document.body.classList.add('has-announcement');
@@ -690,25 +688,10 @@ document.addEventListener('DOMContentLoaded', () => {
             window.closeAnnouncement = () => {
                 bar.classList.add('hidden');
                 document.body.classList.remove('has-announcement');
-                sessionStorage.setItem('eltoufan_ann_closed', 'true');
             };
         }
 
-        async function loadSpecialOffers() {
-            try {
-                const snap = await db.collection('specialOffers').get();
-                activeOffers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("🎁 Loaded Special Offers:", activeOffers.length);
-            } catch (e) {
-                console.error("Failed to load offers:", e);
-                activeOffers = [];
-            }
-        }
-
-        // Helper to find matching special offer tag
-        function getOfferForProduct(product) {
-            return activeOffers.find(o => o.categoryId === product.categoryId) || null;
-        }
+        // Special offers logic removed for simplified site-wide alert system
 
         mainApp.classList.remove('hidden');
         mainApp.style.opacity = '1';
@@ -858,20 +841,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const pName = p[nameKey] || p.name;
                     const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
 
-                    const offer = getOfferForProduct(p);
-
-                    const mainColorName = (currentLang === 'en' && p.mainColorEn) ? p.mainColorEn : p.mainColor;
-                    const colorBadge = mainColorName
-                        ? `<div class="product-color-badge">🎨 ${mainColorName}</div>`
-                        : '';
-
-                    const offerTag = offer
-                        ? `<div class="offer-badge-tag">${offer.title}</div>`
-                        : '';
-
                     card.innerHTML = `
                         <div class="product-card-img">
-                            ${offerTag}
                             <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${pName}" loading="lazy">
                         </div>
                         <div class="product-card-info">
@@ -957,16 +928,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const pName = detailedProd[nameKey] || detailedProd.name;
         const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
-        const pricing = getOfferForProduct(detailedProd);
-
         document.getElementById('detail-name').innerText = pName;
-
-        let priceHtml = `${detailedProd.price}${currency}`;
-        if (pricing) {
-            priceHtml += ` <span style="background:var(--primary); color:#fff; font-size:0.75rem; padding:3px 10px; border-radius:12px; margin-right:10px; display:inline-block; vertical-align:middle;">${pricing.title}</span>`;
-        }
-
-        document.getElementById('detail-price').innerHTML = priceHtml;
+        document.getElementById('detail-price').innerHTML = `${detailedProd.price}${currency}`;
         document.getElementById('detail-main-img').src = detailedProd.mainImage;
 
         const descEl = document.getElementById('detail-description');

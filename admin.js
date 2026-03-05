@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const PERMISSIONS = {
         'mm12@gmail.com': 'ALL', // Super Admin
         'orders@eltoufan.com': ['orders'], // Orders Only
-        'store@eltoufan.com': ['products', 'categories', 'governorates', 'coupons', 'special-offers'] // Content Manager
+        'store@eltoufan.com': ['products', 'categories', 'governorates', 'coupons', 'site-alerts'] // Content Manager
     };
 
     auth.onAuthStateChanged(user => {
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tab === 'products') renderProducts();
         if (tab === 'governorates') renderGovernorates();
         if (tab === 'coupons') renderCoupons();
-        if (tab === 'special-offers') renderSpecialOffers();
+        if (tab === 'site-alerts') renderSiteAlerts();
         if (tab === 'settings') renderSettings();
     }
 
@@ -1301,115 +1301,88 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- 5.5. SPECIAL OFFERS ---
-    async function renderSpecialOffers() {
-        if (storeTreeData.length === 0) {
-            const snap = await db.collection('settings').doc('storeTree').get();
-            storeTreeData = snap.exists ? (snap.data().options || []) : [];
-        }
-
+    // --- 5.5. WEB ALERTS (Replaces Special Offers) ---
+    async function renderSiteAlerts() {
         tabContent.innerHTML = `
             <div class="actions-header">
-                <h3>📢 العروض والخصومات المباشرة</h3>
-                <button class="add-btn" onclick="window.openOfferModal()"><i data-lucide="plus"></i> إضافة عرض جديد</button>
+                <h3>📢 شريط التنبيهات العلوي (Announcement Bar)</h3>
+                <div id="ann-status-badge" style="padding:10px 20px; border-radius:12px; font-weight:700;">جاري التحميل...</div>
             </div>
-            <p style="color:var(--text-dim); margin-bottom:20px;">💡 هذه الخصومات يتم تطبيقها تلقائياً على المنتجات في الأقسام المحددة (تظهر في الواجهة والسعر النهائي).</p>
-            <div id="offers-list" class="grid-container" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;"></div>
-
-            <!-- Offer Modal -->
-            <div id="offer-modal" class="modal-overlay hidden">
-                <div class="modal-card">
-                    <h3>🎁 تفاصيل العرض</h3>
-                    <div class="input-group">
-                        <label>عنوان العرض / الملصق (مثال: خصم 25%):</label>
-                        <input id="of-title" type="text" placeholder="سيظهر كملصق على المنتجات">
-                    </div>
-                    <div class="input-group">
-                        <label>القسم المستهدف:</label>
-                        <select id="of-category-id">
-                            <!-- Categories will be loaded here -->
-                        </select>
-                    </div>
-                    <div class="modal-actions">
-                        <button onclick="window.saveOffer()" class="add-btn">حفظ وتفعيل العرض</button>
-                        <button onclick="window.closeOfferModal()" class="cancel-btn">إلغاء</button>
-                    </div>
+            
+            <div class="settings-card" style="background:var(--card); padding:24px; border-radius:20px; border:1px solid var(--border); margin-top:20px;">
+                <div class="input-group" style="margin-bottom:20px;">
+                    <label>نص التنبيه (مثال: خصم 25% على جميع المنتجات):</label>
+                    <textarea id="ann-text-input" rows="3" placeholder="اكتب الرسالة التي ستظهر في أعلى الموقع هنا..."></textarea>
                 </div>
+                
+                <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                    <button id="save-ann-btn" class="add-btn" style="flex:1; height:50px;">
+                        <i data-lucide="save"></i> حفظ النص وتحديث الموقع
+                    </button>
+                    <button id="toggle-ann-btn-main" class="save-btn" style="flex:1; height:50px; background:#4caf50;">
+                        <i data-lucide="power"></i> تفعيل / إيقاف التنبيه
+                    </button>
+                </div>
+                <p style="color:var(--text-dim); font-size:0.85rem; margin-top:15px; line-height:1.6;">💡 هذا الشريط سيظهر في أعلى الموقع للزوار على جميع الصفحات. زر (X) في الموقع يسمح للزائر بإخفائه مؤقتاً.</p>
             </div>
         `;
 
-        // Fill Category Select
-        const catSelect = document.getElementById('of-category-id');
-        const flatten = (nodes, path = "") => {
-            let options = [];
-            nodes.forEach(n => {
-                options.push({ id: n.id, name: path + n.name });
-                if (n.options) options = options.concat(flatten(n.options, path + n.name + " > "));
-            });
-            return options;
-        };
-        const allCats = flatten(storeTreeData);
-        allCats.forEach(c => {
-            const op = document.createElement('option');
-            op.value = c.id;
-            op.innerText = c.name;
-            catSelect.appendChild(op);
-        });
-
-        const list = document.getElementById('offers-list');
-        const snap = await db.collection('specialOffers').get();
-        if (snap.empty) {
-            list.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px; color:var(--text-dim);">لا يوجد عروض نشطة حالياً.</div>';
-        } else {
-            snap.forEach(doc => {
-                const o = doc.data();
-                const d = document.createElement('div');
-                d.className = 'item-card';
-                d.style.cssText = "background:var(--card); border:1px solid var(--border); border-radius:15px; padding:20px; display:flex; justify-content:space-between; align-items:center;";
-                d.innerHTML = `
-                    <div>
-                        <div style="font-weight:900; font-size:1.1rem; color:var(--accent);">${o.title}</div>
-                        <div style="font-size:0.8rem; color:var(--text-dim); margin-top:5px;">القسم المستهدف: ${o.categoryName || 'غير محدد'}</div>
-                    </div>
-                    <div>
-                        <button onclick="window.deleteOffer('${doc.id}')" class="action-link del" style="padding:10px; border-radius:10px; background:rgba(255,68,68,0.1); border:none; color:#f44336; cursor:pointer;">
-                            <i data-lucide="trash-2" style="width:20px;"></i>
-                        </button>
-                    </div>
-                `;
-                list.appendChild(d);
-            });
-        }
         lucide.createIcons();
-    }
 
-    window.openOfferModal = () => document.getElementById('offer-modal').classList.remove('hidden');
-    window.closeOfferModal = () => document.getElementById('offer-modal').classList.add('hidden');
-
-    window.saveOffer = async () => {
-        const title = document.getElementById('of-title').value.trim();
-        const catId = document.getElementById('of-category-id').value;
-        const catName = document.getElementById('of-category-id').options[document.getElementById('of-category-id').selectedIndex].text;
-
-        if (!title) return alert("❌ يرجى إدخال عنوان العرض!");
-
-        try {
-            await db.collection('specialOffers').add({
-                title, categoryId: catId, categoryName: catName,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            alert("✅ تم تفعيل العرض بنجاح!");
-            window.closeOfferModal();
-            renderSpecialOffers();
-        } catch (e) {
-            alert("❌ خطأ: " + e.message);
+        // Load data
+        const annSnap = await db.collection('settings').doc('announcement').get();
+        let isEnabled = false;
+        if (annSnap.exists) {
+            const data = annSnap.data();
+            document.getElementById('ann-text-input').value = data.text || '';
+            isEnabled = data.enabled || false;
+            updateAlertUI(isEnabled);
         }
-    };
 
-    window.deleteOffer = async (id) => {
-        if (!confirm("هل أنت متأكد من حذف هذا العرض؟ سيتم العودة للأسعار الأصلية للأصناف.")) return;
-        await db.collection('specialOffers').doc(id).delete();
-        renderSpecialOffers();
-    };
+        function updateAlertUI(enabled) {
+            const badge = document.getElementById('ann-status-badge');
+            const btn = document.getElementById('toggle-ann-btn-main');
+            isEnabled = enabled;
+            if (enabled) {
+                badge.innerHTML = '🟢 التنبيه يعمل الآن';
+                badge.style.background = 'rgba(76,175,80,0.1)';
+                badge.style.color = '#4caf50';
+                btn.innerHTML = '<i data-lucide="power"></i> إيقاف التنبيه الآن';
+                btn.style.background = '#f44336';
+            } else {
+                badge.innerHTML = '⚪ التنبيه متوقف حالياً';
+                badge.style.background = 'rgba(128,128,128,0.1)';
+                badge.style.color = 'var(--text-dim)';
+                btn.innerHTML = '<i data-lucide="power"></i> تفعيل التنبيه الآن';
+                btn.style.background = '#4caf50';
+            }
+            lucide.createIcons();
+        }
+
+        document.getElementById('save-ann-btn').onclick = async () => {
+            const text = document.getElementById('ann-text-input').value.trim();
+            if (!text) return alert("❌ يرجى إدخال نص التنبيه!");
+
+            try {
+                await db.collection('settings').doc('announcement').update({
+                    text: text,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                alert("✅ تم تحديث نص التنبيه بنجاح!");
+            } catch (e) { alert("❌ خطأ: " + e.message); }
+        };
+
+        document.getElementById('toggle-ann-btn-main').onclick = async () => {
+            const newStatus = !isEnabled;
+            try {
+                await db.collection('settings').doc('announcement').update({
+                    enabled: newStatus
+                });
+                updateAlertUI(newStatus);
+                alert(newStatus ? "📢 تم تفعيل التنبيه" : "⚪ تم إيقاف التنبيه");
+            } catch (e) { alert("❌ خطأ: " + e.message); }
+        };
+    }
 
     // --- 6. GENERAL SETTINGS ---
     async function renderSettings() {
@@ -1479,25 +1452,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
-                <!-- Announcement Bar Control -->
                 <div class="settings-card" style="background:var(--card); padding:24px; border-radius:20px; border:1px solid var(--border);">
                     <div style="font-weight:900; font-size:1.1rem; margin-bottom:20px; color:var(--accent); display:flex; align-items:center; gap:10px;">
-                        <i data-lucide="megaphone"></i> شريط الإعلانات (أعلى الموقع)
+                        <i data-lucide="info"></i> ملاحظة حول التنبيهات
                     </div>
-                    
-                    <div id="ann-status-badge" style="padding:12px; border-radius:12px; margin-bottom:15px; font-weight:700; font-size:0.9rem; text-align:center; border: 1px solid #333;">
-                        جاري التحميل...
-                    </div>
-
-                    <div class="input-group" style="margin-bottom:15px;">
-                        <label>نص الإعلان:</label>
-                        <input id="ann-text" type="text" placeholder="مثال: خصم 25% على جميع منتجات الصيفي! 🔥">
-                    </div>
-
-                    <button id="toggle-ann-btn" class="save-btn" style="width:100%; height:45px; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:900;">
-                        تحديث شريط الإعلانات
-                    </button>
-                    <p style="color:var(--text-dim); font-size:0.8rem; margin-top:10px; line-height:1.4;">💡 سيظهر هذا الشريط في أعلى الصفحة لجميع الزوار. يمكنك كتابة العروض والخصومات لتظهر في كل الصفحات.</p>
+                    <p style="color:var(--text-dim); font-size:0.8rem; margin-top:10px; line-height:1.4;">💡 لإدارة شريط الإعلانات العلوي، يرجى الانتقال إلى تبويب <b>"تنبيهات الموقع"</b> من القائمة الجانبية.</p>
                 </div>
 
                 <div class="settings-card" style="background:var(--card); padding:24px; border-radius:20px; border:1px solid var(--border);">
@@ -1542,15 +1501,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateMaintenanceUI(false);
             }
 
-            const annSnap = await db.collection('settings').doc('announcement').get();
-            if (annSnap.exists) {
-                const data = annSnap.data();
-                document.getElementById('ann-text').value = data.text || '';
-                updateAnnouncementUI(data.enabled);
-            } else {
-                updateAnnouncementUI(false);
-            }
-
             const waSnap = await db.collection('settings').doc('whatsappNumbers').get();
             if (waSnap.exists) {
                 const data = waSnap.data();
@@ -1585,88 +1535,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
         }
 
-        function updateAnnouncementUI(enabled) {
-            const badge = document.getElementById('ann-status-badge');
-            const btn = document.getElementById('toggle-ann-btn');
-            if (!badge || !btn) return;
-
-            if (enabled) {
-                badge.innerHTML = '🟢 شريط الإعلانات: مفعل الآن';
-                badge.style.background = 'rgba(76,175,80,0.1)';
-                badge.style.color = '#4caf50';
-                btn.innerHTML = '🔴 إيقاف الشريط العلوي';
-                btn.style.background = '#f44336';
-            } else {
-                badge.innerHTML = '⚪ شريط الإعلانات: متوقف حالياً';
-                badge.style.background = 'rgba(128,128,128,0.1)';
-                badge.style.color = 'var(--text-dim)';
-                btn.innerHTML = '🟢 تفعيل الشريط العلوي';
-                btn.style.background = '#4caf50';
-            }
-        }
-
-        document.getElementById('toggle-maintenance-btn').onclick = async function () {
-            const btn = this;
-            const currentlyEnabled = btn.dataset.enabled === "true";
-            const newStatus = !currentlyEnabled;
-            const reason = document.getElementById('mnt-reason').value.trim();
-            const duration = document.getElementById('mnt-duration').value.trim();
-            const message = document.getElementById('mnt-message').value.trim();
-
-            if (newStatus && !reason) return alert("❌ يرجى إدخال سبب الصيانة أولاً!");
-
-            const confirmMsg = newStatus
-                ? "هل أنت متأكد من إغلاق الموقع تماماً عن الزوار؟"
-                : "هل تريد إعادة فتح الموقع للجمهور الآن؟";
-
-            if (confirm(confirmMsg)) {
-                const originalContent = btn.innerHTML;
-                btn.innerText = "⏳ جاري التحديث...";
-                btn.disabled = true;
-                try {
-                    await db.collection('settings').doc('maintenance').set({
-                        enabled: newStatus,
-                        reason: reason,
-                        duration: duration,
-                        message: message,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    updateMaintenanceUI(newStatus);
-                    alert(newStatus ? "⚠️ تم تفعيل وضع الصيانة بنجاح" : "✅ تم تشغيل الموقع بنجاح");
-                } catch (e) {
-                    alert("❌ خطأ: " + e.message);
-                    btn.innerHTML = originalContent;
-                } finally {
-                    btn.disabled = false;
-                }
-            }
-        };
-
-        const toggleAnnBtn = document.getElementById('toggle-ann-btn');
-        if (toggleAnnBtn) {
-            toggleAnnBtn.onclick = async () => {
-                const text = document.getElementById('ann-text').value.trim();
-                const isDisabling = toggleAnnBtn.innerText.includes('إيقاف');
-
-                if (!text && !isDisabling) return alert("❌ يرجى كتابة نص للإعلان أولاً!");
-
-                const nextStatus = !isDisabling;
-                if (!confirm(nextStatus ? "هل تريد تفعيل شريط الإعلانات؟" : "هل تريد إيقاف شريط الإعلانات؟")) return;
-
-                toggleAnnBtn.innerText = "⏳ جاري الحفظ...";
-                try {
-                    await db.collection('settings').doc('announcement').set({
-                        enabled: nextStatus,
-                        text: text,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    updateAnnouncementUI(nextStatus);
-                } catch (e) {
-                    alert("❌ خطأ: " + e.message);
-                    updateAnnouncementUI(!nextStatus);
-                }
-            };
-        }
+        // Announcement logic handled in dedicated tab
 
 
         // Account Updates Logic (Only for Super Admin)
