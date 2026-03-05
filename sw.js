@@ -49,7 +49,19 @@ self.addEventListener("activate", (event) => {
 
 // Fetch Event
 self.addEventListener("fetch", (event) => {
-    // Check if navigation request (HTML page)
+    const url = event.request.url;
+
+    // ❌ تجاهل requests من extensions المتصفح أو غير http/https
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        return;
+    }
+
+    // ❌ تجاهل POST requests (لا يمكن تخزينها في Cache)
+    if (event.request.method !== "GET") {
+        return;
+    }
+
+    // ✅ Check if navigation request (HTML page)
     if (event.request.mode === "navigate") {
         event.respondWith(
             fetch(event.request).catch(() => {
@@ -59,19 +71,18 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    // Default Cache Strategy (Stale-While-Revalidate)
+    // ✅ Default Cache Strategy (Stale-While-Revalidate)
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             const fetchPromise = fetch(event.request).then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200) {
+                if (networkResponse && networkResponse.status === 200 && networkResponse.type !== "opaque") {
                     const cacheCopy = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, cacheCopy);
+                        cache.put(event.request, cacheCopy).catch(() => { });
                     });
                 }
                 return networkResponse;
             }).catch(() => {
-                // Return cached response if available when fetching fails
                 return cachedResponse;
             });
 
