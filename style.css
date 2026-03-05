@@ -254,25 +254,28 @@ body.has-announcement {
 }
 
 .announcement-content {
-    flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 15px;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 .close-announcement {
-    position: absolute;
-    right: 10px;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.2) !important;
     border: none;
     color: #fff;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 5px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     transition: background 0.3s ease;
+    flex-shrink: 0;
 }
 
 .close-announcement:hover {
