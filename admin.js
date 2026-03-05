@@ -1336,6 +1336,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <button id="save-msg-settings" class="save-btn" style="width:100%; height:50px;">حفظ قالب الرسالة</button>
                 </div>
+                <div class="settings-card" style="background:var(--card); padding:24px; border-radius:20px; border:1px solid var(--border);">
+                    <div style="font-weight:900; font-size:1.1rem; margin-bottom:20px; color:var(--accent); display:flex; align-items:center; gap:10px;">
+                        <i data-lucide="user"></i> إعدادات حساب الأدمن
+                    </div>
+                    <p style="color:var(--text-dim); font-size:0.8rem; margin-bottom:15px;">⚠️ ملاحظة: عند تغيير الإيميل، يجب تحديثه أيضاً في ملف <code>admin.js</code> (السطر 17) لضمان استمرار الصلاحيات.</p>
+                    <div class="input-group" style="margin-bottom:15px;">
+                        <label>تغيير البريد الإلكتروني:</label>
+                        <input id="set-admin-email" type="email" placeholder="البريد الجديد">
+                    </div>
+                    <button id="update-email-btn" class="save-btn" style="width:100%; margin-bottom:20px; background:#2196f3; height:45px;">تحديث البريد</button>
+                    
+                    <div style="border-top:1px solid var(--border); margin:20px 0; padding-top:20px;">
+                        <div class="input-group" style="margin-bottom:15px;">
+                            <label>تغيير كلمة المرور:</label>
+                            <input id="set-admin-pass" type="password" placeholder="كلمة المرور الجديدة">
+                        </div>
+                        <button id="update-pass-btn" class="save-btn" style="width:100%; background:#f44336; height:45px;">تحديث كلمة المرور</button>
+                    </div>
+                </div>
 
             </div>`;
 
@@ -1343,6 +1362,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Load existing
         try {
+            const user = auth.currentUser;
+            if (user) {
+                document.getElementById('set-admin-email').value = user.email || '';
+            }
+
             const waSnap = await db.collection('settings').doc('whatsappNumbers').get();
             if (waSnap.exists) {
                 const data = waSnap.data();
@@ -1353,6 +1377,53 @@ document.addEventListener('DOMContentLoaded', () => {
             const defaultMsg = "مرحباً {customer}، بخصوص طلبك رقم {id}:\n\nالمنتجات:\n{items}";
             document.getElementById('set-wa-template').value = msgSnap.exists ? msgSnap.data().template : defaultMsg;
         } catch (e) { console.error(e); }
+
+        // Account Updates Logic
+        document.getElementById('update-email-btn').onclick = async () => {
+            const newEmail = document.getElementById('set-admin-email').value.trim();
+            const user = auth.currentUser;
+            if (!user) return alert("❌ يجب تسجيل الدخول أولاً");
+            if (!newEmail || newEmail === user.email) return alert("❌ يرجى إدخال بريد إلكتروني جديد");
+
+            if (confirm(`هل أنت متأكد من تغيير بريدك إلى ${newEmail}؟\nسيطلب منك إعادة تسجيل الدخول.`)) {
+                try {
+                    await user.updateEmail(newEmail);
+                    alert("✅ تم تحديث البريد الإلكتروني بنجاح! سيتم تسجيل خروجك الآن.");
+                    auth.signOut();
+                    window.location.reload();
+                } catch (e) {
+                    if (e.code === 'auth/requires-recent-login') {
+                        alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى قبل تغيير البريد.");
+                        auth.signOut();
+                    } else {
+                        alert("❌ خطأ: " + e.message);
+                    }
+                }
+            }
+        };
+
+        document.getElementById('update-pass-btn').onclick = async () => {
+            const newPass = document.getElementById('set-admin-pass').value.trim();
+            const user = auth.currentUser;
+            if (!user) return alert("❌ يجب تسجيل الدخول أولاً");
+            if (newPass.length < 6) return alert("❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+
+            if (confirm("هل أنت متأكد من تغيير كلمة المرور؟\nسيطلب منك إعادة تسجيل الدخول.")) {
+                try {
+                    await user.updatePassword(newPass);
+                    alert("✅ تم تحديث كلمة المرور بنجاح! سيتم تسجيل خروجك الآن.");
+                    auth.signOut();
+                    window.location.reload();
+                } catch (e) {
+                    if (e.code === 'auth/requires-recent-login') {
+                        alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى قبل تغيير كلمة المرور.");
+                        auth.signOut();
+                    } else {
+                        alert("❌ خطأ: " + e.message);
+                    }
+                }
+            }
+        };
 
         document.getElementById('save-wa-settings').onclick = async () => {
             const wa1 = document.getElementById('set-wa-1').value.trim();
