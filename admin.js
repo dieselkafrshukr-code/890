@@ -1336,8 +1336,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = annSnap.data();
             document.getElementById('ann-text-input').value = data.text || '';
             isEnabled = data.enabled || false;
-            updateAlertUI(isEnabled);
         }
+        updateAlertUI(isEnabled);
 
         function updateAlertUI(enabled) {
             const badge = document.getElementById('ann-status-badge');
@@ -1364,10 +1364,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!text) return alert("❌ يرجى إدخال نص التنبيه!");
 
             try {
-                await db.collection('settings').doc('announcement').update({
+                await db.collection('settings').doc('announcement').set({
                     text: text,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                }, { merge: true });
                 alert("✅ تم تحديث نص التنبيه بنجاح!");
             } catch (e) { alert("❌ خطأ: " + e.message); }
         };
@@ -1375,9 +1375,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('toggle-ann-btn-main').onclick = async () => {
             const newStatus = !isEnabled;
             try {
-                await db.collection('settings').doc('announcement').update({
+                await db.collection('settings').doc('announcement').set({
                     enabled: newStatus
-                });
+                }, { merge: true });
                 updateAlertUI(newStatus);
                 alert(newStatus ? "📢 تم تفعيل التنبيه" : "⚪ تم إيقاف التنبيه");
             } catch (e) { alert("❌ خطأ: " + e.message); }
