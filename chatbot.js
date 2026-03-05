@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('chatbot-send-btn');
 
     let hasGreeted = false;
+    let conversationHistory = []; // Track conversation for Gemini context
 
     // Social Links
     const FB_LINK = "https://www.facebook.com/share/1FBVWWwdd4/?mibextid=wwXIfr";
@@ -364,17 +365,59 @@ document.addEventListener('DOMContentLoaded', () => {
         return bestMatch;
     }
 
-    function processMessage(text) {
+    async function processMessage(text) {
         const intent = findIntent(text);
 
         if (intent) {
             const response = typeof intent.response === 'function' ? intent.response() : intent.response;
             sendBotMessage(response);
+            // Track in history
+            conversationHistory.push({ role: 'user', text: text });
+            conversationHistory.push({ role: 'model', text: response.replace(/<[^>]*>/g, '') });
             if (intent.followUp && intent.followUp.length > 0) {
                 showOptions(intent.followUp);
             }
         } else {
-            // Fallback - ذكي ومهذب
+            // 🤖 Fallback to Gemini AI
+            await askGemini(text);
+        }
+    }
+
+    async function askGemini(text) {
+        // Track user message in history
+        conversationHistory.push({ role: 'user', text: text });
+
+        // Keep only last 10 messages for context (to save tokens)
+        const recentHistory = conversationHistory.slice(-10);
+
+        try {
+            const response = await fetch('/api/chatbot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: text,
+                    history: recentHistory.slice(0, -1) // Exclude current message (it's sent separately)
+                })
+            });
+
+            if (!response.ok) throw new Error('API request failed');
+
+            const data = await response.json();
+            if (data.success && data.reply) {
+                // Convert markdown-like formatting to HTML
+                let formattedReply = data.reply
+                    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                    .replace(/\*(.*?)\*/g, '<i>$1</i>')
+                    .replace(/\n/g, '<br>');
+
+                sendBotMessage(formattedReply);
+                conversationHistory.push({ role: 'model', text: data.reply });
+            } else {
+                throw new Error('Invalid response');
+            }
+        } catch (e) {
+            console.error('Gemini API Error:', e);
+            // Graceful fallback if API fails
             sendBotMessage(
                 "😊 أهلاً بيك! أنا مساعد <b>الطوفان ستوك</b> وأقدر أساعدك في أي استفسار عن المحل.<br><br>" +
                 "جرب تسألني عن حاجة من دول:"
@@ -385,8 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 "👕 المنتجات والأقسام",
                 "💰 الأسعار والعروض",
                 "🚚 الشحن والتوصيل",
-                "📞 أرقام التواصل",
-                "📱 منصات التواصل"
+                "📞 أرقام التواصل"
             ]);
         }
     }
@@ -443,10 +485,10 @@ document.addEventListener('DOMContentLoaded', () => {
         messagesEl.appendChild(typingDiv);
         scrollToBottom();
 
-        setTimeout(() => {
+        setTimeout(async () => {
             const typing = document.getElementById('typing-indicator');
             if (typing) typing.remove();
-            processMessage(text);
+            await processMessage(text);
         }, 600);
     }
 
