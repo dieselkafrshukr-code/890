@@ -1714,6 +1714,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("✅ تم حفظ قالب الرسالة بنجاح");
             } catch (e) { alert("❌ خطأ في الحفظ: " + e.message); }
         };
+
+        document.getElementById('toggle-maintenance-btn').onclick = async () => {
+            const btn = document.getElementById('toggle-maintenance-btn');
+            const isCurrentlyEnabled = btn.dataset.enabled === 'true';
+
+            const newEnabled = !isCurrentlyEnabled;
+            const reason = document.getElementById('mnt-reason').value.trim();
+            const duration = document.getElementById('mnt-duration').value.trim();
+            const message = document.getElementById('mnt-message').value.trim();
+
+            if (newEnabled && !reason) {
+                return alert("❌ يرجى إدخال سبب الإيقاف أولاً!");
+            }
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ جاري التحديث...';
+
+                await db.collection('settings').doc('maintenance').set({
+                    enabled: newEnabled,
+                    reason: reason,
+                    duration: duration,
+                    message: message,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                updateMaintenanceUI(newEnabled);
+                alert(newEnabled ? "🔴 تم إيقاف الموقع وتفعيل وضع الصيانة" : "🟢 تم تشغيل الموقع بنجاح");
+            } catch (e) {
+                console.error(e);
+                alert("❌ فشل تحديث حالة الصيانة: " + e.message);
+                updateMaintenanceUI(isCurrentlyEnabled);
+            } finally {
+                btn.disabled = false;
+            }
+        };
     }
 
 });
