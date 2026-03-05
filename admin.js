@@ -1396,21 +1396,28 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error(e); }
 
         // Account Updates Logic
-        document.getElementById('update-email-btn').onclick = async () => {
+        document.getElementById('update-email-btn').onclick = async function () {
+            const btn = this;
             const newEmail = document.getElementById('set-admin-email').value.trim();
             const user = auth.currentUser;
             if (!user) return alert("❌ يجب تسجيل الدخول أولاً");
             if (!newEmail || newEmail === user.email) return alert("❌ يرجى إدخال بريد إلكتروني جديد");
 
-            if (confirm(`هل أنت متأكد من تغيير بريدك إلى ${newEmail}؟\nسيطلب منك إعادة تسجيل الدخول.`)) {
+            if (confirm(`هل أنت متأكد من تغيير بريدك إلى ${newEmail}؟\nسيتم تسجيل خروجك لتأكيد الهوية بعد التغيير.`)) {
+                const originalText = btn.innerText;
+                btn.innerText = "⏳ جاري التحديث...";
+                btn.disabled = true;
+
                 try {
                     await user.updateEmail(newEmail);
                     alert("✅ تم تحديث البريد الإلكتروني بنجاح! سيتم تسجيل خروجك الآن.");
                     auth.signOut();
                     window.location.reload();
                 } catch (e) {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
                     if (e.code === 'auth/requires-recent-login') {
-                        alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى قبل تغيير البريد.");
+                        alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى فوراً ثم العودة لتغيير البريد.");
                         auth.signOut();
                     } else {
                         alert("❌ خطأ: " + e.message);
@@ -1419,21 +1426,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        document.getElementById('update-pass-btn').onclick = async () => {
+        document.getElementById('update-pass-btn').onclick = async function () {
+            const btn = this;
             const newPass = document.getElementById('set-admin-pass').value.trim();
             const user = auth.currentUser;
             if (!user) return alert("❌ يجب تسجيل الدخول أولاً");
             if (newPass.length < 6) return alert("❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل");
 
-            if (confirm("هل أنت متأكد من تغيير كلمة المرور؟\nسيطلب منك إعادة تسجيل الدخول.")) {
+            if (confirm("هل أنت متأكد من تغيير كلمة المرور؟\nسيتم تسجيل خروجك لتأكيد الهوية بعد التغيير.")) {
+                const originalText = btn.innerText;
+                btn.innerText = "⏳ جاري التحديث...";
+                btn.disabled = true;
+
                 try {
                     await user.updatePassword(newPass);
                     alert("✅ تم تحديث كلمة المرور بنجاح! سيتم تسجيل خروجك الآن.");
                     auth.signOut();
                     window.location.reload();
                 } catch (e) {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
                     if (e.code === 'auth/requires-recent-login') {
-                        alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى قبل تغيير كلمة المرور.");
+                        alert("⚠️ للأمان، يجب تسجيل الدخول مرة أخرى فوراً ثم العودة لتغيير الباسورد.");
                         auth.signOut();
                     } else {
                         alert("❌ خطأ: " + e.message);
