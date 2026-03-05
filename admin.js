@@ -71,27 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
         auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
             .then(() => auth.signInWithEmailAndPassword(email, pass))
             .catch(err => {
-                alert("❌ خطأ: " + err.message);
+                alert("❌ البريد الإلكتروني أو كلمة المرور غير صحيحة!");
                 loginBtn.innerText = "تسجيل الدخول الآمن";
             });
     };
-
-    const forgotPassBtn = document.getElementById('forgot-pass-btn');
-    if (forgotPassBtn) {
-        forgotPassBtn.onclick = async () => {
-            const email = document.getElementById('email').value.trim();
-            if (!email) return alert("❌ يرجى إدخال بريدك الإلكتروني أولاً لإرسال رابط الاستعادة!");
-
-            if (confirm(`هل تريد إرسال رابط إعادة تعيين كلمة المرور إلى ${email}؟`)) {
-                try {
-                    await auth.sendPasswordResetEmail(email);
-                    alert("✅ تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني بنجاح! تفقد بريدك (بما في ذلك ملف الـ Junk/Spam).");
-                } catch (e) {
-                    alert("❌ خطأ: " + e.message);
-                }
-            }
-        };
-    }
 
     if (logoutBtn) {
         logoutBtn.onclick = () => {
