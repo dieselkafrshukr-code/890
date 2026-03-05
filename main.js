@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let allProductCards = [];
     let currentProductId = null;
     let productCache = {}; // Cache for category products
+    let activeOffers = []; // Live special offers from dashboard
 
     let currentLang = localStorage.getItem('eltoufan_lang') || 'ar';
 
@@ -587,11 +588,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Pre-fetch only essential settings
-            const [treeSnap, prices, wa, mnt] = await Promise.all([
+            const [treeSnap, prices, wa, mnt, ann] = await Promise.all([
                 db.collection('settings').doc('storeTree').get(),
                 loadShippingPrices(),
                 loadWhatsAppNumbers(),
-                checkMaintenanceMode()
+                checkMaintenanceMode(),
+                checkAnnouncement(),
+                loadSpecialOffers()
             ]);
 
             if (treeSnap.exists) {
@@ -661,11 +664,54 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        async function checkAnnouncement() {
+            const bar = document.getElementById('announcement-bar');
+            const textEl = document.getElementById('announcement-text');
+            if (!bar || !textEl) return;
+
+            db.collection('settings').doc('announcement').onSnapshot(doc => {
+                const isClosed = sessionStorage.getItem('eltoufan_ann_closed');
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (data.enabled && !isClosed) {
+                        textEl.innerText = data.text || '';
+                        bar.classList.remove('hidden');
+                    } else {
+                        bar.classList.add('hidden');
+                    }
+                } else {
+                    bar.classList.add('hidden');
+                }
+            });
+
+            window.closeAnnouncement = () => {
+                bar.classList.add('hidden');
+                sessionStorage.setItem('eltoufan_ann_closed', 'true');
+            };
+        }
+
+        async function loadSpecialOffers() {
+            try {
+                const snap = await db.collection('specialOffers').get();
+                activeOffers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("🎁 Loaded Special Offers:", activeOffers.length);
+            } catch (e) {
+                console.error("Failed to load offers:", e);
+                activeOffers = [];
+            }
+        }
+
+        // Helper to find matching special offer tag
+        function getOfferForProduct(product) {
+            return activeOffers.find(o => o.categoryId === product.categoryId) || null;
+        }
+
         mainApp.classList.remove('hidden');
         mainApp.style.opacity = '1';
         mainApp.style.transform = 'translateY(0)';
         await renderStage();
     }
+
 
     async function loadShippingPrices() {
         console.log("🚛 جاري تحميل أسعار الشحن من لوحة التحكم...");
@@ -807,12 +853,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.className = 'product-card';
                     const pName = p[nameKey] || p.name;
                     const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
+
+                    const offer = getOfferForProduct(p);
+
                     const mainColorName = (currentLang === 'en' && p.mainColorEn) ? p.mainColorEn : p.mainColor;
                     const colorBadge = mainColorName
                         ? `<div class="product-color-badge">🎨 ${mainColorName}</div>`
                         : '';
+
+                    const offerTag = offer
+                        ? `<div class="offer-badge-tag">${offer.title}</div>`
+                        : '';
+
                     card.innerHTML = `
                         <div class="product-card-img">
+                            ${offerTag}
                             <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${pName}" loading="lazy">
                         </div>
                         <div class="product-card-info">
@@ -897,8 +952,17 @@ document.addEventListener('DOMContentLoaded', () => {
         selSize = ""; selColor = "";
 
         const pName = detailedProd[nameKey] || detailedProd.name;
+        const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
+        const pricing = getOfferForProduct(detailedProd);
+
         document.getElementById('detail-name').innerText = pName;
-        document.getElementById('detail-price').innerText = detailedProd.price;
+
+        let priceHtml = `${detailedProd.price}${currency}`;
+        if (pricing) {
+            priceHtml += ` <span style="background:var(--primary); color:#fff; font-size:0.75rem; padding:3px 10px; border-radius:12px; margin-right:10px; display:inline-block; vertical-align:middle;">${pricing.title}</span>`;
+        }
+
+        document.getElementById('detail-price').innerHTML = priceHtml;
         document.getElementById('detail-main-img').src = detailedProd.mainImage;
 
         const descEl = document.getElementById('detail-description');

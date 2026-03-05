@@ -217,12 +217,63 @@ body {
     pointer-events: none;
 }
 
+/* --- Announcement Bar --- */
+.announcement-bar {
+    background: var(--primary);
+    color: #fff;
+    padding: 8px 15px;
+    text-align: center;
+    position: relative;
+    z-index: 1001;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 40px;
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin: -2rem -2rem 2rem -2rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.announcement-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.close-announcement {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background 0.3s ease;
+}
+
+.close-announcement:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.announcement-bar.hidden {
+    display: none !important;
+}
+
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 3rem;
 }
+
 
 .header-actions {
     display: flex;
@@ -1035,6 +1086,52 @@ body.dark-mode .close-detail:hover {
     font-size: 1.4rem;
     font-weight: 900;
     color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.old-price {
+    font-size: 0.9rem;
+    text-decoration: line-through;
+    opacity: 0.5;
+    color: var(--text-dim);
+    font-weight: 600;
+}
+
+.final-price {
+    color: #4caf50;
+    /* Modern Green for Special Prices */
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
+}
+
+.offer-badge-tag {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 900;
+    z-index: 5;
+    box-shadow: 0 4px 15px rgba(255, 65, 108, 0.4);
+    pointer-events: none;
+    animation: badgePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badgePop {
+    from {
+        transform: scale(0) rotate(-10deg);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+    }
 }
 
 /* Ensure modal is perfectly centered */
