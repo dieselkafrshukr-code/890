@@ -8,6 +8,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasGreeted = false;
     let conversationHistory = []; // Track conversation for Gemini context
+    let cachedProducts = null; // Cache products from Firebase
+    let cachedStoreTree = null; // Cache store tree (categories)
+
+    // Fetch real products from Firebase (cached)
+    async function fetchRealProducts() {
+        if (cachedProducts) return cachedProducts;
+        try {
+            const snap = await db.collection('products').get();
+            cachedProducts = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(p => !p.hidden);
+            console.log(`🤖 Chatbot: Loaded ${cachedProducts.length} products from Firebase`);
+            return cachedProducts;
+        } catch (e) {
+            console.error('Failed to fetch products for chatbot:', e);
+            return [];
+        }
+    }
+
+    // Fetch store tree (categories) from Firebase
+    async function fetchStoreTree() {
+        if (cachedStoreTree) return cachedStoreTree;
+        try {
+            const snap = await db.collection('settings').doc('storeTree').get();
+            if (snap.exists) {
+                cachedStoreTree = snap.data();
+                return cachedStoreTree;
+            }
+        } catch (e) {
+            console.error('Failed to fetch store tree:', e);
+        }
+        return null;
+    }
+
+    // Build product summary text from real data
+    async function buildProductSummary() {
+        const products = await fetchRealProducts();
+        const tree = await fetchStoreTree();
+
+        if (products.length === 0) return null;
+
+        // Group products by categoryId
+        const categories = {};
+        products.forEach(p => {
+            const catId = p.categoryId || 'other';
+            if (!categories[catId]) categories[catId] = [];
+            categories[catId].push(p);
+        });
+
+        // Try to get category names from storeTree
+        const catNames = {};
+        if (tree && tree.options) {
+            function extractCategories(options, prefix = '') {
+                options.forEach(opt => {
+                    if (opt.id) catNames[opt.id] = prefix + (opt.name || opt.id);
+                    if (opt.options && opt.options.length > 0) {
+                        extractCategories(opt.options, (opt.name || '') + ' > ');
+                    }
+                });
+            }
+            extractCategories(tree.options);
+        }
+
+        let summary = '';
+        for (const [catId, prods] of Object.entries(categories)) {
+            const catName = catNames[catId] || catId;
+            summary += `\n📂 ${catName} (${prods.length} منتج):\n`;
+            prods.slice(0, 8).forEach(p => {
+                summary += `  • ${p.name} - ${p.price} جنيه`;
+                if (p.mainColor) summary += ` | لون: ${p.mainColor}`;
+                summary += `\n`;
+            });
+            if (prods.length > 8) summary += `  ... و ${prods.length - 8} منتج آخر\n`;
+        }
+        return summary;
+    }
 
     // Social Links
     const FB_LINK = "https://www.facebook.com/share/1FBVWWwdd4/?mibextid=wwXIfr";
@@ -95,13 +169,50 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             id: 'products',
             patterns: ['منتج', 'منتجات', 'ملابس', 'عندكم', 'هدوم', 'رجالي', 'حريمي', 'اطفال', 'أطفال', 'أحذية', 'جزم', 'جزمة', 'شراب', 'شرابات', 'قميص', 'تيشرت', 'بنطلون', 'جاكيت', 'جواكت', 'ملابس داخلية', 'بيجامة', 'بيتي', 'خروج', 'اكسسوار', 'إكسسوار', 'حزام', 'ماركة', 'ماركات', 'براند', 'brand', 'أقسام', 'اقسام', 'products', 'clothes', 'shoes'],
-            response: () => {
-                let msg = "👕 <b>أقسام ومنتجات الطوفان ستوك:</b><br><br>";
-                STORE_INFO.categories.forEach(c => {
-                    msg += `🔹 <b>${c.name}:</b> ${c.items}<br><br>`;
+            response: async () => {
+                const products = await fetchRealProducts();
+                const tree = await fetchStoreTree();
+
+                if (products.length === 0) {
+                    return "👕 <b>منتجاتنا:</b><br><br>" +
+                        "عذراً، مش قادر أحمل المنتجات دلوقتي. تقدر تتصفح المنتجات من المتجر مباشرة أو تتواصل معانا على واتساب! 📱";
+                }
+
+                // Group by category
+                const categories = {};
+                products.forEach(p => {
+                    const catId = p.categoryId || 'other';
+                    if (!categories[catId]) categories[catId] = [];
+                    categories[catId].push(p);
                 });
-                msg += "✨ كل المنتجات <b>توكيلات أوروبية أصلية</b> بأعلى جودة!<br>";
-                msg += "🛍️ متاح بيع <b>جملة وقطاعي</b>.";
+
+                // Get category names
+                const catNames = {};
+                if (tree && tree.options) {
+                    function extractCats(options, prefix) {
+                        options.forEach(opt => {
+                            if (opt.id) catNames[opt.id] = opt.name || opt.id;
+                            if (opt.options) extractCats(opt.options, (opt.name || '') + ' > ');
+                        });
+                    }
+                    extractCats(tree.options, '');
+                }
+
+                let msg = `👕 <b>منتجاتنا الحالية (${products.length} منتج):</b><br><br>`;
+
+                for (const [catId, prods] of Object.entries(categories)) {
+                    const catName = catNames[catId] || catId;
+                    msg += `📂 <b>${catName}</b> (${prods.length} منتج):<br>`;
+                    prods.slice(0, 5).forEach(p => {
+                        msg += `&nbsp;&nbsp;• ${p.name} — <span style="color:var(--accent);font-weight:700;">${p.price} ج.م</span>`;
+                        if (p.mainColor) msg += ` <span style="color:#888;">(${p.mainColor})</span>`;
+                        msg += `<br>`;
+                    });
+                    if (prods.length > 5) msg += `&nbsp;&nbsp;<i>... و ${prods.length - 5} منتج تاني</i><br>`;
+                    msg += `<br>`;
+                }
+
+                msg += "🛍️ تقدر تتصفح كل المنتجات من المتجر وتضيفها للسلة مباشرة!";
                 return msg;
             },
             followUp: ["💰 الأسعار والعروض؟", "🛒 ازاي أطلب أونلاين؟", "📍 عنوان المحل؟"]
@@ -369,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const intent = findIntent(text);
 
         if (intent) {
-            const response = typeof intent.response === 'function' ? intent.response() : intent.response;
+            const response = typeof intent.response === 'function' ? await intent.response() : intent.response;
             sendBotMessage(response);
             // Track in history
             conversationHistory.push({ role: 'user', text: text });
@@ -391,12 +502,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const recentHistory = conversationHistory.slice(-10);
 
         try {
+            // Build real product context for Gemini
+            const productSummary = await buildProductSummary();
+
             const response = await fetch('/api/chatbot', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: text,
-                    history: recentHistory.slice(0, -1) // Exclude current message (it's sent separately)
+                    history: recentHistory.slice(0, -1),
+                    productContext: productSummary || ''
                 })
             });
 

@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
 
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyDocJGg_V2d5P7mCVqdErhLWigFq2EbDXA';
 
-    const { message, history } = req.body;
+    const { message, history, productContext } = req.body;
     if (!message) {
         return res.status(400).json({ error: 'Message is required' });
     }
@@ -55,7 +55,15 @@ module.exports = async function handler(req, res) {
 4. خلي ردودك قصيرة ومفيدة (لا تتعدى 3-4 سطور إلا لو السؤال محتاج تفصيل).
 5. استخدم إيموجي بشكل معتدل.
 6. لو حد سألك عن سعر منتج محدد، قوله يتواصل على واتساب أو يزور المحل.
-7. لا تخترع معلومات غير موجودة.`;
+7. لا تخترع معلومات غير موجودة.
+8. لو حد سألك عن منتج معين، استخدم بيانات المنتجات الحقيقية المرفقة (لو موجودة) واذكر اسمه وسعره الحقيقي.
+9. لو المنتج مش موجود في البيانات المرفقة، قوله "مش لاقي المنتج ده دلوقتي، تقدر تتصفح المتجر أو تكلمنا على واتساب".`;
+
+    // Append real product data if available
+    let fullSystemPrompt = systemInstruction;
+    if (productContext && productContext.length > 0) {
+        fullSystemPrompt += `\n\n## المنتجات الحقيقية المتاحة حالياً في المتجر:\n${productContext}`;
+    }
 
     try {
         // Build conversation for Gemini
@@ -84,7 +92,7 @@ module.exports = async function handler(req, res) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     system_instruction: {
-                        parts: [{ text: systemInstruction }]
+                        parts: [{ text: fullSystemPrompt }]
                     },
                     contents: contents,
                     generationConfig: {
