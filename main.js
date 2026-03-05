@@ -587,10 +587,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Pre-fetch only essential settings
-            const [treeSnap, prices, wa] = await Promise.all([
+            const [treeSnap, prices, wa, mnt] = await Promise.all([
                 db.collection('settings').doc('storeTree').get(),
                 loadShippingPrices(),
-                loadWhatsAppNumbers()
+                loadWhatsAppNumbers(),
+                checkMaintenanceMode()
             ]);
 
             if (treeSnap.exists) {
@@ -606,6 +607,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         clearTimeout(emergencyShow);
+
+        async function checkMaintenanceMode() {
+            // Listen in real-time to allow instant unlock/lock
+            db.collection('settings').doc('maintenance').onSnapshot(doc => {
+                if (!doc.exists) return;
+                const data = doc.data();
+                const overlay = document.getElementById('maintenance-overlay');
+                if (!overlay) return;
+
+                if (data.enabled) {
+                    // Check if user is an admin to bypass
+                    const user = auth.currentUser;
+                    const ADMINS = ['mm12@gmail.com', 'orders@eltoufan.com', 'store@eltoufan.com'];
+
+                    if (user && ADMINS.includes(user.email.toLowerCase())) {
+                        console.log("🛡️ Admin detected - Maintenance Mode bypassed.");
+                        overlay.classList.add('hidden');
+                        return;
+                    }
+
+                    document.getElementById('mnt-reason-text').innerText = data.reason || 'تحديثات عامة';
+                    document.getElementById('mnt-duration-text').innerText = data.duration || 'غير محدد';
+                    document.getElementById('mnt-extra-msg').innerText = data.message || '';
+                    overlay.classList.remove('hidden');
+                    // Disable scrolling
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    overlay.classList.add('hidden');
+                    document.body.style.overflow = '';
+                }
+                if (window.lucide) lucide.createIcons();
+            });
+        }
+
+        // Add auth listener specifically for maintenance bypass
+        auth.onAuthStateChanged(user => {
+            // Re-trigger check if auth state changes while site is in maintenance
+            db.collection('settings').doc('maintenance').get().then(doc => {
+                if (doc.exists && doc.data().enabled) {
+                    const overlay = document.getElementById('maintenance-overlay');
+                    if (!overlay) return;
+
+                    const ADMINS = ['mm12@gmail.com', 'orders@eltoufan.com', 'store@eltoufan.com'];
+                    if (user && ADMINS.includes(user.email.toLowerCase())) {
+                        overlay.classList.add('hidden');
+                        document.body.style.overflow = '';
+                    } else {
+                        overlay.classList.remove('hidden');
+                        document.body.style.overflow = 'hidden';
+                    }
+                }
+            });
+        });
+
         mainApp.classList.remove('hidden');
         mainApp.style.opacity = '1';
         mainApp.style.transform = 'translateY(0)';

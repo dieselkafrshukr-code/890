@@ -1336,6 +1336,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <button id="save-msg-settings" class="save-btn" style="width:100%; height:50px;">حفظ قالب الرسالة</button>
                 </div>
+
+                <div class="settings-card" style="background:var(--card); padding:24px; border-radius:20px; border:1px solid var(--border);">
+                    <div style="font-weight:900; font-size:1.1rem; margin-bottom:20px; color:var(--accent); display:flex; align-items:center; gap:10px;">
+                        <i data-lucide="power"></i> ⚙️ حالة الموقع (التحكم في الإغلاق)
+                    </div>
+                    <div id="maintenance-status-badge" style="margin-bottom:20px; padding:15px; border-radius:15px; text-align:center; font-weight:900; font-size:1.1rem; border:1px solid #333;">
+                        جاري التحميل...
+                    </div>
+
+                    <div class="form-section" style="border:none; padding:0; background:transparent; margin-bottom:15px;">
+                        <div class="input-group" style="margin-bottom:15px;">
+                            <label>سبب الإيقاف (يظهر للزوار):</label>
+                            <input id="mnt-reason" type="text" placeholder="مثال: تحديث المنتجات / عطل فني">
+                        </div>
+                        <div class="input-group" style="margin-bottom:15px;">
+                            <label>مدة الصيانة المتوقعة:</label>
+                            <input id="mnt-duration" type="text" placeholder="مثال: 30 دقيقة / ساعتين">
+                        </div>
+                        <div class="input-group" style="margin-bottom:15px;">
+                            <label>رسالة إضافية للزوار:</label>
+                            <textarea id="mnt-message" style="width:100%; height:80px; background:var(--bg-admin); border:1px solid var(--border); color:#fff; border-radius:12px; padding:12px; font-family:inherit; resize:none;" placeholder="مثال: سيعود الموقع قريباً.. شكراً لتفهمكم ❤️"></textarea>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <button id="toggle-maintenance-btn" class="save-btn" style="flex:1; height:50px; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:900;">
+                            تحديث الحالة
+                        </button>
+                    </div>
+                </div>
+
                 <div class="settings-card" style="background:var(--card); padding:24px; border-radius:20px; border:1px solid var(--border);">
                     <div style="font-weight:900; font-size:1.1rem; margin-bottom:20px; color:var(--accent); display:flex; align-items:center; gap:10px;">
                         <i data-lucide="user"></i> إعدادات حساب الأدمن
@@ -1367,6 +1398,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('set-admin-email').value = user.email || '';
             }
 
+            const mntSnap = await db.collection('settings').doc('maintenance').get();
+            if (mntSnap.exists) {
+                const data = mntSnap.data();
+                document.getElementById('mnt-reason').value = data.reason || '';
+                document.getElementById('mnt-duration').value = data.duration || '';
+                document.getElementById('mnt-message').value = data.message || '';
+                updateMaintenanceUI(data.enabled);
+            } else {
+                updateMaintenanceUI(false);
+            }
+
             const waSnap = await db.collection('settings').doc('whatsappNumbers').get();
             if (waSnap.exists) {
                 const data = waSnap.data();
@@ -1377,6 +1419,67 @@ document.addEventListener('DOMContentLoaded', () => {
             const defaultMsg = "مرحباً {customer}، بخصوص طلبك رقم {id}:\n\nالمنتجات:\n{items}";
             document.getElementById('set-wa-template').value = msgSnap.exists ? msgSnap.data().template : defaultMsg;
         } catch (e) { console.error(e); }
+
+        function updateMaintenanceUI(enabled) {
+            const badge = document.getElementById('maintenance-status-badge');
+            const btn = document.getElementById('toggle-maintenance-btn');
+            if (!badge || !btn) return;
+
+            if (enabled) {
+                badge.innerHTML = '🔴 الحالة الحالية: الموقع مغلق (تحت الصيانة)';
+                badge.style.background = 'rgba(244,67,54,0.1)';
+                badge.style.color = '#f44336';
+                btn.innerHTML = '<i data-lucide="play-circle"></i> تشغيل الموقع الآن';
+                btn.style.background = '#4caf50';
+                btn.dataset.enabled = "true";
+            } else {
+                badge.innerHTML = '🟢 الحالة الحالية: الموقع يعمل بشكل طبيعي';
+                badge.style.background = 'rgba(76,175,80,0.1)';
+                badge.style.color = '#4caf50';
+                btn.innerHTML = '<i data-lucide="pause-circle"></i> إيقاف الموقع (وضع الصيانة)';
+                btn.style.background = '#f44336';
+                btn.dataset.enabled = "false";
+            }
+            lucide.createIcons();
+        }
+
+        document.getElementById('toggle-maintenance-btn').onclick = async function () {
+            const btn = this;
+            const currentlyEnabled = btn.dataset.enabled === "true";
+            const newStatus = !currentlyEnabled;
+            const reason = document.getElementById('mnt-reason').value.trim();
+            const duration = document.getElementById('mnt-duration').value.trim();
+            const message = document.getElementById('mnt-message').value.trim();
+
+            if (newStatus && !reason) return alert("❌ يرجى إدخال سبب الصيانة أولاً!");
+
+            const confirmMsg = newStatus
+                ? "هل أنت متأكد من إغلاق الموقع تماماً عن الزوار؟"
+                : "هل تريد إعادة فتح الموقع للجمهور الآن؟";
+
+            if (confirm(confirmMsg)) {
+                const originalContent = btn.innerHTML;
+                btn.innerText = "⏳ جاري التحديث...";
+                btn.disabled = true;
+                try {
+                    await db.collection('settings').doc('maintenance').set({
+                        enabled: newStatus,
+                        reason: reason,
+                        duration: duration,
+                        message: message,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    updateMaintenanceUI(newStatus);
+                    alert(newStatus ? "⚠️ تم تفعيل وضع الصيانة بنجاح" : "✅ تم تشغيل الموقع بنجاح");
+                } catch (e) {
+                    alert("❌ خطأ: " + e.message);
+                    btn.innerHTML = originalContent;
+                } finally {
+                    btn.disabled = false;
+                }
+            }
+        };
+
 
         // Account Updates Logic (Only for Super Admin)
         const user = auth.currentUser;

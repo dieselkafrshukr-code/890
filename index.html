@@ -292,7 +292,32 @@
         </div>
     </div>
 
+    <!-- Maintenance Overlay -->
+    <div id="maintenance-overlay" class="maintenance-overlay hidden">
+        <div class="maintenance-card">
+            <div class="maintenance-icon">
+                <i data-lucide="hammer"></i>
+            </div>
+            <h1 id="mnt-title">الموقع تحت الصيانة</h1>
+            <p id="mnt-reason-text"></p>
+            <div class="mnt-timer-box">
+                <i data-lucide="clock"></i>
+                <span>المدة المتوقعة: </span>
+                <span id="mnt-duration-text"></span>
+            </div>
+            <p id="mnt-extra-msg" style="margin-top: 1rem; color: var(--text-dim);"></p>
+            <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 15px;">
+                <a href="https://wa.me/201275460336" target="_blank" class="opt-btn active"
+                    style="text-decoration: none; justify-content: center;">
+                    <i data-lucide="message-circle"></i> تواصل معنا على واتساب
+                </a>
+                <p style="font-size: 0.8rem; color: var(--text-dim);">شكراً لتفهمكم ❤️</p>
+            </div>
+        </div>
+    </div>
+
     <script src="chatbot.js?v=1"></script>
+
     <script src="main.js?v=34"></script>
 </body>
 
