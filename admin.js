@@ -1743,8 +1743,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateMaintenanceUI(newEnabled);
                 alert(newEnabled ? "🔴 تم إيقاف الموقع وتفعيل وضع الصيانة" : "🟢 تم تشغيل الموقع بنجاح");
             } catch (e) {
-                console.error(e);
-                alert("❌ فشل تحديث حالة الصيانة: " + e.message);
+                console.error("Maintenance Update Error:", e);
+                alert("❌ فشل تحديث حالة الصيانة:\n" + (e.message || "خطأ غير معروف") + "\n\nتأكد من صلاحيات قاعدة البيانات.");
                 updateMaintenanceUI(isCurrentlyEnabled);
             } finally {
                 btn.disabled = false;
