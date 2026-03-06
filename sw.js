@@ -1,11 +1,11 @@
-const CACHE_NAME = "EL-TOUFAN-v10";
+const CACHE_NAME = "EL-TOUFAN-v11";
 const OFFLINE_URL = "offline.html";
 
 const PRECACHE_ASSETS = [
     "./",
     "index.html",
     "style.css",
-    "main.js",
+    "main.js?v=41",
     "firebase-config.js",
     "payment-config.js",
     "shipping-config.js",
