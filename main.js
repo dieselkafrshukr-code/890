@@ -604,9 +604,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
         } catch (e) {
-            console.error("Init failed:", e);
+            console.error("🚨 App Init Error:", e);
+            // If it's a firebase connection error, experimentalForceLongPolling (set in firebase-config.js) should help.
+            // We use default data as a fallback so the site is at least semi-functional.
             useDefaultData();
         }
+
 
         clearTimeout(emergencyShow);
 

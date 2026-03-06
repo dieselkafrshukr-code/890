@@ -1,4 +1,4 @@
-const CACHE_NAME = "EL-TOUFAN-v7";
+const CACHE_NAME = "EL-TOUFAN-v9";
 const OFFLINE_URL = "offline.html";
 
 const PRECACHE_ASSETS = [
