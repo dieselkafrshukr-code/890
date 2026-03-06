@@ -1,4 +1,4 @@
-const CACHE_NAME = "EL-TOUFAN-v2";
+const CACHE_NAME = "EL-TOUFAN-v3";
 const OFFLINE_URL = "offline.html";
 
 const PRECACHE_ASSETS = [
@@ -56,8 +56,13 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    // ❌ تجاهل POST requests (لا يمكن تخزينها في Cache)
+    // ❌ تجاهل POST requests
     if (event.request.method !== "GET") {
+        return;
+    }
+
+    // ❌ تجاهل favicon.ico لتجنب أخطاء الشبكة في الكونسول
+    if (url.includes("favicon.ico")) {
         return;
     }
 
