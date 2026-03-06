@@ -46,6 +46,15 @@ body {
     transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s ease;
 }
 
+/* Global Icon Sizing (Prevent layout shift/large icons on load) */
+i[data-lucide],
+svg.lucide {
+    width: 24px;
+    height: 24px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 .theme-toggle-btn {
     background: transparent;
     border: none;
