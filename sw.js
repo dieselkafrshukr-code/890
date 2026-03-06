@@ -1,4 +1,4 @@
-const CACHE_NAME = "EL-TOUFAN-v5";
+const CACHE_NAME = "EL-TOUFAN-v6";
 const OFFLINE_URL = "offline.html";
 
 const PRECACHE_ASSETS = [
@@ -84,7 +84,7 @@ self.addEventListener("fetch", (event) => {
                 const networkResponse = await fetch(event.request);
 
                 // Only cache successful standard responses
-                if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                if (networkResponse && networkResponse.status === 200) {
                     await cache.put(event.request, networkResponse.clone());
                 }
 
