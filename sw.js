@@ -1,4 +1,4 @@
-const CACHE_NAME = "EL-TOUFAN-v4";
+const CACHE_NAME = "EL-TOUFAN-v5";
 const OFFLINE_URL = "offline.html";
 
 const PRECACHE_ASSETS = [
@@ -17,14 +17,15 @@ const PRECACHE_ASSETS = [
     "https://unpkg.com/lucide@latest",
     "https://cdn.jsdelivr.net/npm/chart.js",
     "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js",
-    "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@400;700;900&display=swap"
+    "https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@400;700;900&display=swap",
+    "https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap"
 ];
 
 // Install Event
 self.addEventListener("install", (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            console.log("Caching assets...");
+            console.log("sw: Caching assets...");
             return cache.addAll(PRECACHE_ASSETS);
         })
     );
@@ -49,49 +50,59 @@ self.addEventListener("activate", (event) => {
 
 // Fetch Event
 self.addEventListener("fetch", (event) => {
-    const url = event.request.url;
+    const url = new URL(event.request.url);
 
-    // ❌ تجاهل favicon.ico لتجنب أخطاء الشبكة في الكونسول
-    if (url.includes("favicon.ico") || url.endsWith(".ico")) {
+    // ❌ Ignore non-GET, non-http(s), and browser extensions
+    if (event.request.method !== "GET" || !url.protocol.startsWith("http")) {
         return;
     }
 
-    // ❌ تجاهل requests من extensions المتصفح أو غير http/https
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    // ❌ Ignore specific problematic paths
+    if (url.pathname.includes("favicon.ico") || url.pathname.endsWith(".ico")) {
         return;
     }
 
-    // ❌ تجاهل POST requests
-    if (event.request.method !== "GET") {
-        return;
-    }
-
-    // ✅ Check if navigation request (HTML page)
-    if (event.request.mode === "navigate") {
-        event.respondWith(
-            fetch(event.request).catch(() => {
-                return caches.match(OFFLINE_URL);
-            })
-        );
-        return;
-    }
-
-    // ✅ Default Cache Strategy (Stale-While-Revalidate)
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            const fetchPromise = fetch(event.request).then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200 && networkResponse.type !== "opaque") {
-                    const cacheCopy = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, cacheCopy).catch(() => { });
-                    });
-                }
-                return networkResponse;
-            }).catch(() => {
-                return cachedResponse || new Response("Network error occurred", { status: 408, statusText: "Request Timeout" });
-            });
+        (async () => {
+            const cache = await caches.open(CACHE_NAME);
 
-            return cachedResponse || fetchPromise;
-        })
+            // Try matching in cache first
+            const cachedResponse = await cache.match(event.request);
+
+            if (cachedResponse) {
+                // Stale-While-Revalidate: Return cached then fetch updated
+                fetch(event.request).then(async (networkResponse) => {
+                    if (networkResponse && networkResponse.status === 200) {
+                        await cache.put(event.request, networkResponse);
+                    }
+                }).catch(() => { });
+                return cachedResponse;
+            }
+
+            // Not in cache, try network
+            try {
+                const networkResponse = await fetch(event.request);
+
+                // Only cache successful standard responses
+                if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                    await cache.put(event.request, networkResponse.clone());
+                }
+
+                return networkResponse;
+            } catch (error) {
+                // Network failed
+                if (event.request.mode === "navigate") {
+                    const offlineFallback = await cache.match(OFFLINE_URL);
+                    if (offlineFallback) return offlineFallback;
+                }
+
+                // Return a generic error response instead of letting the promise reject
+                return new Response("Offline or Network Error", {
+                    status: 503,
+                    statusText: "Service Unavailable",
+                    headers: new Headers({ "Content-Type": "text/plain" })
+                });
+            }
+        })()
     );
 });
