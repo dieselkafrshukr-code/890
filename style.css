@@ -711,11 +711,11 @@ body.dark-mode .close-cart:hover {
 
 .close-detail {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    color: var(--text) !important;
+    top: 16px;
+    right: 16px;
+    background: rgba(0, 0, 0, 0.65);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    color: #ffffff !important;
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -724,23 +724,27 @@ body.dark-mode .close-cart:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: 0.3s;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: background 0.2s ease, transform 0.25s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
 .close-detail:hover {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.85);
     transform: rotate(90deg) scale(1.1);
+    border-color: rgba(255, 255, 255, 0.6);
 }
 
 body.dark-mode .close-detail {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(20, 20, 20, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     color: #ffffff !important;
 }
 
 body.dark-mode .close-detail:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(40, 40, 40, 0.95);
+    border-color: rgba(255, 255, 255, 0.6);
 }
 
 .product-view-split {
