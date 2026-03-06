@@ -201,51 +201,48 @@ body {
     }
 }
 
-/* SEO Hero Section - subtle for UX, visible for Google */
-.seo-hero-section {
+/* SEO About Section (bottom of page) */
+.seo-about-section {
     text-align: center;
-    padding: 0 1rem;
-    margin-bottom: 0;
-    opacity: 0.55;
-    transition: opacity 0.3s ease;
+    padding: 2rem 1.5rem;
+    margin-top: 3rem;
+    border-top: 1px solid var(--border);
+    background: var(--btn-bg);
+    border-radius: 20px;
 }
 
-.seo-hero-section:hover {
-    opacity: 0.75;
+.seo-about-heading {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.8rem;
+    line-height: 1.6;
 }
 
-.seo-main-heading {
-    font-size: 0.8rem;
-    font-weight: 600;
+.seo-about-text {
+    font-size: 0.85rem;
     color: var(--text-dim);
-    margin-bottom: 0.4rem;
-    line-height: 1.5;
-}
-
-.seo-description {
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    line-height: 1.7;
-    max-width: 600px;
+    line-height: 1.9;
+    max-width: 650px;
     margin: 0 auto;
-    padding: 0.5rem 0.8rem;
-    background: transparent;
-    border: none;
-    border-radius: 0;
 }
 
-.seo-description strong {
-    color: var(--text-dim);
+.seo-about-text strong {
+    color: var(--text);
     font-weight: 600;
 }
 
 @media (max-width: 600px) {
-    .seo-main-heading {
-        font-size: 0.75rem;
+    .seo-about-section {
+        padding: 1.5rem 1rem;
     }
 
-    .seo-description {
-        font-size: 0.65rem;
+    .seo-about-heading {
+        font-size: 0.9rem;
+    }
+
+    .seo-about-text {
+        font-size: 0.8rem;
     }
 }
 
