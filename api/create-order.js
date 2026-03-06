@@ -45,26 +45,42 @@ module.exports = async function handler(req, res) {
         const itemsDetail = [];
 
         for (const item of cartItems) {
-            const prodSnap = await firestore.collection('products').doc(item.productId).get();
-            if (prodSnap.exists) {
-                const data = prodSnap.data();
-                subtotal += data.price;
-                itemsDetail.push({
-                    name: data.name,
-                    price: data.price,
-                    color: item.color,
-                    size: item.size,
-                    image: data.mainImage || '',
-                    sku: data.sku || '' // ✅ إضافة كود المنتج
-                });
+            const qty = item.qty || 1;
+            if (item.productId) {
+                try {
+                    const prodSnap = await firestore.collection('products').doc(item.productId).get();
+                    if (prodSnap.exists) {
+                        const data = prodSnap.data();
+                        subtotal += data.price * qty;
+                        itemsDetail.push({
+                            name: data.name,
+                            price: data.price,
+                            qty: qty,
+                            color: item.color || '',
+                            size: item.size || '',
+                            image: data.mainImage || '',
+                            sku: data.sku || ''
+                        });
+                    } else {
+                        subtotal += (item.price || 0) * qty;
+                        itemsDetail.push({ name: item.name, price: item.price || 0, qty, color: item.color || '', size: item.size || '', image: item.image || '', sku: item.sku || '' });
+                    }
+                } catch (err) {
+                    subtotal += (item.price || 0) * qty;
+                    itemsDetail.push({ name: item.name, price: item.price || 0, qty, color: item.color || '', size: item.size || '', image: item.image || '', sku: item.sku || '' });
+                }
+            } else {
+                subtotal += (item.price || 0) * qty;
+                itemsDetail.push({ name: item.name, price: item.price || 0, qty, color: item.color || '', size: item.size || '', image: item.image || '', sku: item.sku || '' });
             }
         }
 
-        // 2. جلب سعر الشحن
+        // 2. جلب سعر الشحن (من governoratesPricing - الكوليكشن الصحيح)
         let shipping = 0;
-        const shipSnap = await firestore.collection('settings').doc('shipping_prices').get();
+        const shipSnap = await firestore.collection('settings').doc('governoratesPricing').get();
         if (shipSnap.exists) {
-            shipping = shipSnap.data()[governorate] || 0;
+            const prices = shipSnap.data().prices || {};
+            shipping = prices[governorate] || 0;
         }
 
         const total = subtotal + shipping;
@@ -72,7 +88,10 @@ module.exports = async function handler(req, res) {
         const { Timestamp } = require('firebase-admin/firestore');
 
         // 3. تجهيز بيانات إضافية للوحة التحكم (Summary for Admin)
-        const itemSummary = itemsDetail.map(i => `${i.name} [${i.sku || ''}] (${i.color || ''} - ${i.size || ''})`).join(' | ');
+        const itemSummary = itemsDetail.map(i => {
+            const qtyPrefix = (i.qty && i.qty > 1) ? `${i.qty}× ` : '';
+            return `${qtyPrefix}${i.name} [${i.sku || ''}] (${i.color || ''} - ${i.size || ''})`;
+        }).join(' | ');
         const productImages = itemsDetail.map(i => i.image).filter(img => img);
 
         // 4. حفظ الأوردر

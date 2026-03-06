@@ -841,6 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const pName = p[nameKey] || p.name;
                     const currency = currentLang === 'en' ? ' EGP' : ' ج.م';
 
+                    const colorBadge = p.mainColor ? `<div class="product-card-color">${p.mainColor}</div>` : '';
                     card.innerHTML = `
                         <div class="product-card-img">
                             <img src="${p.mainImage || 'https://via.placeholder.com/300'}" alt="${pName}" loading="lazy">
@@ -1259,7 +1260,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Store shipping prices for use in form
     window.updateOrderTotal = () => {
-        const subtotal = cart.reduce((s, i) => s + i.price, 0);
+        const subtotal = cart.reduce((s, i) => s + i.price * (i.qty || 1), 0);
         const discount = couponDiscount > 0
             ? (couponType === 'percent' ? Math.round(subtotal * couponDiscount / 100) : couponDiscount)
             : 0;
@@ -1398,9 +1399,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!result.success) throw new Error(result.error || 'Failed to create order');
 
             const orderId = result.orderId.slice(-6).toUpperCase();
-            fbShipping = result.shipping;
-            fbTotal = result.total;
-            discount = result.discount;
+            const finalShipping = result.shipping !== undefined ? result.shipping : fbShipping;
+            const finalTotal = result.total !== undefined ? result.total : fbTotal;
+            const finalDiscount = result.discount !== undefined ? result.discount : discount;
 
             // ✅ بناء رسالة الواتساب من itemsForDB (يضمن أن qty صحيح دايماً)
             const itemsList = itemsForDB.map(i => {
@@ -1426,9 +1427,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 `━━━━━━━━━━━━━━━\n` +
                 `${t.items}:\n${itemsList}\n` +
                 `━━━━━━━━━━━━━━━\n` +
-                (discount > 0 ? `🎟️ خصم: -${discount} ج.م\n` : '') +
-                `🚚 شحن: ${fbShipping} ج.م\n` +
-                `✅ ${t.total}: ${fbTotal}${currency}`
+                (finalDiscount > 0 ? `🎟️ خصم: -${finalDiscount} ج.م\n` : '') +
+                `🚚 شحن: ${finalShipping} ج.م\n` +
+                `✅ ${t.total}: ${finalTotal}${currency}`
             );
 
             // مسح السلة والإغلاق
