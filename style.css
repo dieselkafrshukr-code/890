@@ -201,46 +201,51 @@ body {
     }
 }
 
-/* SEO Hero Section */
+/* SEO Hero Section - subtle for UX, visible for Google */
 .seo-hero-section {
     text-align: center;
-    padding: 1.5rem 1rem 0.5rem;
-    margin-bottom: 1rem;
+    padding: 0 1rem;
+    margin-bottom: 0;
+    opacity: 0.55;
+    transition: opacity 0.3s ease;
+}
+
+.seo-hero-section:hover {
+    opacity: 0.75;
 }
 
 .seo-main-heading {
-    font-size: 1.3rem;
-    font-weight: 900;
-    color: var(--text);
-    margin-bottom: 0.8rem;
-    line-height: 1.6;
-    opacity: 0.9;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 0.4rem;
+    line-height: 1.5;
 }
 
 .seo-description {
-    font-size: 0.92rem;
+    font-size: 0.7rem;
     color: var(--text-dim);
-    line-height: 1.9;
-    max-width: 700px;
+    line-height: 1.7;
+    max-width: 600px;
     margin: 0 auto;
-    padding: 0.8rem 1rem;
-    background: var(--btn-bg);
-    border: 1px solid var(--border);
-    border-radius: 16px;
+    padding: 0.5rem 0.8rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
 }
 
 .seo-description strong {
-    color: var(--text);
-    font-weight: 700;
+    color: var(--text-dim);
+    font-weight: 600;
 }
 
 @media (max-width: 600px) {
     .seo-main-heading {
-        font-size: 1.1rem;
+        font-size: 0.75rem;
     }
 
     .seo-description {
-        font-size: 0.85rem;
+        font-size: 0.65rem;
     }
 }
 
