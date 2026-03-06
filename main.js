@@ -239,16 +239,36 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('close-orders-btn').onclick = () => document.getElementById('user-orders-modal').style.display = 'none';
 
         document.getElementById('google-login-action').onclick = async () => {
+            const btn = document.getElementById('google-login-action');
+            const originalText = btn.innerHTML;
             try {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ جاري الاتصال بجوجل...';
+
                 const provider = new firebase.auth.GoogleAuthProvider();
-                // Switching back to Popup as Redirect is causing reload loops in some environments
-                await auth.signInWithPopup(provider);
+                provider.setCustomParameters({ prompt: 'select_account' });
+
+                // Use signInWithPopup but handle common mobile issues
+                const result = await auth.signInWithPopup(provider);
+                console.log("Login Success:", result.user.email);
+
                 document.getElementById('customer-login-modal').style.display = 'none';
-                window.handleUserIconClick(); // Refresh UI to show orders
+                window.handleUserIconClick();
+
             } catch (err) {
                 console.error("Login Error:", err);
-                if (err.code === 'auth/popup-closed-by-user') return;
-                alert("تعذر تسجيل الدخول: " + err.message);
+                let msg = "تعذر تسجيل الدخول: ";
+                if (err.code === 'auth/popup-blocked-by-user' || err.code === 'auth/cancelled-popup-request') {
+                    msg = "يرجى السماح بالنوافذ المنبثقة (Popups) للموقع للمتابعة.";
+                } else if (err.code === 'auth/unauthorized-domain') {
+                    msg = "هذا النطاق غير مصرح به في إعدادات Firebase. يرجى مراجعة المطور.";
+                } else {
+                    msg += err.message;
+                }
+                alert(msg);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         };
 
