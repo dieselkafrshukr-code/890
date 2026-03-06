@@ -1,4 +1,4 @@
-const CACHE_NAME = "EL-TOUFAN-v1";
+const CACHE_NAME = "EL-TOUFAN-v2";
 const OFFLINE_URL = "offline.html";
 
 const PRECACHE_ASSETS = [
@@ -83,7 +83,7 @@ self.addEventListener("fetch", (event) => {
                 }
                 return networkResponse;
             }).catch(() => {
-                return cachedResponse;
+                return cachedResponse || new Response("Network error occurred", { status: 408, statusText: "Request Timeout" });
             });
 
             return cachedResponse || fetchPromise;
