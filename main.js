@@ -777,14 +777,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentStepIndicator = document.querySelector('.step-indicator');
         if (currentStepIndicator) {
             const depth = navigationStack.length;
-            let stepHtml = `<div class="step ${depth === 0 ? 'active' : 'completed'}" onclick="window.resetApp()" style="cursor:pointer;">${t.start}</div>`;
+            // Use data-action and data-idx for event delegation instead of inline onclick
+            let stepHtml = `<div class="step ${depth === 0 ? 'active' : 'completed'}" data-action="reset" style="cursor:pointer;">${t.start}</div>`;
 
-            // Skip the first item if it's the store root to avoid redundancy with "Start"
             navigationStack.forEach((nav, idx) => {
                 if (idx === 0) return;
                 const navName = nav[nameKey] || nav.name;
                 stepHtml += `<div class="step-line active"></div>`;
-                stepHtml += `<div class="step completed" onclick="window.jumpToStep(${idx})" style="cursor:pointer;">${navName}</div>`;
+                stepHtml += `<div class="step completed" data-action="jump" data-idx="${idx}" style="cursor:pointer;">${navName}</div>`;
             });
 
             if (depth > 0) {
@@ -792,6 +792,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 stepHtml += `<div class="step active">${currentLevel[nameKey] || currentLevel.name}</div>`;
             }
             currentStepIndicator.innerHTML = stepHtml;
+
+            // Add event listener once (or ensure it's not duplicated)
+            if (!currentStepIndicator.dataset.listenerAdded) {
+                currentStepIndicator.addEventListener('click', (e) => {
+                    const step = e.target.closest('.step');
+                    if (!step) return;
+
+                    const action = step.dataset.action;
+                    if (action === 'reset') {
+                        window.resetApp();
+                    } else if (action === 'jump') {
+                        const idx = parseInt(step.dataset.idx);
+                        window.jumpToStep(idx);
+                    }
+                });
+                currentStepIndicator.dataset.listenerAdded = "true";
+            }
         }
 
         // Sibling Quick Nav removed as requested
@@ -952,8 +969,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const initialSizes = detailedProd.mainSizes || [];
         if (initialSizes.length > 0) {
             sizeGroup.innerHTML = initialSizes.map(s =>
-                `<button class="detail-chip" onclick="window.selectSize(this, '${s}')">${s}</button>`
+                `<button class="detail-chip" data-size="${s}">${s}</button>`
             ).join('');
+
+            if (!sizeGroup.dataset.listener) {
+                sizeGroup.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.detail-chip');
+                    if (btn) window.selectSize(btn, btn.dataset.size);
+                });
+                sizeGroup.dataset.listener = "true";
+            }
         } else {
             sizeGroup.innerHTML = `<p style="font-size:0.8rem; color:var(--text-dim);">${t.no_sizes}</p>`;
         }
@@ -976,8 +1001,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (allColors.length > 0) {
             colorGroup.innerHTML = allColors.map((c, i) => {
                 const displayName = currentLang === 'en' ? (c.nameEn || c.name) : c.name;
-                return `<button class="detail-chip ${i === 0 ? 'active' : ''}" onclick="window.selectColor(this, '${c.name}', '${c.image}')">${displayName}${c.isMain ? ' ✦' : ''}</button>`;
+                return `<button class="detail-chip ${i === 0 ? 'active' : ''}" data-color-name="${c.name}" data-color-image="${c.image}">${displayName}${c.isMain ? ' ✦' : ''}</button>`;
             }).join('');
+
+            if (!colorGroup.dataset.listener) {
+                colorGroup.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.detail-chip');
+                    if (btn) window.selectColor(btn, btn.dataset.colorName, btn.dataset.colorImage);
+                });
+                colorGroup.dataset.listener = "true";
+            }
             if (allColors[0]) selColor = allColors[0].name;
         } else {
             colorGroup.innerHTML = `<p style="font-size:0.8rem; color:var(--text-dim);">${t.no_colors}</p>`;

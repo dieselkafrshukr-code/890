@@ -97,8 +97,13 @@
         <div class="icon">📡</div>
         <h1>عذراً، النت مقطوع!</h1>
         <p>يبدو أنك لست متصلاً بالإنترنت حالياً. الرجاء التأكد من اتصالك والمحاولة مرة أخرى.</p>
-        <button class="retry-btn" onclick="window.location.reload()">حاول مرة أخرى</button>
+        <button id="retry-btn" class="retry-btn">حاول مرة أخرى</button>
     </div>
+    <script>
+        document.getElementById('retry-btn').addEventListener('click', () => {
+            window.location.reload();
+        });
+    </script>
 </body>
 
 </html>
